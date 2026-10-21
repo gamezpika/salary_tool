@@ -269,6 +269,10 @@ td.way{text-align:center}
 td.way.hold{color:var(--danger);font-weight:500}
 tr.revoff td{color:var(--muted);background:var(--soft)}
 #revTable td{white-space:nowrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.segb{border:0;background:var(--panel);padding:5px 12px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.segb.on{background:var(--ink);color:var(--panel)}
+[hidden]{display:none!important}
 .rtag{display:inline-block;font-size:10.5px;line-height:15px;padding:0 4px;border-radius:3px;margin-left:4px;font-weight:500;background:var(--w2);color:#fff;border:1px solid var(--w2);vertical-align:middle;white-space:nowrap}
 .plan-days{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
 .plan-days[hidden]{display:none}
@@ -324,20 +328,33 @@ tfoot tr.quota td{font-weight:400;color:var(--muted);font-size:13px}
     <div class="msg" id="importMsg">请导出 OA 的「菲律宾USDT薪资发放名单」。档案只在你的浏览器里读取，不会上传。</div>
   </section>
 
-  <section class="step" id="walletSec" hidden>
-    <h2>钱包分配（USDT）</h2>
-    <p class="msg" style="margin-top:0">导入当天核准后的名单，填当天 USDT 汇率，就会算出要用几个钱包、各打多少。</p>
-    <div class="plan-days" style="margin-bottom:12px">
+  <div id="walletSec" hidden>
+  <p class="notice" id="busyNote" hidden style="position:sticky;top:8px;z-index:20"></p>
+  <section class="step wstep">
+    <h2><span class="n">1</span>导入当天核准名单</h2>
+    <div class="row" style="margin:0"><label class="btn primary" for="batchFile">导入当天核准名单（Excel）</label><input type="file" id="batchFile" accept=".xlsx,.xls,.csv" hidden><span class="formula" id="batchMsg">每天核准后，从 OA 导出当天的名单再导入。</span></div>
+
+  </section>
+  <section class="step wstep">
+    <h2><span class="n">2</span>汇率</h2>
+    <div class="plan-days" style="margin:0">
       <label for="phpRate"><b>PHP→RMB 汇率</b></label>
       <input type="number" id="phpRate" step="0.0001" min="0" style="width:120px">
       <span class="formula" id="phpRateNote"></span>
     </div>
+    <p class="hint" style="text-align:left;margin:6px 0 0">每天的 RMB→USDT 汇率，在第 ⑥ 步每一天的表格上方填。</p>
+  </section>
+  <section class="step wstep">
+    <h2><span class="n">3</span>出款钱包设定</h2>
     <details class="fold-list wset"><summary>出款钱包设定</summary>
       <div class="tablewrap" style="margin:8px 0 8px"><table class="ctable" style="min-width:720px"><thead><tr><th>钱包</th><th>名称</th><th>出款地址</th><th>打款人员</th><th>检查</th></tr></thead><tbody id="wsetBody"></tbody></table></div>
       <div class="row" style="margin-bottom:10px;gap:16px"><button class="btn" id="wsAdd">＋新增钱包</button><label class="trxp">每个钱包每天最多 <input type="number" id="wcap" min="0" step="1000" style="width:110px"> USDT</label></div>
     </details>
-    <div class="rules" style="margin-bottom:12px">
-      <h3>分钱包的条件</h3>
+
+  </section>
+  <section class="step wstep">
+    <h2><span class="n">4</span>分钱包的条件</h2>
+    <div class="rules">
       <p class="sub">分钱包时会遵守，设定会自动记住。</p>
       <div id="wruleList"></div>
       <div class="add">
@@ -348,18 +365,26 @@ tfoot tr.quota td{font-weight:400;color:var(--muted);font-size:13px}
         <button class="btn" id="wrAdd">新增条件</button>
       </div>
     </div>
-    <div class="hgset" style="margin-bottom:12px">
-      <h3>第一次打款（另外打 TRX）</h3>
+
+  </section>
+  <section class="step wstep">
+    <h2><span class="n">5</span>第一次打款（另外打 TRX）</h2>
+    <div class="hgset">
       <p class="msg" style="margin-top:0">自动跟上个月实际打款的名单比对工号，上月没有的就是第一次打款，会平均分到各个钱包。</p>
       <div class="row"><span class="formula" id="prevNote"></span></div>
       <div class="row" style="margin-top:4px"><label class="linkbtn" for="prevFile">改用 Excel 比对</label><input type="file" id="prevFile" accept=".xlsx,.xls,.csv" hidden></div>
       <div class="row" style="margin-top:8px;gap:16px"><label class="trxp">第一次补助：每人 <input type="number" min="0" step="0.1" data-trx="perNew"> TRX</label></div>
       <div id="newList" style="margin-top:10px"></div>
     </div>
-    <div class="row" style="margin:4px 0 12px"><label class="btn primary" for="batchFile">导入当天核准名单（Excel）</label><input type="file" id="batchFile" accept=".xlsx,.xls,.csv" hidden><span class="formula" id="batchMsg">每天核准后，从 OA 导出当天的名单再导入。</span></div>
+
+  </section>
+  <section class="step wstep">
+    <h2><span class="n">6</span>钱包分配与 UC 打款文件</h2>
     <div id="walletDays"></div>
     <div class="row" style="margin-top:10px"><button class="btn" id="ucAll00">下载所有 USDT 打款明细（00）</button><button class="btn" id="ucAll01">下载所有 TRX 打款明细（01）</button></div>
   </section>
+</div>
+
 
   <section class="step" id="holdSec" hidden>
     <h2>暂缓表</h2>
@@ -476,8 +501,8 @@ tfoot tr.quota td{font-weight:400;color:var(--muted);font-size:13px}
 <div class="modal" id="revModal" hidden role="dialog" aria-modal="true" aria-labelledby="revTitle">
   <div class="mbox" style="width:min(1300px,100%)">
     <div class="mhead"><h3 id="revTitle">发薪日送审总名单</h3><button class="btn" id="revClose" aria-label="关闭">✕</button></div>
-    <p class="msg" style="margin:0 0 8px">发薪栏依工资发放方式自动带出：0 = 发薪（USDT），1 = 不发（现金、暂缓、其他发放方式）。这里只能查看，要修改请回 OA 改资料后重新导入。</p>
-    <div class="row" style="margin-bottom:8px;gap:8px"><span id="revSum" class="formula"></span><span style="flex:1"></span><button class="btn" id="revDl">下载 Excel</button><button class="btn primary" id="revCopy">复制，贴到 Excel</button></div>
+    <p class="msg" style="margin:0 0 8px">发薪栏依工资发放方式自动带出：1 = 发薪（USDT），0 = 不发（现金、暂缓、其他发放方式）。这里只能查看，要修改请回 OA 改资料后重新导入。</p>
+    <div class="row" style="margin-bottom:8px;gap:8px"><span class="seg"><button class="segb on" data-revf="all">全部</button><button class="segb" data-revf="usdt">只看 USDT</button><button class="segb" data-revf="hold">只看暂缓</button><button class="segb" data-revf="other" title="现金发放，以及其他发放方式">其他</button></span><span id="revSum" class="formula"></span><span style="flex:1"></span><button class="btn" id="revDl">下载 Excel</button><button class="btn primary" id="revCopy">复制，贴到 Excel</button></div>
     <div class="tablewrap" style="max-height:62vh;overflow:auto"><table id="revTable" class="ctable" style="min-width:1300px"></table></div>
   </div>
 </div>
@@ -535,7 +560,7 @@ function build(rows){
   const nodes=new Map(),roots=[];
   const get=path=>{const id=path.join(SEP);if(!nodes.has(id)){const n={id,path:path.slice(),name:path[path.length-1],depth:path.length-1,parent:null,children:[],own:0,ownH:0,amount:0,heads:0,emps:[]};
     if(path.length>1){const p=get(path.slice(0,-1));n.parent=p.id;p.children.push(id)}else roots.push(id);nodes.set(id,n)}return nodes.get(id)};
-  rows.forEach(r=>{const n=get(r.path);n.own+=r.amount;n.ownH+=r.heads;n.emps.push({a:r.amount,code:r.code||'',month:r.month||'',bp:r.bp||'',name:r.name||'',pos:r.pos||'',rmb:r.rmb,orig:r.orig||'',addr:r.addr||''})});
+  rows.forEach(r=>{const n=get(r.path);n.own+=r.amount;n.ownH+=r.heads;n.emps.push({a:r.amount,code:r.code||'',month:r.month||'',bp:r.bp||'',name:r.name||'',pos:r.pos||'',rmb:r.rmb,rem:r.rem||'',orig:r.orig||'',addr:r.addr||''})});
   [...nodes.values()].forEach(n=>{if(n.own>0&&n.children.length){const c=get([...n.path,'']);c.own+=n.own;c.ownH+=n.ownH;c.emps.push(...n.emps);n.emps=[];n.own=0;n.ownH=0}});
   nodes.forEach(n=>n.emps.forEach(e=>e.leaf=n.id));
   const sum=id=>{const n=nodes.get(id);n.amount=n.own;n.heads=n.ownH;n.children.forEach(c=>{sum(c);n.amount+=nodes.get(c).amount;n.heads+=nodes.get(c).heads})};
@@ -687,7 +712,7 @@ function render(){
   $('walletSec').hidden=st.tab!=='wallet';
   if(st.tab==='wallet')renderWallet();
   $('tabs').hidden=!loadedData||st.tab==='wallet';
-  $('leadText').innerHTML=st.tab==='wallet'?'作业二照顺序操作：设定出款钱包和条件 → 每天导入核准名单 → 填当天汇率 → 复制到 Excel。':'作业一照顺序操作：① 导入薪资表 → ② 每天预计拨款 → ③ 设定排的条件 → ④ 选择分配单位 → ⑤ 自动排、调整 → ⑥ 总结，复制到 Excel。';
+  $('leadText').innerHTML=st.tab==='wallet'?'作业二照顺序操作：① 导入当天核准名单 → ② 汇率 → ③ 出款钱包设定 → ④ 分钱包的条件 → ⑤ 第一次打款 → ⑥ 填当天汇率、下载 UC 打款文件。':'作业一照顺序操作：① 导入薪资表 → ② 每天预计拨款 → ③ 设定排的条件 → ④ 选择分配单位 → ⑤ 自动排、调整 → ⑥ 总结，复制到 Excel。';
   document.querySelectorAll('[data-job]').forEach(b=>{const on=(b.dataset.job==='2')===(st.tab==='wallet');b.classList.toggle('on',on);b.setAttribute('aria-selected',on)});
   $('tabHold').hidden=!hasHold;$('tabOther').hidden=!hasOther;
   $('otherCount').textContent=(st.otherRows||[]).length;
@@ -786,7 +811,7 @@ function render(){
     const items=d.items.slice().sort((a,b)=>(ord.get(a.id)??0)-(ord.get(b.id)??0)), itemMap=new Map(items.map(it=>[it.id,it]));
     const br=items.length?blockRows(items.map(it=>it.id),i):[];
     const rs=Math.max(1,br.length)+1, over=surplus<-0.5;
-    const merged=`<td class="merged" rowspan="${rs}"><b>第 ${i+1} 天</b><input type="date" class="dinput" data-ddate="${i}" value="${esc(d.date)}" aria-label="第 ${i+1} 天日期"><button class="addto" data-fill="${i}">补满这天</button><button class="addto" data-dexport="${i}">导出送审名单</button>${items.length?'':`<button class="addto" data-delday="${i}">删除这天</button>`}</td>
+    const merged=`<td class="merged" rowspan="${rs}"><b>第 ${i+1} 天</b><input type="date" class="dinput" data-ddate="${i}" value="${esc(d.date)}" aria-label="第 ${i+1} 天日期"><button class="addto" data-fill="${i}">补满这天</button><button class="addto" data-dexport="${i}">导出送审名单</button>${d.items.some(it=>isHold(it.id))?`<button class="addto" data-dhold="${i}">导出暂缓名单</button>`:''}${items.length?'':`<button class="addto" data-delday="${i}">删除这天</button>`}</td>
       <td class="num merged${over?' neg':''}" rowspan="${rs}"><b>${fmt(daySum)}</b></td>
       <td class="num merged" rowspan="${rs}"><input type="number" class="cinput" min="0" step="100000" data-dcap="${i}" value="${d.cap}" aria-label="第 ${i+1} 天预计拨款"></td>
       <td class="num merged${over?' neg':''}" rowspan="${rs}">${fmt(surplus)}</td><td class="num merged${run<-0.5?' neg':''}" rowspan="${rs}">${fmt(run)}</td>`;
@@ -878,37 +903,42 @@ function collapseUnit(id){
     if(days.size>1)st.notice={text:`${esc(N(id).name)} 原本分在${[...days].map(d=>d<0?'未排':`第 ${d+1} 天`).join('、')}，合起后整组移到第 ${i+1} 天。如果这天超过预计拨款，请调整。`}}
   return placedDays.length?placedDays[0]:-1;
 }
-function changed(){rebalance();allocAllBatches();render()}
+function changed(){rebalance();render()}
+/* 计算比较久的动作：先显示「处理中」，让画面更新后再算，算完再重画 */
+function busy(fn,msg){const n=$('busyNote');if(n){n.textContent=msg||'正在重新分配钱包…';n.hidden=false}
+  setTimeout(()=>{try{fn()}finally{if(n)n.hidden=true;render()}},30)}
 /* 送审名单：dayIdx>=0 只导出那一天；-1 导出全部发薪日（含现金发放） */
 /* 发薪日送审总名单：排进发薪日的 + 现金发放 + 暂缓表 + 其他发放方式，全部员工一张 */
 function reviewAllRows(){const rows=[],seen=new Set();
   const lastDay=st.days.reduce((m,d,i)=>d.items.length?i:m,-1);
   st.days.forEach((d,i)=>whoList(i,-1,'').forEach(r=>{const e=r.ref,l=st.nodes.get(e.leaf),hold=l&&isHold(l.id),p=hold&&e.orig?e.orig.split(' / '):realPath(l?l.path:[]);
-    seen.add('h|'+e.code);rows.push({key:(hold?'H|':'U|')+e.code+'|'+i,def:!hold,date:d.date,day:`第${i+1}天`,month:e.month||'',code:e.code,name:e.name,pos:e.pos||'',frmb:e.rmb,g:p[0]||'',b:p[1]||'',d:p[2]||'',amt:e.a,addr:e.addr||'',way:hold?'暂缓':'USDT',grp:hold?N(l.id).name:'',note:''})}));
-  (st.cashRows||[]).forEach(r=>{rows.push({key:'C|'+r.code,def:false,date:cashDate(),day:'现金发放',month:r.month||'',code:r.code,name:r.ename,pos:r.pos||'',frmb:r.rmb,g:r.g,b:r.cb||'',d:r.cd||'',amt:r.amount,addr:'',way:'现金',grp:'',note:''})});
-  (st.held||[]).forEach((h,i)=>{if(seen.has('h|'+h.code)&&h.ok&&!isSkip(h,i))return;rows.push({key:'X|'+(h.code||i),def:false,date:'',day:'',month:h.month||'',code:h.code,name:h.name,pos:h.pos||'',frmb:h.rmb,g:h.g,b:h.b,d:h.d,amt:h.amount,addr:h.addr||'',way:h.way||'暂缓',grp:holdGroupOfH(h,i),note:isSkip(h,i)?'特例不发':!h.ok?'金额是 0 或读不到':''})});
-  (st.otherRows||[]).forEach((r,i)=>rows.push({key:'O|'+(r.code||i),def:false,date:'',day:'',month:r.month||'',code:r.code,name:r.name,pos:r.pos||'',frmb:r.rmb,g:r.g,b:r.b,d:r.d,amt:r.amount,addr:'',way:r.way,grp:'',note:'其他发放方式'}));
+    seen.add('h|'+e.code);rows.push({key:(hold?'H|':'U|')+e.code+'|'+i,def:!hold,date:d.date,day:`第${i+1}天`,month:e.month||'',code:e.code,name:e.name,pos:e.pos||'',frmb:e.rmb,rem:e.rem||'',g:p[0]||'',b:p[1]||'',d:p[2]||'',amt:e.a,addr:e.addr||'',way:hold?'暂缓':'USDT',grp:hold?N(l.id).name:'',note:''})}));
+  (st.cashRows||[]).forEach(r=>{rows.push({key:'C|'+r.code,def:false,date:cashDate(),day:'现金发放',month:r.month||'',code:r.code,name:r.ename,pos:r.pos||'',frmb:r.rmb,rem:r.rem||'',g:r.g,b:r.cb||'',d:r.cd||'',amt:r.amount,addr:'',way:'现金',grp:'',note:''})});
+  (st.held||[]).forEach((h,i)=>{if(seen.has('h|'+h.code)&&h.ok&&!isSkip(h,i))return;rows.push({key:'X|'+(h.code||i),def:false,date:'',day:'',month:h.month||'',code:h.code,name:h.name,pos:h.pos||'',frmb:h.rmb,rem:h.rem||'',g:h.g,b:h.b,d:h.d,amt:h.amount,addr:h.addr||'',way:h.way||'暂缓',grp:holdGroupOfH(h,i),note:isSkip(h,i)?'特例不发':!h.ok?'金额是 0 或读不到':''})});
+  (st.otherRows||[]).forEach((r,i)=>rows.push({key:'O|'+(r.code||i),def:false,date:'',day:'',month:r.month||'',code:r.code,name:r.name,pos:r.pos||'',frmb:r.rmb,rem:r.rem||'',g:r.g,b:r.b,d:r.d,amt:r.amount,addr:'',way:r.way,grp:'',note:'其他发放方式'}));
   /* 发薪勾选只依工资发放方式自动带出（只有 USDT 打勾），不能在工具里修改；要改请回 OA */
   const rate=Number(st.phpRate)||0;
-  rows.forEach(r=>{r.serial=serialOf(r.month||st.serialMonth,r.code);r.on=r.def;r.rate=rate||'';r.rmb=isFinite(r.frmb)?r.frmb:''});
+  rows.forEach(r=>{r.serial=serialOf(r.month||st.serialMonth,r.code);r.on=r.def;r.rate=rate||'';r.rmb=isFinite(r.frmb)?r.frmb:'';r.note=[r.rem,r.note].filter(Boolean).join('；')});
   rows.sort((a,b)=>(a.date||'9')<(b.date||'9')?-1:(a.date||'9')>(b.date||'9')?1:String(a.serial).localeCompare(String(b.serial)));
   return rows}
 const REV_HEAD=['发薪','发放日期','薪资年月','序号','工号','姓名','事业群','事业处','部门','实发工资PHP','PHP→RMB 汇率','实发工资RMB','工资发放方式','备注'];
-function renderReview(){const rows=reviewAllRows(),on=rows.filter(r=>r.on);
-  $('revSum').innerHTML=`共 <b>${rows.length}</b> 人；发薪（0）<b>${on.length}</b> 人，${fmt(on.reduce((a,r)=>a+r.amt,0))} PHP`;
-  $('revTable').innerHTML=`<thead><tr>${REV_HEAD.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr class="${r.on?'':'revoff'}"><td class="ck"><b>${r.on?0:1}</b></td><td>${esc(r.date)}</td><td>${esc(r.month)}</td><td>${esc(r.serial)}</td><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.g)}</td><td>${esc(r.b)}</td><td>${esc(r.d)}</td><td class="num">${fmt(r.amt)}</td><td class="num">${r.rate===''?'':esc(String(r.rate))}</td><td class="num">${r.rmb===''?'':fmt2(r.rmb)}</td><td class="way${r.way==='暂缓'?' hold':''}">${esc(r.way)}</td><td>${esc(r.note)}</td></tr>`).join('')}</tbody>`;
+const isHoldRow=r=>/^[HX]\|/.test(r.key);
+const revRows=()=>{const rows=reviewAllRows(),f=st.revFilter;return f==='hold'?rows.filter(isHoldRow):f==='usdt'?rows.filter(r=>/^U\|/.test(r.key)):f==='other'?rows.filter(r=>/^[CO]\|/.test(r.key)):rows};
+function renderReview(){document.querySelectorAll('[data-revf]').forEach(b=>b.classList.toggle('on',b.dataset.revf===(st.revFilter||'all')));const rows=revRows(),on=rows.filter(r=>r.on);
+  $('revSum').innerHTML=`共 <b>${rows.length}</b> 人；发薪（1）<b>${on.length}</b> 人，${fmt(on.reduce((a,r)=>a+r.amt,0))} PHP`;
+  $('revTable').innerHTML=`<thead><tr>${REV_HEAD.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr class="${r.on?'':'revoff'}"><td class="ck"><b>${r.on?1:0}</b></td><td>${esc(r.date)}</td><td>${esc(r.month)}</td><td>${esc(r.serial)}</td><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.g)}</td><td>${esc(r.b)}</td><td>${esc(r.d)}</td><td class="num">${fmt(r.amt)}</td><td class="num">${r.rate===''?'':esc(String(r.rate))}</td><td class="num">${r.rmb===''?'':fmt2(r.rmb)}</td><td class="way${r.way==='暂缓'?' hold':''}">${esc(r.way)}</td><td>${esc(r.note)}</td></tr>`).join('')}</tbody>`;
 }
-function copyReviewAll(btn,rowsIn,title){const rows=rowsIn||reviewAllRows(),lab=btn.textContent,on=rows.filter(r=>r.on),tot=on.reduce((a,r)=>a+r.amt,0);
+function copyReviewAll(btn,rowsIn,title){const rows=rowsIn||revRows(),lab=btn.textContent,on=rows.filter(r=>r.on),tot=on.reduce((a,r)=>a+r.amt,0);
   const B="border:1px solid #000;padding:2px 6px;font-family:Calibri,'Microsoft YaHei',sans-serif;font-size:11pt;";
-  const cells=r=>[r.on?0:1,r.date,r.month,r.serial,r.code,r.name,r.g,r.b,r.d,r.amt,r.rate,r.rmb===''?'':r.rmb,r.way,r.note];
+  const cells=r=>[r.on?1:0,r.date,r.month,r.serial,r.code,r.name,r.g,r.b,r.d,r.amt,r.rate,r.rmb===''?'':r.rmb,r.way,r.note];
   const html=`<table style="border-collapse:collapse"><tr>${REV_HEAD.map(h=>`<td style="${B}background:#DCE6F1;font-weight:bold;text-align:center">${h}</td>`).join('')}</tr>${rows.map(r=>`<tr>${cells(r).map((v,k)=>`<td style="${B}${k===0?'text-align:center;font-size:13pt;':''}${k===9||k===10||k===11?'text-align:right;':''}${k===3?'mso-number-format:&quot;\\@&quot;;':''}">${esc(String(v))}</td>`).join('')}</tr>`).join('')}</table>`;
   const text=[REV_HEAD.join('\t'),...rows.map(r=>cells(r).join('\t'))].join('\n');
   copyRich(html,text).then(()=>{btn.textContent=`已复制 ${rows.length} 人，到 Excel 贴上即可`}).catch(()=>{btn.textContent='请用跳出的视窗手动复制'}).finally(()=>setTimeout(()=>{btn.textContent=lab},3000));
 }
-function exportReview(dayIdx,btn){
+function exportReview(dayIdx,btn,holdOnly){
   /* 单天送审名单：格式跟发薪日送审总名单一样，只放这一天的人（现金发放日期是这天的也一起放） */
   const d=st.days[dayIdx];if(!d)return;
-  const rows=reviewAllRows().filter(r=>r.day===`第${dayIdx+1}天`||(r.day==='现金发放'&&r.date===d.date));
+  const rows=reviewAllRows().filter(r=>(r.day===`第${dayIdx+1}天`||(r.day==='现金发放'&&r.date===d.date))&&(!holdOnly||isHoldRow(r)));
   copyReviewAll(btn,rows,`第 ${dayIdx+1} 天（${d.date}）送审名单`);
 }
 /* ---------- 第一次打款：跟上个月打款名单比对工号，上月没有的就是第一次 ---------- */
@@ -956,10 +986,11 @@ const wInfo=w=>st.wallets[w]||{name:`钱包 ${w+1}`,addr:'',payer:''};
 function allocCore(units,K){K=K||W;
   /* 多试几种起始排法，取最平均的结果，避免卡在局部最好 */
   let best=null,bestV=Infinity;
-  for(let t=0;t<8;t++){const r=allocTry(units,t,K);if(r.v<bestV){bestV=r.v;best=r.ws}}
+  const t0=Date.now();
+  for(let t=0;t<4;t++){const r=allocTry(units,t,K,t0);if(r.v<bestV){bestV=r.v;best=r.ws}if(Date.now()-t0>900)break}
   if(best)units.flatMap(u=>u.emps).forEach((e,i)=>e.w=best[i]);
 }
-function allocTry(units,seed,K){
+function allocTry(units,seed,K,t0){t0=t0||Date.now();
   const emps=[];units.forEach((u,ui)=>u.emps.forEach(e=>emps.push({e,a:e.a,u:ui,w:0,nw:isNewEmp(e)?1:0})));
   const n=emps.length;if(!n)return {v:0,ws:[]};
   const T=emps.reduce((s,x)=>s+x.a,0),tA=T/K,tC=n/K,NN=emps.reduce((s,x)=>s+x.nw,0),tN=NN/K,nA=tA||1,nC=tC||1,nN=Math.max(1,NN/K);
@@ -992,20 +1023,20 @@ function allocTry(units,seed,K){
     const add=new Array(K).fill(0);
     es.forEach(x=>{let w=ws.find(w=>add[w]+x.a<=rem[w]+0.5);if(w===undefined)w=ws.reduce((b,v)=>(rem[v]-add[v])>(rem[b]-add[b])?v:b,ws[0]);add[w]+=x.a;place(x,w)})});
   let improved=true,pass=0;
-  while(improved&&pass++<40){improved=false;
+  while(improved&&pass++<40&&Date.now()-t0<1200){improved=false;
     for(const x of emps){const u=x.w;
       for(let v=0;v<K;v++){if(v===u||!allowed[x.u].includes(v)||!okGroup(x.u,u,v))continue;const k=x.nw?used(x.u):usedAfter(x.u,u,v);if(k>lim[x.u])continue;
         const before=g(A[u],C[u],NW[u])+g(A[v],C[v],NW[v])+SPLIT_PENALTY*used(x.u);
         const after=g(A[u]-x.a,C[u]-1,NW[u]-x.nw)+g(A[v]+x.a,C[v]+1,NW[v]+x.nw)+SPLIT_PENALTY*k;
         if(after<before-1e-12){unplace(x);place(x,v);improved=true;break}}}
-    for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){const x=emps[i],y=emps[j],u=x.w,v=y.w;if(u===v||(x.a===y.a&&x.nw===y.nw))continue;
+    for(let i=0;i<n;i++){if(Date.now()-t0>1200)break;for(let j=i+1;j<n;j++){const x=emps[i],y=emps[j],u=x.w,v=y.w;if(u===v||(x.a===y.a&&x.nw===y.nw))continue;
       if(!allowed[x.u].includes(v)||!allowed[y.u].includes(u))continue;
       let kx,ky;if(x.u===y.u){kx=used(x.u);ky=0}else{kx=x.nw?used(x.u):usedAfter(x.u,u,v);ky=y.nw?used(y.u):usedAfter(y.u,v,u);if(kx>lim[x.u]||ky>lim[y.u])continue}
       unplace(x);unplace(y);const okG=okGroup(x.u,-1,v)&&(()=>{uMax[x.u].forEach(ri=>gcnt[ri][v]++);const r=okGroup(y.u,-1,u);uMax[x.u].forEach(ri=>gcnt[ri][v]--);return r})();place(x,u);place(y,v);
       if(!okG)continue;
       const before=g(A[u],C[u],NW[u])+g(A[v],C[v],NW[v])+SPLIT_PENALTY*(used(x.u)+(x.u===y.u?0:used(y.u)));
       const after=g(A[u]-x.a+y.a,C[u],NW[u]-x.nw+y.nw)+g(A[v]-y.a+x.a,C[v],NW[v]-y.nw+x.nw)+SPLIT_PENALTY*(kx+ky);
-      if(after<before-1e-12){unplace(x);unplace(y);place(x,v);place(y,u);improved=true}}
+      if(after<before-1e-12){unplace(x);unplace(y);place(x,v);place(y,u);improved=true}}}
   }
   let v=0;for(let w=0;w<K;w++)v+=g(A[w],C[w],NW[w]);units.forEach((u,ui)=>v+=SPLIT_PENALTY*used(ui));
   return {v,ws:emps.map(x=>x.w)};
@@ -1046,7 +1077,7 @@ function renderWallet(){
     $('wsetBody').innerHTML=st.wallets.map((x,w)=>{const c=addrCheck(x.addr);return `<tr><td><span class="wtag" style="--wc:${wc(w)}"></span>${w+1}${w>=4?` <button class="x" data-wsdel="${w}">删除</button>`:''}</td><td><input class="wsin" data-wset="${w}" data-k="name" value="${esc(x.name)}" aria-label="钱包 ${w+1} 名称"></td><td><input class="wsin addr" data-wset="${w}" data-k="addr" value="${esc(x.addr)}" placeholder="T 开头，34 码" aria-label="钱包 ${w+1} 出款地址"></td><td><input class="wsin" data-wset="${w}" data-k="payer" value="${esc(x.payer)}" placeholder="姓名" aria-label="钱包 ${w+1} 打款人员"></td><td>${c?`<span class="bad">${esc(c)}</span>`:'<span class="ok">✓</span>'}</td></tr>`}).join('');
   }
   const done=st.wallets.filter(x=>!addrCheck(x.addr)&&x.payer).length,nW=st.wallets.length;
-  document.querySelector('.wset>summary').textContent=`出款钱包设定（${done===nW?`${nW} 个都设好了`:`已设好 ${done}／${nW}`}）`;
+  document.querySelector('.wset>summary').textContent=`${done===nW?`${nW} 个钱包都设好了`:`已设好 ${done}／${nW} 个钱包`}（按 ＋／－ 展开或收起）`;
   if(document.activeElement!==$('wcap'))$('wcap').value=st.wcap||'';
   if(document.activeElement!==$('phpRate'))$('phpRate').value=st.phpRate||'';
   $('phpRateNote').textContent=st.rate?`（资料里的汇率：${st.rate}）`:'';
@@ -1099,17 +1130,17 @@ const UC_HEAD=['序号','收款账户','币种（USDT_TRC20 填 00，TRX 填 01�
 /* 序号 = 一个员工一个号：薪资年月 + 流水号（例如 202609001）。用工号记住，同一个月里这位员工的号码固定不变，删除或重新导入某天名单也不会改；新出现的员工接着往下编 */
 const SKEY='payroll-allocator-serials-v1';
 function loadSerials(){try{const v=JSON.parse(localStorage.getItem(SKEY)||'null');return v&&typeof v==='object'?v:{}}catch(_){return{}}}
-function assignSerials(month,codes){if(!/^\d{6}$/.test(month||''))return 0;const store=loadSerials(),s=store[month]=store[month]||{codes:{},next:1};let added=0;
+function assignSerials(month,codes){if(!/^\d{6}$/.test(month||''))return 0;const store=loadSerials(),s=store[month]={codes:{},next:1};/* 每次导入月度薪资表都从 0001 重新编号 */let added=0;
   codes.forEach(c=>{if(c&&!s.codes[c]){s.codes[c]=s.next++;added++}});
   const ks=Object.keys(store).sort();while(ks.length>6)delete store[ks.shift()];try{localStorage.setItem(SKEY,JSON.stringify(store))}catch(_){}return added}
-function serialOf(month,code){if(!code)return '';const s=loadSerials()[month];if(!s||!s.codes[code])return '';return month+String(s.codes[code]).padStart(Math.max(3,String(s.next).length),'0')}
+function serialOf(month,code){if(!code)return '';const s=loadSerials()[month];if(!s||!s.codes[code])return '';return month+String(s.codes[code]).padStart(Math.max(4,String(s.next).length),'0')}
 function serialMap(){const store=loadSerials();let dirty=false;const out=new Map(),tmp={};
   (st.batches||[]).slice().sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0).forEach(b=>b.emps.slice().sort((x,y)=>(x.ord||0)-(y.ord||0)).forEach(e=>{
     const m=/^\d{6}$/.test(e.month||'')?e.month:ym(b.date);const s=store[m]=store[m]||{codes:{},next:1};
     let n;if(e.code){n=s.codes[e.code];if(!n){n=s.codes[e.code]=s.next++;dirty=true}}else{tmp[m]=tmp[m]||{};n=s.next+(tmp[m].k=(tmp[m].k||0)+1)-1}
     out.set(e,{m,n})}));
   if(dirty){const ks=Object.keys(store).sort();while(ks.length>6)delete store[ks.shift()];try{localStorage.setItem(SKEY,JSON.stringify(store))}catch(_){}}
-  const res=new Map();out.forEach((v,e)=>{const w=Math.max(3,String((store[v.m]||{}).next||1).length);res.set(e,v.m+String(v.n).padStart(w,'0'))});return res}
+  const res=new Map();out.forEach((v,e)=>{const w=Math.max(4,String((store[v.m]||{}).next||1).length);res.set(e,v.m+String(v.n).padStart(w,'0'))});return res}
 function ucRows(b,w,cur){const per=Number(st.trx.perNew)||0,sm=serialMap();
   return b.emps.filter(e=>(w<0||e.w===w)&&(cur==='00'||isNewEmp(e))).map(e=>{const amt=cur==='00'?bUsdt(e,b):per;return {e,seq:sm.get(e)||'',addr:e.addr||'',cur,amt,bad:addrCheck(e.addr||'')}}).sort((x,y)=>String(x.seq).localeCompare(String(y.seq)))}
 function ucFileName(b,w,cur){const x=w>=0?wInfo(w):{};return `UC打款_${b.date}_${w>=0?wName(w):'第一次补助'}${x.payer?'_'+x.payer:''}_${cur==='00'?'USDT':'TRX'}.xlsx`.replace(/[\\/:*?"<>|\s]+/g,'_')}
@@ -1181,7 +1212,7 @@ function normDate(v){const t=String(v??'').trim();if(!t)return'';let m=t.match(/
 function whoList(day,wallet,units){
   const set=units?new Set(units.split('|').filter(Boolean)):null,out=[];
   st.days.forEach((d,i)=>{if(day>=0&&i!==day)return;d.items.forEach(it=>{if(set&&!set.has(it.id))return;(it.parts||[]).forEach(p=>{if(wallet>=0&&p.wallet!==wallet)return;
-    (p.list||[]).forEach(e=>{const leaf=st.nodes.get(e.leaf),path=leaf?leaf.path:[];const op=isHold(it.id)&&e.orig?clean(e.orig.split(' / ')):realPath(path);out.push({ref:e,day:i,wallet:p.wallet,code:e.code,name:e.name,g:op[0]||'',unit:op.slice(1).join(' / ')||op[0]||'',amount:e.a,way:isHold(it.id)?'暂缓':'USDT',holdGroup:isHold(it.id)?N(it.id).name:''})})})})});
+    (p.list||[]).forEach(e=>{const leaf=st.nodes.get(e.leaf),path=leaf?leaf.path:[];const op=isHold(it.id)&&e.orig?e.orig.split(' / '):realPath(path);out.push({ref:e,day:i,wallet:p.wallet,code:e.code,name:e.name,g:op[0]||'',unit:op.slice(1).filter(Boolean).join(' / ')||op[0]||'',amount:e.a,rem:e.rem||'',way:isHold(it.id)?'暂缓':'USDT',holdGroup:isHold(it.id)?N(it.id).name:''})})})})});
   return out;
 }
 let whoRows=[];
@@ -1201,9 +1232,10 @@ function openWhoRows(title){showList(title,whoRows.map(r=>({...r,dayText:`第 ${
 /* 作业一的名单只列：工号、姓名、事业群、事业处／部门、实发工资PHP（金额有问题的才多一栏备注） */
 function showSimple(title,rows){
   rows.forEach(r=>{if(!r.serial)r.serial=serialOf(st.serialMonth,r.code)});rows.sort((a,b)=>String(a.serial).localeCompare(String(b.serial)));
-  whoRows=rows;st.listSimple=true;const note=rows.some(r=>r.keepNote&&r.note);
+  rows.forEach(r=>{r.snote=[r.rem,r.keepNote?r.note:''].filter(Boolean).join('；')});
+  whoRows=rows;st.listSimple=true;const note=rows.some(r=>r.snote);
   $('whoTitle').textContent=`${title}：${rows.length} 人`;
-  $('whoTable').innerHTML=`<thead><tr><th>序号</th><th>工号</th><th>姓名</th><th>事业群</th><th>事业处／部门</th><th class="num">实发工资PHP</th><th>工资发放方式</th>${note?'<th>备注</th>':''}</tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.serial)}</td><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.g)}</td><td>${esc(r.unit)}</td><td class="num">${fmt(r.amount)}</td><td class="way${r.way==='暂缓'?' hold':''}">${esc(r.way||'USDT')}</td>${note?`<td>${esc(r.note||'')}</td>`:''}</tr>`).join('')}</tbody><tfoot><tr><td colspan="5">合计 ${rows.length} 人</td><td class="num">${fmt(rows.reduce((a,r)=>a+r.amount,0))}</td><td></td>${note?'<td></td>':''}</tr></tfoot>`;
+  $('whoTable').innerHTML=`<thead><tr><th>序号</th><th>工号</th><th>姓名</th><th>事业群</th><th>事业处／部门</th><th class="num">实发工资PHP</th><th>工资发放方式</th>${note?'<th>备注</th>':''}</tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.serial)}</td><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.g)}</td><td>${esc(r.unit)}</td><td class="num">${fmt(r.amount)}</td><td class="way${r.way==='暂缓'?' hold':''}">${esc(r.way||'USDT')}</td>${note?`<td>${esc(r.snote||'')}</td>`:''}</tr>`).join('')}</tbody><tfoot><tr><td colspan="5">合计 ${rows.length} 人</td><td class="num">${fmt(rows.reduce((a,r)=>a+r.amount,0))}</td><td></td>${note?'<td></td>':''}</tr></tfoot>`;
   $('whoModal').hidden=false;$('whoClose').focus();
 }
 function showList(title,rows){
@@ -1213,30 +1245,30 @@ function showList(title,rows){
   $('whoTable').innerHTML=`<thead><tr>${showDay?'<th>天</th>':''}${showW?'<th>钱包</th>':''}<th>工号</th><th>姓名</th><th>事业群</th><th>事业处／部门</th><th class="num">实发工资PHP</th>${rows.some(r=>r.usdt!=null)?'<th class="num">USDT</th>':''}${rows.some(r=>r.ref)?'<th>第一次打款</th>':''}${rows.some(r=>r.note)?'<th>备注</th>':''}</tr></thead><tbody>${rows.map(r=>`<tr>${showDay?`<td>${esc(r.dayText||'')}</td>`:''}${showW?`<td>${r.wallet>=0?esc(wName(r.wallet)):''}</td>`:''}<td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.g)}</td><td>${esc(r.unit)}</td><td class="num">${fmt(r.amount)}</td>${rows.some(x=>x.usdt!=null)?`<td class="num">${r.usdt==null?'':fmt2(r.usdt)}</td>`:''}${rows.some(x=>x.ref)?`<td class="ck">${r.ref&&r.code?`<input type="checkbox" data-newck="${esc(r.code)}" ${isNewEmp(r.ref)?'checked':''}>`:''}</td>`:''}${rows.some(x=>x.note)?`<td>${esc(r.note||'')}</td>`:''}</tr>`).join('')}</tbody><tfoot><tr><td colspan="${4+(showDay?1:0)+(showW?1:0)}">合计 ${rows.length} 人</td><td class="num">${fmt(rows.reduce((a,r)=>a+r.amount,0))}</td>${rows.some(r=>r.usdt!=null)?`<td class="num">${fmt2(r2(rows.reduce((a,r)=>a+(r.usdt||0),0)))}</td>`:''}${rows.some(r=>r.ref)?'<td></td>':''}${rows.some(r=>r.note)?'<td></td>':''}</tr></tfoot>`;
   $('whoModal').hidden=false;$('whoClose').focus();
 }
-const empRow=(e,extra)=>{const l=st.nodes.get(e.leaf),hold=l&&isHold(l.id),p=hold&&e.orig?clean(e.orig.split(' / ')):realPath(l?l.path:[]);return {code:e.code,name:e.name,g:p[0]||'',unit:p.slice(1).join(' / ')||p[0]||'',amount:e.a,wallet:-1,way:hold?'暂缓':'USDT',...extra}};
-const heldRow=h=>({code:h.code,name:h.name,g:h.g,unit:[h.b,h.d].filter(Boolean).join(' / ')||h.g,amount:h.amount,wallet:-1,way:'暂缓'});
+const empRow=(e,extra)=>{const l=st.nodes.get(e.leaf),hold=l&&isHold(l.id),p=hold&&e.orig?e.orig.split(' / '):realPath(l?l.path:[]);return {code:e.code,name:e.name,g:p[0]||'',unit:p.slice(1).filter(Boolean).join(' / ')||p[0]||'',amount:e.a,wallet:-1,rem:e.rem||'',way:hold?'暂缓':'USDT',...extra}};
+const heldRow=h=>({code:h.code,name:h.name,g:h.g,unit:[h.b,h.d].filter(Boolean).join(' / ')||h.g,amount:h.amount,wallet:-1,rem:h.rem||'',way:'暂缓'});
 function openListKey(key){
   const [type,...rest]=key.split(':'),arg=rest.join(':'),pm=placed();
   const dayOf=id=>{const d=pm.get(id);return d===undefined?'未排':`第 ${d+1} 天`};
   const sched=()=>whoList(-1,-1,'').map(r=>({...r,dayText:`第 ${r.day+1} 天`}));
-  const cashR=()=>(st.cashRows||[]).map(r=>({code:r.code,name:r.ename,g:r.g,unit:r.unit||r.g,amount:r.amount,wallet:-1,dayText:'现金发放',way:'现金'}));
+  const cashR=()=>(st.cashRows||[]).map(r=>({code:r.code,name:r.ename,g:r.g,unit:r.unit||r.g,amount:r.amount,wallet:-1,dayText:'现金发放',rem:r.rem||'',way:'现金'}));
   if(type==='unsched')return showList('未排',visibleUnits().filter(u=>!pm.has(u)).flatMap(u=>empsOf(u).map(e=>empRow(e,{dayText:'未排'}))));
   if(type==='all')return showList('全部（排进日期 + 现金发放）',[...sched(),...cashR()]);
   if(type==='units'){const ids=arg.split('|');return showList(ids.map(id=>N(id).name).join('、'),ids.flatMap(id=>empsOf(id).map(e=>empRow(e,{dayText:dayOf(id)}))))}
   if(type==='unit'){const n=N(arg);return showList(n.path.join(' / '),empsOf(arg).map(e=>empRow(e,{dayText:dayOf(arg)})))}
   if(type==='holdgrp'){return showList(`暂缓分组 · ${arg}`,(st.held||[]).map((h,i)=>({h,i})).filter(x=>!isSkip(x.h,x.i)&&holdGroupOfH(x.h,x.i)===arg).map(x=>({...heldRow(x.h),note:x.h.ok?'':'金额是 0 或读不到'})))}
-  if(type==='other')return showList(`其他发放方式 · ${arg}`,(st.otherRows||[]).filter(r=>r.way===arg).map(r=>({code:r.code,name:r.name,g:r.g,unit:[r.b,r.d].filter(Boolean).join(' / '),amount:r.amount,wallet:-1,way:r.way})));
+  if(type==='other')return showList(`其他发放方式 · ${arg}`,(st.otherRows||[]).filter(r=>r.way===arg).map(r=>({code:r.code,name:r.name,g:r.g,unit:[r.b,r.d].filter(Boolean).join(' / '),amount:r.amount,wallet:-1,rem:r.rem||'',way:r.way})));
   if(type==='imp'){
     if(arg==='alloc')return showList('排入分配',st.roots.flatMap(id=>visibleUnits().filter(u=>related(id,u))).filter((v,i,a)=>a.indexOf(v)===i).flatMap(u=>empsOf(u).map(e=>empRow(e,{dayText:dayOf(u)}))));
     if(arg==='usdt')return showList('USDT',visibleUnits().filter(u=>!isHold(u)).flatMap(u=>empsOf(u).map(e=>empRow(e,{dayText:dayOf(u)}))));
     if(arg==='hold')return showList('暂缓',(st.held||[]).map((h,i)=>({...heldRow(h),note:isSkip(h,i)?'特例不发':h.ok?holdGroupOfH(h,i):'金额是 0 或读不到'})));
     if(arg==='holdbad')return showList('暂缓 · 金额是 0 或读不到',(st.held||[]).filter(h=>!h.ok).map(h=>({...heldRow(h),keepNote:true,note:h.raw?'原始内容：'+h.raw:'空白'})));
     if(arg==='cash')return showList('现金发放',cashR());
-    if(arg==='other')return showList('其他发放方式',(st.otherRows||[]).map(r=>({code:r.code,name:r.name,g:r.g,unit:[r.b,r.d].filter(Boolean).join(' / '),amount:r.amount,wallet:-1,way:r.way})));
+    if(arg==='other')return showList('其他发放方式',(st.otherRows||[]).map(r=>({code:r.code,name:r.name,g:r.g,unit:[r.b,r.d].filter(Boolean).join(' / '),amount:r.amount,wallet:-1,rem:r.rem||'',way:r.way})));
   }
 }
 function openCash(key){
-  if(st.tab!=='wallet'){const [g,name]=key?key.split('|'):[null,null];return showSimple(`现金发放${key?' · '+name:''}`,(st.cashRows||[]).filter(r=>!key||(r.g===g&&r.name===name)).map(r=>({code:r.code,name:r.ename,g:r.g,unit:r.unit||r.g,amount:r.amount,way:'现金'})))}
+  if(st.tab!=='wallet'){const [g,name]=key?key.split('|'):[null,null];return showSimple(`现金发放${key?' · '+name:''}`,(st.cashRows||[]).filter(r=>!key||(r.g===g&&r.name===name)).map(r=>({code:r.code,name:r.ename,g:r.g,unit:r.unit||r.g,amount:r.amount,rem:r.rem||'',way:'现金'})))}
   const [g,name]=key?key.split('|'):[null,null];
   const list=(st.cashRows||[]).filter(r=>!key||(r.g===g&&r.name===name));
   whoRows=list.map(r=>({day:-1,wallet:-1,code:r.code,name:r.ename,g:r.g,unit:r.unit||r.g,amount:r.amount,cash:true}));
@@ -1258,7 +1290,7 @@ function summaryRows(){
   out.forEach(r=>{if(st.sumLabels[r.key])r.label=st.sumLabels[r.key]});
   return out;
 }
-function holdRows(){return (st.held||[]).map((h,i)=>({h,i})).filter(x=>x.h.ok&&!isSkip(x.h,x.i)).map(({h,i})=>({path:[holdGroupOfH(h,i)],heads:1,amount:h.amount,code:h.code,pos:h.pos||'',rmb:h.rmb,addr:h.addr||'',month:h.month||'',bp:h.bp||'',name:h.name||'',orig:[h.g,h.b,h.d].filter(Boolean).join(' / ')}))}
+function holdRows(){return (st.held||[]).map((h,i)=>({h,i})).filter(x=>x.h.ok&&!isSkip(x.h,x.i)).map(({h,i})=>({path:[holdGroupOfH(h,i)],heads:1,amount:h.amount,code:h.code,pos:h.pos||'',rmb:h.rmb,rem:h.rem||'',addr:h.addr||'',month:h.month||'',bp:h.bp||'',name:h.name||'',orig:[h.g||'',h.b||'',h.d||''].join(' / ')}))}
 function buildAll(){st.holdNames=new Set(st.holdCfg.groups);build([...(st.baseData||[]),...holdRows()])}
 /* 改了暂缓分组：重建暂缓，其他已排好的部门保留 */
 function regroup(){
@@ -1380,16 +1412,18 @@ document.addEventListener('click',e=>{
   const wl=e.target.closest('[data-list]');if(wl){openListKey(wl.dataset.list);return}
   const wc2=e.target.closest('[data-whocash]');if(wc2){openCash(wc2.dataset.whocash);return}
   const dx=e.target.closest('[data-dexport]');if(dx){exportReview(Number(dx.dataset.dexport),dx);return}
+  const dh=e.target.closest('[data-dhold]');if(dh){exportReview(Number(dh.dataset.dhold),dh,true);return}
+  const rf=e.target.closest('[data-revf]');if(rf){st.revFilter=rf.dataset.revf;renderReview();return}
   const ud=e.target.closest('[data-ucdl]');if(ud){const [bi,w,cur]=ud.dataset.ucdl.split('~');ucExport(Number(bi),Number(w),cur,ud);return}
-  if(e.target.id==='wsAdd'){st.wallets.push({name:`钱包 ${st.wallets.length+1}`,addr:'',payer:''});saveWallets();$('wrWs').dataset.built='';render();return}
-  const wsd=e.target.closest('[data-wsdel]');if(wsd){wsd.blur();st.wallets.splice(Number(wsd.dataset.wsdel),1);saveWallets();$('wrWs').dataset.built='';allocAllBatches();render();return}
+  if(e.target.id==='wsAdd'){st.wallets.push({name:`钱包 ${st.wallets.length+1}`,addr:'',payer:''});saveWallets();$('wrWs').dataset.built='';busy(allocAllBatches);return}
+  const wsd=e.target.closest('[data-wsdel]');if(wsd){wsd.blur();st.wallets.splice(Number(wsd.dataset.wsdel),1);saveWallets();$('wrWs').dataset.built='';busy(allocAllBatches);return}
   if(e.target.id==='wrAdd'){const target=$('wrTarget').value,type=$('wrType').value;
     if(!target){$('wruleList').insertAdjacentHTML('afterbegin','<p class="notice">请先导入当天核准名单，才能选择事业群或事业处。</p>');return}
     const r=type==='max'?{target,type,n:Math.max(1,parseInt($('wrNum').value,10)||2)}:{target,type,ws:[...document.querySelectorAll('[data-wrw]')].filter(c=>c.checked).map(c=>Number(c.dataset.wrw))};
     if(type==='only'&&!r.ws.length){$('wruleList').insertAdjacentHTML('afterbegin','<p class="notice">请至少勾选一个钱包。</p>');return}
-    st.wrules=st.wrules.filter(x=>!(x.target===target&&x.type===type));st.wrules.push(r);saveWRules();allocAllBatches();render();return}
-  const wd2=e.target.closest('[data-wrdel]');if(wd2){st.wrules.splice(Number(wd2.dataset.wrdel),1);saveWRules();allocAllBatches();render();return}
-  const bd=e.target.closest('[data-bdel]');if(bd){st.batches.splice(Number(bd.dataset.bdel),1);autoPrevW();allocAllBatches();render();return}
+    st.wrules=st.wrules.filter(x=>!(x.target===target&&x.type===type));st.wrules.push(r);saveWRules();busy(allocAllBatches);return}
+  const wd2=e.target.closest('[data-wrdel]');if(wd2){st.wrules.splice(Number(wd2.dataset.wrdel),1);saveWRules();busy(allocAllBatches);return}
+  const bd=e.target.closest('[data-bdel]');if(bd){st.batches.splice(Number(bd.dataset.bdel),1);autoPrevW();busy(allocAllBatches);return}
   const bw=e.target.closest('[data-bwho]');if(bw){const [k,w]=bw.dataset.bwho.split('~').map(Number);showList(`${k>=0?st.batches[k].date:'整个月'} · ${w>=0?wName(w):'全部钱包'}`,listRows(k,w));return}
   const bn=e.target.closest('[data-bnew]');if(bn){const [k,w]=bn.dataset.bnew.split('~').map(Number);showList(`${k>=0?st.batches[k].date:'整个月'} · ${wName(w)} · 第一次打款`,listRows(k,w,isNewEmp));return}
   const bc=e.target.closest('[data-bchg]');if(bc){const [k,w]=bc.dataset.bchg.split('~').map(Number);showList(`${k>=0?st.batches[k].date:'整个月'}${w>=0?' · '+wName(w):''} · 钱包地址跟上月不同`,listRows(k,w,addrChanged).map(r=>({...r,note:addrNote(r.ref)})));return}
@@ -1399,7 +1433,7 @@ document.addEventListener('click',e=>{
   const wn=e.target.closest('[data-whonew]');if(wn){const [d,w]=wn.dataset.whonew.split('~').map(Number);whoRows=whoList(d,w,'').filter(r=>r.ref&&isNewEmp(r.ref));openWhoRows(`${d>=0?`第 ${d+1} 天`:'整个月'} · 钱包 ${w+1} · 第一次打款`);return}
   const wb=e.target.closest('[data-who]');if(wb){const [d,w,u]=wb.dataset.who.split('~');openWho(Number(d),Number(w),u||'');return}
   if(e.target.id==='whoClose'||e.target.id==='whoModal'){closeWho();return}
-  if(e.target.id==='whoCopy'&&st.listSimple){const L=['序号\t工号\t姓名\t事业群\t事业处／部门\t实发工资PHP\t工资发放方式',...whoRows.map(r=>[r.serial||'',r.code,r.name,r.g,r.unit,Math.round(r.amount),r.way||'USDT'].join('\t'))];
+  if(e.target.id==='whoCopy'&&st.listSimple){const L=['序号\t工号\t姓名\t事业群\t事业处／部门\t实发工资PHP\t工资发放方式\t备注',...whoRows.map(r=>[r.serial||'',r.code,r.name,r.g,r.unit,Math.round(r.amount),r.way||'USDT',r.snote||''].join('\t'))];
     copyRich(null,L.join('\n')).then(()=>{$('whoCopy').textContent='已复制，到 Excel 贴上即可';setTimeout(()=>{$('whoCopy').textContent='复制这份名单，贴到 Excel'},3000)}).catch(()=>{$('whoCopy').textContent='请用跳出的视窗手动复制'});return}
   if(e.target.id==='whoCopy'){const L=['天\t钱包\t工号\t姓名\t事业群\t事业处／部门\t实发工资PHP',...whoRows.map(r=>[r.dayText||(r.cash?'现金发放':(r.day>=0?`第${r.day+1}天`:'')),r.wallet>=0?`钱包${r.wallet+1}`:'',r.code,r.name,r.g,r.unit,Math.round(r.amount)].join('\t'))];
     copyRich(null,L.join('\n')).then(()=>{$('whoCopy').textContent='已复制，到 Excel 贴上即可';setTimeout(()=>{$('whoCopy').textContent='复制这份名单，贴到 Excel'},3000)}).catch(()=>{$('whoCopy').textContent='请用跳出的视窗手动复制'});return}
@@ -1417,8 +1451,8 @@ document.addEventListener('click',e=>{
   if(e.target.id==='treeLevel1'){[...st.roots].forEach(id=>{if(N(id).children.length&&!st.open.has(id))expandUnit(id)});st.notice=null;changed();return}
   if(e.target.id==='reviewAll'){renderReview();$('revModal').hidden=false;return}
   if(e.target.id==='revCopy'){copyReviewAll(e.target);return}
-  if(e.target.id==='revDl'){const rows=reviewAllRows(),btn=e.target,lab=btn.textContent;
-    const aoa=[REV_HEAD,...rows.map(r=>[r.on?0:1,r.date,r.month,String(r.serial),r.code,r.name,r.g,r.b,r.d,r.amt,r.rate,r.rmb,r.way,r.note])];
+  if(e.target.id==='revDl'){const rows=revRows(),btn=e.target,lab=btn.textContent;
+    const aoa=[REV_HEAD,...rows.map(r=>[r.on?1:0,r.date,r.month,String(r.serial),r.code,r.name,r.g,r.b,r.d,r.amt,r.rate,r.rmb,r.way,r.note])];
     if(!DL||typeof XLSX==='undefined'){btn.textContent='这里不能下载，请用复制';setTimeout(()=>btn.textContent=lab,2500);return}
     try{const ws=XLSX.utils.aoa_to_sheet(aoa);rows.forEach((r,i)=>{const c=ws[XLSX.utils.encode_cell({r:i+1,c:3})];if(c){c.t='s';c.v=String(r.serial)}});ws['!cols']=[{wch:5},{wch:11},{wch:9},{wch:12},{wch:20},{wch:12},{wch:10},{wch:14},{wch:14},{wch:12},{wch:10},{wch:12},{wch:10},{wch:16}];
       const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'送审总名单');
@@ -1468,10 +1502,10 @@ document.addEventListener('change',e=>{
     st.holdCfg.groups[i]=v;saveHoldCfg();regroup();return}
   if(t.dataset.wset!==undefined){const w=Number(t.dataset.wset),k=t.dataset.k;st.wallets[w][k]=k==='addr'?t.value.trim():t.value.trim()||(k==='name'?`钱包 ${w+1}`:'');saveWallets();render();return}
   if(t.dataset.trx!==undefined){st.trx[t.dataset.trx]=t.value;render();return}
-  if(t.dataset.newck!==undefined){st.newOverride[t.dataset.newck]=t.checked;changed();return}
-  if(t.id==='phpRate'){st.phpRate=Number(t.value)||0;allocAllBatches();render();return}
-  if(t.dataset.brate!==undefined){const b=st.batches[Number(t.dataset.brate)];if(b){b.rate=Number(t.value)>0?Number(t.value):'';allocBatch(b)}render();return}
-  if(t.id==='wcap'){st.wcap=Math.max(0,Number(t.value)||0);try{localStorage.setItem(CAPKEY,String(st.wcap))}catch(_){}allocAllBatches();render();return}
+  if(t.dataset.newck!==undefined){st.newOverride[t.dataset.newck]=t.checked;busy(()=>{allocAllBatches();rebalance()});return}
+  if(t.id==='phpRate'){st.phpRate=Number(t.value)||0;render();return}
+  if(t.dataset.brate!==undefined){const b=st.batches[Number(t.dataset.brate)];if(b)b.rate=Number(t.value)>0?Number(t.value):'';render();return}
+  if(t.id==='wcap'){st.wcap=Math.max(0,Number(t.value)||0);try{localStorage.setItem(CAPKEY,String(st.wcap))}catch(_){}render();return}
   if(t.dataset.sumkey!==undefined){st.sumLabels[t.dataset.sumkey]=t.value;render();return}
   if(t.dataset.cashdate!==undefined){st.cashDate=t.value;render();return}
   if(t.dataset.ddate!==undefined){st.days[Number(t.dataset.ddate)].date=t.value;render();return}
@@ -1663,7 +1697,7 @@ $('prevFile').addEventListener('change',e=>{
     const kE=find(['工号']),kA=find(['充值地址','钱包地址','收款地址']);
     if(!kE)throw new Error('上个月的名单找不到「工号」栏位。');
     const m=new Map();rows.forEach(x=>{const c=String(x[kE]??'').trim();if(c)m.set(c,kA?String(x[kA]??'').trim():'')});
-    st.prev=m;st.prevName=f.name+'（Excel 档案）';st.prevManual=true;st.newOverride={};changed();
+    st.prev=m;st.prevName=f.name+'（Excel 档案）';st.prevManual=true;st.newOverride={};busy(()=>{allocAllBatches();rebalance()});
   }catch(err){$('prevNote').textContent='导入失败：'+err.message}e.target.value=''};
   r.readAsArrayBuffer(f);
 });
@@ -1677,8 +1711,9 @@ $('batchFile').addEventListener('change',e=>{
   const f=e.target.files[0];if(!f)return;
   if(typeof XLSX==='undefined'){$('batchMsg').textContent='Excel 读取程序没有载入，请重新整理页面再试。';return}
   const r=new FileReader();
-  r.onload=()=>{try{const wb=XLSX.read(new Uint8Array(r.result),{type:'array'}),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
-      const {b,replaced}=importBatch(f.name,rows);autoPrevW();allocAllBatches();savePaidBatches();
+  r.onload=async()=>{try{const wb=XLSX.read(new Uint8Array(r.result),{type:'array'}),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+      $('batchMsg').textContent=`正在读取 ${f.name}，并分配钱包…`;await new Promise(r=>setTimeout(r,30));
+      const {b,replaced}=importBatch(f.name,rows);const before=st.prev;autoPrevW();if(st.prev!==before)allocAllBatches();savePaidBatches();
       $('batchMsg').innerHTML=`已导入 <b>${esc(b.date)}</b>：${b.emps.length} 人，${fmt(b.emps.reduce((a,e)=>a+e.a,0))} PHP${replaced?'（同一天已有名单，已用新的取代）':''}。日期不对的话，请在档案加上「发放日期」栏位再导入。`;render()}
     catch(err){$('batchMsg').textContent='导入失败：'+err.message}e.target.value=''};
   r.readAsArrayBuffer(f);
@@ -1718,7 +1753,8 @@ function loaded(label){
   const bad=(st.held||[]).filter(h=>!h.ok).length, skip=(st.held||[]).filter((h,i)=>isSkip(h,i)).length;
   const otherN=(st.otherRows||[]).length, cashN=(st.cashRows||[]).length, cashAmt=(st.cashRows||[]).reduce((a,r)=>a+r.amount,0);
   const li=[];
-  if(st.serialMonth){const sv=loadSerials()[st.serialMonth];li.push(`序号：${st.serialMonth}001～${st.serialMonth}${String((sv?sv.next:1)-1).padStart(3,'0')}${st.serialAdded?`（这次新编 ${st.serialAdded} 人）`:'（全部沿用之前的号码）'}`)}
+  if(st.reArranged)li.push(`<b>已用新的薪资表重新自动排好发放日期</b>（日期沿用之前的），请到第 ⑤ 步检查`);
+  if(st.serialMonth){const sv=loadSerials()[st.serialMonth],last=(sv?sv.next:1)-1,wd=Math.max(4,String(last).length);li.push(`序号：从 ${st.serialMonth}${'1'.padStart(wd,'0')} 编到 ${st.serialMonth}${String(last).padStart(wd,'0')}，共 ${last} 人（每次导入都重新编号）`)}
   li.push(`共 <b>${groups}</b> 个事业群，排入分配 <button class="who inl" data-list="imp:alloc">${allHeads} 人</button>，应发合计 <b>${fmt(st.total)}</b> PHP`);
   if(st.hasWay){
     li.push(`USDT：<button class="who inl" data-list="imp:usdt">${normal} 人</button>`);
@@ -1739,7 +1775,7 @@ $('file').addEventListener('change',e=>{
       const keys=Object.keys(rows[0]);
       const norm=v=>String(v).replace(/\s/g,'').toLowerCase();
       const find=c=>{for(const x of c){const ex=keys.find(k=>norm(k)===norm(x));if(ex)return ex}for(const x of c){const k=keys.find(k=>norm(k).includes(norm(x)));if(k)return k}};
-      const kA=find(['实发工资PHP','实发工资','应发']),kG=find(['事业群']),kB=find(['事业处']),kD=find(['部门','事业部']),kC=find(['工资发放方式','发放方式','发放渠道']),kN=find(['姓名']),kPos=find(['岗位','职位']),kRmb=find(['实发工资RMB','人民币金额','实发工资人民币']),kE=find(['工号']),kM=find(['薪资年月','年月','Salary period']),kAddr=find(['充值地址','钱包地址','收款地址']),kRate=find(['汇率Peso','汇率']),kP=find(['所属BP','BP']);
+      const kA=find(['实发工资PHP','实发工资','应发']),kG=find(['事业群']),kB=find(['事业处']),kD=find(['部门','事业部']),kC=find(['工资发放方式','发放方式','发放渠道']),kN=find(['姓名']),kPos=find(['岗位','职位']),kRmb=find(['实发工资RMB','人民币金额','实发工资人民币']),kRem=find(['备注']),kE=find(['工号']),kM=find(['薪资年月','年月','Salary period']),kAddr=find(['充值地址','钱包地址','收款地址']),kRate=find(['汇率Peso','汇率']),kP=find(['所属BP','BP']);
       if(!kA)throw new Error('找不到「实发工资PHP」这一栏。');
       if(!kG&&!kB&&!kD)throw new Error('找不到「事业群」「事业处」「部门」任何一栏。');
       const data=[],held=[],other=new Map(),cash=[],otherRows=[];
@@ -1752,18 +1788,22 @@ $('file').addEventListener('change',e=>{
         /* 工资发放方式：写「暂缓」的放进暂缓表；没写 USDT 的不分配 */
         /* 现金：工资发放方式必须完全等于「现金」（前后空格不算）；「PESO现金」「现金暂缓」等都不算 */
         if(kC&&way.replace(/\s/g,'')==='现金'){
-          if(isFinite(a)&&a>0){cash.push({g:txt(kG),name:txt(kB)||txt(kG),cb:txt(kB),cd:txt(kD),code:txt(kE),ename:txt(kN),pos:txt(kPos),rmb:kRmb?toNum(row[kRmb]):NaN,unit:[txt(kB),txt(kD)].filter(Boolean).join(' / '),amount:a,month:normMonth(txt(kM)),bp:txt(kP),way})}
+          if(isFinite(a)&&a>0){cash.push({g:txt(kG),name:txt(kB)||txt(kG),cb:txt(kB),cd:txt(kD),code:txt(kE),ename:txt(kN),pos:txt(kPos),rem:txt(kRem),rmb:kRmb?toNum(row[kRmb]):NaN,unit:[txt(kB),txt(kD)].filter(Boolean).join(' / '),amount:a,month:normMonth(txt(kM)),bp:txt(kP),way})}
           return}
-        if(kC&&way.includes('暂缓')){const h={code:txt(kE),name:txt(kN),pos:txt(kPos),rmb:kRmb?toNum(row[kRmb]):NaN,g:txt(kG),b:txt(kB),d:txt(kD),addr:kAddr?txt(kAddr):'',amount:isFinite(a)?a:0,way,raw:kA?String(row[kA]??''):'',ok:isFinite(a)&&a>0};held.push(h);
+        if(kC&&way.includes('暂缓')){const h={code:txt(kE),name:txt(kN),pos:txt(kPos),rem:txt(kRem),rmb:kRmb?toNum(row[kRmb]):NaN,g:txt(kG),b:txt(kB),d:txt(kD),addr:kAddr?txt(kAddr):'',amount:isFinite(a)?a:0,way,raw:kA?String(row[kA]??''):'',ok:isFinite(a)&&a>0};held.push(h);
           /* 暂缓的员工合成一组「暂缓」，排在最后一天发 */
           h.month=normMonth(txt(kM));h.bp=txt(kP);return}
         if(kC&&!way.toUpperCase().includes('USDT')){const k=way||'（空白）',o=other.get(k)||{heads:0,amount:0};o.heads++;o.amount+=isFinite(a)?a:0;other.set(k,o);
-          otherRows.push({code:txt(kE),name:txt(kN),pos:txt(kPos),rmb:kRmb?toNum(row[kRmb]):NaN,g:txt(kG),b:txt(kB),d:txt(kD),month:normMonth(txt(kM)),amount:isFinite(a)?a:0,way:k});return}
+          otherRows.push({code:txt(kE),name:txt(kN),pos:txt(kPos),rem:txt(kRem),rmb:kRmb?toNum(row[kRmb]):NaN,g:txt(kG),b:txt(kB),d:txt(kD),month:normMonth(txt(kM)),amount:isFinite(a)?a:0,way:k});return}
         if(!isFinite(a)||a<=0)return;
-        const path=orgPath(kG?row[kG]:'',kB?row[kB]:'',kD?row[kD]:'');if(path.length)data.push({path,heads:1,amount:a,code:kE?String(row[kE]).trim():'',month:normMonth(txt(kM)),bp:txt(kP),name:txt(kN),pos:txt(kPos),rmb:kRmb?toNum(row[kRmb]):NaN,addr:kAddr?txt(kAddr):''});
+        const path=orgPath(kG?row[kG]:'',kB?row[kB]:'',kD?row[kD]:'');if(path.length)data.push({path,heads:1,amount:a,code:kE?String(row[kE]).trim():'',month:normMonth(txt(kM)),bp:txt(kP),name:txt(kN),pos:txt(kPos),rmb:kRmb?toNum(row[kRmb]):NaN,rem:txt(kRem),addr:kAddr?txt(kAddr):''});
       });
       if(!data.length&&!held.length)throw new Error('没有找到要用 USDT 发放的员工，请确认档案内容。');
-      st.serialMonth=fileMonth;st.serialAdded=assignSerials(fileMonth,allCodes);st.rate=rate;st.phpRate=Number(String(rate).replace(/[^0-9.]/g,''))||0;st.baseData=data;st.held=held;st.allGroups=[...seenG];st.newOverride={};buildAll();st.other=[...other.entries()];st.otherRows=otherRows;st.hasWay=!!kC;st.cashRows=cash;st.cashDate='';loaded(f.name);
+      const prevDays=st.days.filter(d=>d.items.length).map(d=>d.date);st.reArranged=false;
+      st.serialMonth=fileMonth;st.serialAdded=assignSerials(fileMonth,allCodes);st.rate=rate;st.phpRate=Number(String(rate).replace(/[^0-9.]/g,''))||0;st.baseData=data;st.held=held;st.allGroups=[...seenG];st.newOverride={};buildAll();st.other=[...other.entries()];st.otherRows=otherRows;st.hasWay=!!kC;st.cashRows=cash;st.cashDate='';
+      /* 重新导入：之前排过的话，用新的薪资表自动重排，日期沿用之前的 */
+      if(prevDays.length){try{autoSplit();autoAll();st.days.forEach((d,i)=>{if(prevDays[i])d.date=prevDays[i]});rebalance();st.reArranged=true}catch(_){}}
+      loaded(f.name);
     }catch(err){msg('导入失败：'+esc(err.message),true)}
     e.target.value='';
   };
