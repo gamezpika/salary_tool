@@ -1,0 +1,2001 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>发薪分配工具</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#EDF0EF; --panel:#FFFFFF; --ink:#17222A; --muted:#5B6870; --line:#D2D9D7; --soft:#F5F7F6;
+  --w1:#1F7A6D; --w2:#3B4FA0; --w3:#A2690F; --w4:#8C3B67;
+  --ok:#1F7A4D; --danger:#B53A25; --dangerbg:#FBEAE6; --sel:#FFF4C9;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#111719; --panel:#1A2225; --ink:#E4EAE8; --muted:#93A0A3; --line:#2D393C; --soft:#151D1F;
+    --w1:#4FB3A3; --w2:#8697E2; --w3:#D9A447; --w4:#CB7EA9; --ok:#5CC08A; --danger:#E5735E; --dangerbg:#3A201B; --sel:#3A321A;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111719; --panel:#1A2225; --ink:#E4EAE8; --muted:#93A0A3; --line:#2D393C; --soft:#151D1F;
+  --w1:#4FB3A3; --w2:#8697E2; --w3:#D9A447; --w4:#CB7EA9; --ok:#5CC08A; --danger:#E5735E; --dangerbg:#3A201B; --sel:#3A321A;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+button:disabled{cursor:not-allowed;opacity:.45}
+:focus-visible{outline:2px solid var(--w2);outline-offset:2px}
+.wrap{max-width:1680px;margin:0 auto;padding:24px 20px 48px}
+h1{font-size:24px;margin:0 0 4px}
+.lead{color:var(--muted);margin:0 0 24px}
+section.step{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:18px}
+.step h2{font-size:18px;margin:0 0 12px;display:flex;align-items:center;gap:10px}
+.step h2 .n{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--panel);font-size:14px}
+.step.locked{opacity:.5;pointer-events:none}
+.btn{border:1px solid var(--line);background:var(--soft);border-radius:8px;padding:8px 14px}
+.btn:hover:not(:disabled){border-color:var(--muted)}
+.btn.primary{background:var(--ink);color:var(--panel);border-color:var(--ink);font-weight:500;padding:10px 18px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.msg{font-size:14px;color:var(--muted);margin-top:10px}
+.msg.err{color:var(--danger)}
+.msg b{color:var(--ink)}
+
+.plan{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:18px;align-items:start}
+@media (max-width:880px){.plan{grid-template-columns:1fr}}
+.listhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.listhead span{font-size:13px;color:var(--muted)}
+.list{border:1px solid var(--line);border-radius:10px;max-height:520px;overflow:auto}
+.item{display:grid;grid-template-columns:22px 22px 1fr auto;gap:8px;align-items:center;padding:9px 12px 9px calc(12px + var(--d,0) * 22px);border-top:1px solid var(--line)}
+.item:first-child{border-top:0}
+.item.unit{cursor:pointer}
+.item.unit:hover{background:var(--soft)}
+.item.checked{background:var(--sel)}
+.item.group{background:var(--soft);font-weight:500}
+.item.done{color:var(--muted)}
+.item input[type=checkbox]{width:18px;height:18px;margin:0;cursor:pointer}
+.tog{border:0;background:none;padding:0;width:22px;height:22px;font-size:13px;color:var(--muted);border-radius:4px}
+.tog:hover:not(:disabled){background:var(--line)}
+.nm{min-width:0}
+.nm small{display:block;font-size:12.5px;color:var(--muted);font-weight:400}
+.nm .tag{display:inline-block;font-size:12px;padding:0 6px;border-radius:4px;background:var(--line);color:var(--ink);margin-left:6px;font-weight:400}
+.nm .warn{color:var(--danger)}
+.amt{text-align:right}
+
+.daycard{border:2px solid var(--ink);border-radius:12px;padding:16px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+.daycard h3{margin:0 0 10px;font-size:20px}
+.daycard label{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:14px;color:var(--muted);margin-bottom:8px}
+.daycard label input{width:170px;border:1px solid var(--line);background:var(--soft);border-radius:8px;padding:6px 8px;text-align:right}
+.sum{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}
+.sum div{display:flex;justify-content:space-between;margin-bottom:4px}
+.sum .big{font-size:24px;font-weight:700}
+.sum .left.over{color:var(--danger)}
+.sum .left.ok{color:var(--ok)}
+.bar{height:10px;border-radius:5px;background:var(--soft);border:1px solid var(--line);overflow:hidden;margin:8px 0 12px}
+.bar i{display:block;height:100%;background:var(--ink)}
+.bar.over i{background:var(--danger)}
+.picked{font-size:13.5px;color:var(--muted);margin:0 0 12px;max-height:120px;overflow:auto}
+.daycard .btns{display:flex;flex-direction:column;gap:8px}
+.modesel{margin-bottom:0!important}
+.daycard select{width:170px;border:1px solid var(--line);background:var(--soft);border-radius:8px;padding:6px 8px;font:inherit;color:inherit}
+.notice{background:var(--dangerbg);color:var(--danger);border-radius:8px;padding:8px 10px;font-size:13.5px;margin-bottom:10px}
+.notice.ok{background:var(--soft);color:var(--ink)}
+.rules{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:16px;background:var(--soft)}
+.rules h3{font-size:15px;margin:0 0 4px}
+.rules .sub{font-size:13px;color:var(--muted);margin:0 0 10px}
+.rules ol{margin:0 0 10px;padding-left:22px}
+.rules li{padding:3px 0}
+.rules li .x{margin-left:10px}
+.rules .none{font-size:13.5px;color:var(--muted);margin:0 0 10px}
+.rules .add{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.rules select,.rules input{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 8px;font:inherit;color:inherit}
+.rules input{width:70px;text-align:center}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar select{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:7px 8px;font:inherit;color:inherit}
+.daysel{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:3px 4px;font:inherit;font-size:13px;color:inherit;max-width:150px}
+tr.unsched .daysel{border-color:var(--danger);color:var(--danger)}
+.unsched-cell{color:var(--danger)}
+.dinput,.cinput{display:block;width:100%;min-width:118px;margin:4px 0;border:1px solid var(--line);background:var(--soft);border-radius:6px;padding:3px 6px;font:inherit;font-size:13px;color:inherit}
+.cinput{text-align:right}
+.lvl{display:flex;align-items:center;flex-wrap:wrap;gap:2px;padding-left:calc(var(--lv,0) * 20px)}
+.tog-ph{display:inline-block;width:18px}
+.nm2{display:inline-flex;align-items:baseline;flex-wrap:wrap;gap:2px}
+.parents{display:inline-flex;align-items:baseline;color:var(--muted);font-size:12px}
+.up{border:0;background:none;padding:0 2px;color:var(--muted);font-size:12px;border-radius:4px}
+.up:hover{background:var(--soft);color:var(--ink)}
+.sep{margin:0 4px 0 2px;color:var(--line)}
+td.dept b{font-weight:600}
+tr.grouprow td{background:var(--soft);border-top:1px solid var(--line)}
+tr.grouprow .grpinfo{margin-left:8px;color:var(--muted);font-size:12px;font-weight:400}
+td.grp{color:var(--muted)}
+.dept{min-width:240px}
+td.num,th.num{min-width:96px}
+.tog.sm{width:18px;height:18px;font-size:11px;vertical-align:baseline}
+.warnline{display:block;font-size:12px;color:var(--danger)}
+.rowbtns{display:flex;gap:4px;margin-top:4px}
+.mini{border:1px solid var(--line);background:var(--panel);border-radius:5px;padding:0 6px;font-size:12px;line-height:20px}
+.mini:hover{border-color:var(--muted)}
+.mini.on{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+tr.lockedrow td:not(.merged){background:color-mix(in srgb,var(--sel) 60%,transparent)}
+.utree{border:1px solid var(--line);border-radius:10px;margin-bottom:16px;background:var(--panel)}
+.utree-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.utree-head h3{font-size:15px;margin:0 0 2px}
+.utree-head .sub{font-size:13px;color:var(--muted);margin:0}
+.tlist{max-height:380px;overflow:auto}
+.trow{display:grid;grid-template-columns:minmax(0,1fr) 90px 120px 130px;gap:10px;align-items:center;padding:6px 14px;border-top:1px solid var(--line);font-size:14px}
+.trow:first-child{border-top:0}
+.trow.open{background:var(--soft);color:var(--muted)}
+.trow .tn{display:flex;align-items:center;gap:6px;padding-left:calc(var(--lv) * 26px);min-width:0}
+.trow .tn b{color:var(--ink)}
+.tbtn{width:26px;height:26px;border:1px solid var(--ink);background:var(--panel);border-radius:6px;font-size:15px;font-weight:700;line-height:1;padding:0;flex:0 0 26px;color:var(--ink)}
+.tbtn:hover{border-color:var(--ink)}
+.tph{width:26px;flex:0 0 26px}
+.tlv{font-size:11.5px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 5px}
+.trow .tamt{text-align:right}
+.trow .theads{text-align:right;color:var(--muted);font-size:13px}
+.tstat{font-size:12.5px;justify-self:start;padding:1px 8px;border-radius:10px;background:var(--soft);border:1px solid var(--line)}
+.tstat.un{color:var(--danger);border-color:var(--danger);background:var(--dangerbg)}
+.tstat.big{color:#fff;background:var(--danger);border-color:var(--danger)}
+.jobs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.job{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:2px solid var(--line);background:var(--panel);border-radius:12px;padding:10px 16px;font-size:16px;color:var(--muted)}
+.job b{font-size:12.5px;letter-spacing:.05em}
+.job small{font-size:12.5px;color:var(--muted)}
+.job.on{border-color:var(--ink);color:var(--ink);box-shadow:0 2px 0 var(--ink)}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin-bottom:18px}
+.tabs[hidden]{display:none}
+.tab{border:0;background:none;padding:10px 18px;font-size:15px;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px}
+.tab.on{color:var(--ink);font-weight:700;border-bottom-color:var(--ink)}
+.tabcount.gray{background:var(--muted)}
+.tab[hidden]{display:none}
+.tabcount{display:inline-block;min-width:22px;padding:0 6px;border-radius:10px;background:var(--danger);color:#fff;font-size:12px;font-weight:500;margin-left:4px}
+.rtag.hold{color:var(--danger);border-color:var(--danger);background:var(--dangerbg)}
+tr.notin td{background:var(--dangerbg)}
+tr.cashrow td:not(.merged){background:color-mix(in srgb,var(--w3) 8%,transparent)}
+.cashlbl{font-size:12.5px;color:var(--muted)}
+.hgset{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--soft);margin-bottom:8px}
+.hgset h3{font-size:15px;margin:0 0 4px}
+.hglist{max-width:none}
+.hglist .hgrow{max-width:460px;margin-top:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 6px}
+.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:2px 10px;font-size:13px;cursor:pointer;color:var(--muted)}
+.chip input{width:14px;height:14px;margin:0}
+.chip.on{border-color:var(--ink);color:var(--ink);font-weight:500}
+.chip.dflt{border-style:dashed}
+#holdTable select{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:3px 6px;font:inherit}
+.hgrow{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.hgrow input{flex:1;min-width:0;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 8px;font:inherit}
+.hgrow small{color:var(--muted);white-space:nowrap}
+#hgMap select{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:3px 6px;font:inherit}
+tr.skiprow td{color:var(--muted);text-decoration:line-through}
+tr.skiprow td.ck,tr.skiprow td:nth-last-child(2){text-decoration:none}
+td.ck{text-align:center}
+td.ck input{width:16px;height:16px}
+small.wh{display:block;font-size:12px;color:var(--muted)}
+.gut{width:26px;min-width:26px;padding:0!important;position:relative}
+.gut .fold{position:relative;z-index:1;width:20px;height:20px;margin:8px 3px;border:1px solid var(--ink);background:var(--panel);border-radius:4px;font-size:13px;line-height:16px;padding:0;font-weight:700}
+.gut.g-start::after,.gut.g-mid::after,.gut.g-end::after{content:'';position:absolute;left:12px;width:2px;background:var(--ink)}
+.gut.g-start::after{top:28px;bottom:0}
+.gut.g-mid::after{top:0;bottom:0}
+.gut.g-end::after{top:0;height:22px}
+.gut.g-end::before{content:'';position:absolute;left:12px;top:20px;width:10px;height:2px;background:var(--ink)}
+tr.foldrow td:not(.merged){background:var(--soft)}
+.sumlbl{width:100%;min-width:320px;border:1px solid transparent;background:transparent;border-radius:6px;padding:4px 6px;font:inherit;color:inherit}
+.sumlbl:hover,.sumlbl:focus{border-color:var(--line);background:var(--panel)}
+td.sumdate{vertical-align:middle;white-space:nowrap;font-weight:500}
+.msglist,.howto{margin:6px 0 10px;padding-left:20px;font-size:13.5px;color:var(--muted);line-height:1.8}
+.msglist b,.howto b{color:var(--ink)}
+.msglist .bad{color:var(--danger)}
+button.who{display:block;margin-left:auto;border:0;background:none;padding:0;font-size:12px;color:var(--w2);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+button.who:hover{color:var(--ink)}
+.modal{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:20px}
+.modal[hidden]{display:none}
+.mbox{background:var(--panel);border-radius:12px;padding:16px 18px;width:min(900px,100%);max-height:90vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+.mhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.mhead h3{margin:0;font-size:16px}
+.tsep{width:1px;height:26px;background:var(--line);margin:0 4px}
+.tbtn.sm{width:20px;height:20px;flex:0 0 20px;font-size:13px;margin-right:4px}
+.gut.g-single::after{display:none}
+.expwrap table{min-width:0!important;width:auto}
+.expwrap td{white-space:nowrap}
+button.who.inl{display:inline;margin:0 2px;font-size:inherit}
+button.who.bad{color:var(--danger)}
+thead th,thead th.num{text-align:center!important;vertical-align:middle}
+#result .wcol{display:none}
+.trxp{display:flex;align-items:center;gap:6px;font-size:13.5px}
+.trxp input{width:80px;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:4px 6px;text-align:right;font:inherit}
+.rtag.new{background:var(--w3);border-color:var(--w3)}
+.linkbtn{font-size:12.5px;color:var(--muted);text-decoration:underline;cursor:pointer}
+.wcell b{font-size:14px}
+.wmeta{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:2px 8px;font-size:12px;margin-top:2px}
+.wmeta .who.inl{font-size:12px;margin:0}
+.wmeta .who.first{color:var(--w3)}
+.wmeta .who.chg{color:var(--muted)}
+.trxv{color:var(--w3);font-size:12px}
+.wphp{color:var(--muted)}
+#walletTable td{padding:7px 10px}
+#walletTable td:nth-child(-n+2){white-space:nowrap}
+#walletTable .cinput{max-width:110px;margin:0}
+.fold-list>summary{cursor:pointer;font-weight:500;font-size:14px;padding:6px 0;list-style:none;display:flex;align-items:center;gap:6px}
+.fold-list>summary::-webkit-details-marker{display:none}
+.fold-list>summary::before{content:'＋';display:inline-grid;place-items:center;width:20px;height:20px;border:1px solid var(--ink);border-radius:4px;font-size:13px;font-weight:700}
+.fold-list[open]>summary::before{content:'－'}
+.ctable th,.ctable td{text-align:center!important}
+.unsched-box{border:1px solid var(--danger);border-radius:10px;padding:8px 12px;margin-bottom:14px;background:var(--dangerbg)}
+.unsched-box>summary{color:var(--danger)}
+.unsched-box .tablewrap{background:var(--panel)}
+.utbl{min-width:900px!important}
+.subhead{font-size:15px;margin:4px 0 8px}
+.wset{border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:12px;background:var(--soft)}
+.wsin{width:100%;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:4px 8px;font:inherit;text-align:center}
+.wsin.addr{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;min-width:300px}
+.ctable .bad{color:var(--danger)}.ctable .ok{color:var(--ok);font-weight:700}
+.wday{border:1px solid var(--line);border-radius:10px;margin-bottom:12px;overflow:hidden}
+.wday.month{border-color:var(--ink)}
+.wdhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:8px 12px;background:var(--soft);border-bottom:1px solid var(--line)}
+.wdhead label{display:flex;align-items:center;gap:6px;font-size:13.5px}
+.wdhead .cinput{width:110px;margin:0}
+.wdhead .btn.sm{padding:4px 10px;font-size:13px}
+.wdbtns{margin-left:auto;display:flex;gap:6px}
+.wday .tablewrap{border:0;border-radius:0}
+.wtbl{min-width:960px!important}
+.wtbl th{background:color-mix(in srgb,var(--w2) 14%,var(--panel))!important;color:var(--ink)!important;font-weight:700}
+.wtbl td{text-align:center;vertical-align:middle;padding:6px 10px}
+.wtbl td.num{text-align:right}
+.wtbl .who.inl{margin-left:6px}
+.wtbl tr.wsub td{color:var(--w2);font-weight:700;border-top:2px solid var(--line)}
+.addrcell{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;text-align:left!important}
+.ucfiles{padding:8px 12px 12px;border-top:1px solid var(--line)}
+.uchead{font-weight:700;font-size:14px;margin:4px 0 6px}
+.ucw{border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin-bottom:6px;background:var(--panel)}
+.ucw>summary{font-weight:500;font-size:13.5px}
+.trxw{border-color:var(--w3)}
+.trxw>summary{color:var(--w3)}
+.ucw .bad{color:var(--danger)}
+.ucbtns{display:flex;gap:6px;margin:6px 0}
+.uctbl{min-width:760px!important}
+.uctbl th{background:color-mix(in srgb,var(--w1) 14%,var(--panel))!important;color:var(--ink)!important}
+.uctbl td{text-align:center;padding:4px 10px}
+.uctbl td.num{text-align:right}
+.uctbl td.addrcell{text-align:left}
+tr.badrow td{background:var(--dangerbg)}
+td.way{text-align:center}
+td.way.hold{color:var(--danger);font-weight:500}
+tr.revoff td{color:var(--muted);background:var(--soft)}
+#revTable td{white-space:nowrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.segb{border:0;background:var(--panel);padding:5px 12px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.segb.on{background:var(--ink);color:var(--panel)}
+[hidden]{display:none!important}
+td.first{text-align:center;color:var(--w3);font-weight:600}
+.rtag.trxtag{background:var(--w3);border-color:var(--w3)}
+.wsin.num{text-align:right;min-width:90px}
+small.wh.neg{color:var(--danger);font-weight:600}
+.trxpick{background:color-mix(in srgb,var(--w3) 14%,var(--panel));border-radius:8px;padding:2px 8px;white-space:nowrap}
+.trxpick select{width:auto;min-width:120px}
+.feew{border-color:var(--w3)}
+.feew>summary{color:var(--w3)}
+.paytbl{min-width:760px!important}
+.reqtbl{min-width:720px!important}
+.subsec{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:10px 0 14px;background:var(--soft)}
+.subsec h3{margin:0 0 6px;font-size:15px}
+.balchk{border:1px solid var(--danger);background:var(--dangerbg);border-radius:10px;padding:8px 12px;margin-bottom:10px}
+.balhead{font-weight:600;color:var(--danger);margin-bottom:6px;font-size:14px}
+.balt{min-width:0!important;width:auto}
+.balt td,.balt th{padding:4px 14px!important}
+.balt td.num{text-align:right!important}
+.okc{color:var(--ok);font-weight:600}
+.balt .neg{color:var(--danger)}
+.rtag{display:inline-block;font-size:10.5px;line-height:15px;padding:0 4px;border-radius:3px;margin-left:4px;font-weight:500;background:var(--w2);color:#fff;border:1px solid var(--w2);vertical-align:middle;white-space:nowrap}
+.plan-days{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.plan-days[hidden]{display:none}
+.plan-days input{width:90px;border:1px solid var(--line);background:var(--soft);border-radius:8px;padding:6px 8px;font-size:16px;text-align:center}
+.plan-days .formula{font-size:14px;color:var(--muted)}
+.plan-days .formula b{color:var(--ink)}
+.hint{font-size:12.5px;color:var(--muted);margin:-4px 0 8px;text-align:right}
+.x{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:0 8px;font-size:12.5px;margin-left:8px;color:var(--danger)}
+.x:hover{border-color:var(--danger)}
+.addto{display:block;margin-top:4px;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:1px 8px;font-size:12.5px}
+td .line{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:2px 0}
+.split{display:block;font-size:12px;color:var(--muted)}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:1500px;font-size:13.5px}
+th,td{padding:9px 12px;border-top:1px solid var(--line);text-align:left;vertical-align:top}
+thead th{border-top:0;background:var(--soft);font-weight:500;font-size:13px;color:var(--muted);white-space:nowrap}
+td.num,th.num{text-align:right;white-space:nowrap}
+th.w{border-bottom:3px solid var(--wc)}
+td.merged{vertical-align:middle;text-align:center;border-left:1px solid var(--line);border-right:1px solid var(--line);background:var(--panel)}
+td.merged.num{text-align:right}
+td.neg{color:var(--danger)}
+tr.daystart td{border-top:2px solid var(--ink)}
+tr.daysub td{background:var(--soft);font-size:12.5px;color:var(--muted);border-top:1px dashed var(--line)}
+tr.daysub td:first-child{text-align:right}
+tfoot td{background:var(--soft);font-weight:500}
+tfoot tr.quota td{font-weight:400;color:var(--muted);font-size:13px}
+.wtag{display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--wc);margin-right:4px;vertical-align:baseline}
+.empty{padding:20px;text-align:center;color:var(--muted)}
+.copybox{width:100%;height:120px;margin-top:8px;border:1px solid var(--line);border-radius:8px;background:var(--soft);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>发薪分配工具</h1>
+  <p class="lead" id="leadText">作业一照顺序操作：① 导入薪资表 → ② 每天预计拨款 → ③ 设定排的条件 → ④ 选择分配单位 → ⑤ 自动排、调整 → ⑥ 总结，复制到 Excel。</p>
+
+  <nav class="jobs" role="tablist" aria-label="作业">
+    <button class="job on" role="tab" data-job="1" aria-selected="true"><b>作业一</b>部门发薪日分配（PESO）<small>把部门排到每一天，送审前</small></button>
+    <button class="job" role="tab" data-job="2" aria-selected="false"><b>作业二</b>钱包分配（USDT）<small>核准后，分到各个钱包</small></button>
+  </nav>
+  <nav class="tabs" id="tabs" role="tablist" hidden>
+    <button class="tab on" role="tab" data-tab="main" aria-selected="true">排程</button>
+    <button class="tab" role="tab" data-tab="hold" aria-selected="false" id="tabHold">暂缓表 <span class="tabcount" id="holdCount">0</span></button>
+    <button class="tab" role="tab" data-tab="other" aria-selected="false" id="tabOther">其他发放方式 <span class="tabcount gray" id="otherCount">0</span></button>
+  </nav>
+  <section class="step" id="step1">
+    <h2><span class="n">1</span>导入月度薪资表</h2>
+    <div class="row">
+      <label class="btn primary" for="file">选择 Excel 档案</label>
+      <input type="file" id="file" accept=".xlsx,.xls,.csv" hidden>
+    </div>
+    <div class="msg" id="importMsg">请导出 OA 的「菲律宾USDT薪资发放名单」。档案只在你的浏览器里读取，不会上传。</div>
+  </section>
+
+  <div id="walletSec" hidden>
+  <p class="notice" id="busyNote" hidden style="position:sticky;top:8px;z-index:20"></p>
+  <section class="step wstep">
+    <h2><span class="n">1</span>导入当天核准名单</h2>
+    <div class="row" style="margin:0"><label class="btn primary" for="batchFile">导入当天核准名单（Excel）</label><input type="file" id="batchFile" accept=".xlsx,.xls,.csv" hidden><span class="formula" id="batchMsg">每天核准后，从 OA 导出当天的名单再导入。</span></div>
+    <div class="row" style="margin-top:8px"><span class="formula" id="prevNote"></span><label class="linkbtn" for="prevFile">改用 Excel 比对</label><input type="file" id="prevFile" accept=".xlsx,.xls,.csv" hidden></div>
+    <div id="newList" hidden></div>
+
+  </section>
+  <section class="step wstep">
+    <h2><span class="n">2</span>汇率与矿工费</h2>
+    <div class="plan-days" style="margin:0">
+      <label for="phpRate"><b>PHP→RMB 汇率</b></label>
+      <input type="number" id="phpRate" step="0.0001" min="0" style="width:120px">
+      <span class="formula" id="phpRateNote"></span>
+    </div>
+    <p class="hint" style="text-align:left;margin:6px 0 0">每天的 RMB→USDT 汇率，在第 ④ 步每一天的表格上方填。</p>
+    <div class="row" style="margin-top:12px;gap:16px">
+      <label class="trxp">打 USDT 矿工费 <input type="number" min="0" step="0.001" data-trx="feeU"> TRX/笔</label>
+      <label class="trxp">打 TRX 矿工费：已启用地址 <input type="number" min="0" step="0.001" data-trx="feeOld"> TRX/笔</label>
+      <label class="trxp">新地址（链上没有纪录） <input type="number" min="0" step="0.001" data-trx="feeNew"> TRX/笔</label>
+    </div>
+    <div class="row" style="margin-top:8px"><label class="trxp">第一次补助：每人 <input type="number" min="0" step="0.1" data-trx="perNew"> TRX<span id="trxPayName" hidden></span>；每天只由一个钱包打 TRX，在第 ④ 步每一天的表格上方选</label></div>
+  </section>
+  <section class="step wstep">
+    <h2><span class="n">3</span>出款钱包设定</h2>
+    <details class="fold-list wset"><summary>出款钱包设定</summary>
+      <div class="tablewrap" style="margin:8px 0 8px"><table class="ctable" style="min-width:720px"><thead><tr><th>钱包</th><th>名称</th><th>出款地址</th><th>打款人员</th><th>检查</th><th>目前 TRX</th><th>目前 USDT</th></tr></thead><tbody id="wsetBody"></tbody></table></div>
+      <div class="row" style="margin-bottom:10px;gap:16px"><button class="btn" id="wsAdd">＋新增钱包</button><button class="btn" id="chainBal">查询链上余额</button><label class="trxp">每个钱包每天最多 <input type="number" id="wcap" min="0" step="1000" style="width:110px"> USDT</label></div>
+    </details>
+
+  </section>
+  <section class="step wstep">
+    <h2><span class="n">4</span>跟老板请款（USDT ＋ TRX，含矿工费）</h2>
+    <p class="msg" style="margin-top:0">依当天名单，算出每个钱包的 TRX 费用（第一次补助）、转 TRX 的矿工费、本次转账的 USDT、转 USDT 的矿工费。每天先填 RMB→USDT 汇率、选这天由哪个钱包打 TRX。</p>
+    <div class="subsec"><h3>分钱包的条件</h3>
+    <div class="rules">
+      <p class="sub">只影响员工的 USDT 由哪个钱包发，跟 TRX 无关。没有特别规定就留空，系统会自动平均分。设定会自动记住。</p>
+      <div id="wruleList"></div>
+      <div class="add">
+        <select id="wrTarget" aria-label="选择事业群或事业处"></select>
+        <select id="wrType" aria-label="选择条件"><option value="max">最多用几个钱包</option><option value="only">只用指定钱包</option></select>
+        <span id="wrN">最多 <input type="number" id="wrNum" min="1" max="10" value="2" aria-label="钱包数"> 个</span>
+        <span id="wrWs" class="chips" hidden></span>
+        <button class="btn" id="wrAdd">新增条件</button>
+      </div>
+    </div>
+      <p class="hint" style="text-align:left;margin:6px 0 0">条件会决定员工由哪个钱包发，下方请款单和第 ⑤ 步的 UC 打款文件都会照这个分。</p></div>
+    <div class="row" style="margin-bottom:10px;gap:10px"><button class="btn sm" id="chainFirst">上链查询第一次发薪员工的地址</button><span class="hint" style="margin:0;text-align:left">有纪录的地址打 TRX 矿工费 0.268，没有纪录的（新地址）1.1；还没查的先当新地址计算，也可以在每天的「TRX 矿工费明细」里手动选。</span></div>
+    <div id="walletDays"></div>
+  </section>
+  <section class="step wstep">
+    <h2><span class="n">5</span>UC 打款文件</h2>
+    <p class="msg" style="margin-top:0">照 UC 格式下载：USDT 每个钱包一份；TRX 一天一份，只有领第一次补助的员工。金额跟第 ④ 步请款单的「本次转账的 USDT」「TRX 费用」一致，矿工费由链上自动扣，不在文件里。</p>
+    <div id="ucDays"></div>
+    <div class="row" style="margin-top:10px"><button class="btn" id="ucAll00">下载所有 USDT 打款明细（00）</button><button class="btn" id="ucAll01">下载所有 TRX 打款明细（01）</button></div>
+  </section>
+</div>
+
+
+  <section class="step" id="holdSec" hidden>
+    <h2>暂缓表</h2>
+    <p class="msg" style="margin-top:0">暂缓的员工按下面的分组，排在最后一天发。</p>
+    <div class="hgset">
+      <h3>暂缓分组</h3>
+      <p class="msg" style="margin-top:0">勾选每一组包含哪些事业群，没勾的归最后一组。个别员工在明细的「归入」改；不发的勾「特例不发」。</p>
+      <div id="hgGroups" class="hglist"></div>
+      <button class="btn" id="hgAdd">＋新增分组</button>
+    </div>
+    <h3 style="margin:18px 0 8px">暂缓员工明细</h3>
+    <div class="tablewrap"><table id="holdTable" style="min-width:720px"></table></div>
+    <div class="row" style="margin-top:10px"><button class="btn" id="copyHold">复制暂缓表，贴到 Excel</button></div>
+  </section>
+
+  <section class="step" id="otherSec" hidden>
+    <h2>其他发放方式</h2>
+    <p class="msg" style="margin-top:0">不是 USDT、暂缓、现金的员工，不分配，列在这里核对。</p>
+    <div id="otherSummary" class="chips" style="margin-bottom:10px"></div>
+    <div class="tablewrap"><table id="otherTable" style="min-width:720px"></table></div>
+    <div class="row" style="margin-top:10px"><button class="btn" id="copyOther">复制这张表，贴到 Excel</button></div>
+  </section>
+
+  <section class="step" id="stepCap" hidden>
+    <h2><span class="n">2</span>每天预计拨款</h2>
+    <div class="plan-days" id="planBox">
+      <label for="capDefault"><b>每天预计拨款</b></label>
+      <input type="number" id="capDefault" min="0" step="100000" style="width:150px">
+      <label for="planDays" style="margin-left:12px"><b>预计分几天发完</b>（选填，填了就一定在这几天内排完）</label>
+      <input type="number" id="planDays" min="1" max="30" step="1" placeholder="天数">
+      <span class="formula" id="formula"></span>
+    </div>
+  </section>
+
+
+
+  <section class="step locked" id="stepRules">
+    <h2><span class="n">3</span>设定排的条件</h2>
+    <div class="rules">
+      <p class="sub">自动排时会遵守这些条件，设定会自动记住。</p>
+      <div id="ruleList"></div>
+      <div class="add">
+        <select id="rUnit" aria-label="选择部门"></select>
+        <select id="rType" aria-label="选择条件">
+          <option value="last">最后发</option>
+          <option value="day">指定第几天发</option>
+          <option value="maxdays">最多分几天发</option>
+          <option value="alone">独自一天发（不和其他部门同一天）</option>
+          <option value="together">和另一个部门同一天发</option>
+        </select>
+        <span id="rWithWrap" hidden>和 <select id="rUnit2" aria-label="选择另一个部门"></select></span>
+        <span id="rDayWrap" hidden><span id="rDayPre">第</span> <input type="number" id="rDay" min="1" max="30" value="1" aria-label="天数"> 天</span>
+        <button class="btn" id="rAdd">新增条件</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="step locked" id="stepUnits">
+    <h2><span class="n">4</span>选择分配单位</h2>
+    <div class="utree">
+      <div class="utree-head">
+        <div><p class="sub">按 ＋ 拆开、－ 合起，粗体是目前的分配单位。</p></div>
+        <div class="row">
+          <button class="btn" id="treeCollapse">全部收起到事业群</button>
+          <button class="btn" id="treeLevel1">全部拆到事业处</button>
+          <button class="btn" id="treeAutoSplit">自动拆开超过上限的</button>
+        </div>
+      </div>
+      <div class="tlist" id="tlist"></div>
+    </div>
+  </section>
+
+  <section class="step locked" id="step2">
+    <h2><span class="n">5</span>排发放日期</h2>
+    <div class="toolbar">
+      <button class="btn primary" id="autoAll">自动排</button>
+      <button class="btn" id="addDay">＋新增一天</button>
+      <button class="btn" id="reset">全部清空</button>
+    </div>
+    <p class="hint" style="text-align:left;margin:4px 0 10px">自动排：只排还没排的，前面的日子先排满。要重来就先「全部清空」。</p>
+    <div id="notice"></div>
+    <div id="splitWarn"></div>
+    <ul class="howto">
+      <li><b>改日期</b>：改那一行的「发放日期」；按「移除」移回未排。</li>
+      <li><b>＋／－</b>：同一事业群的几行收起或展开（只是显示）。真的拆开、合起在第 ④ 步。</li>
+    </ul>
+    <div id="unschedBox"></div>
+    <h3 class="subhead" id="schedHead">已排</h3>
+    <div class="tablewrap"><table id="result"></table></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn primary" id="copy">导出到 Excel（照模版格式）</button>
+      <button class="btn" id="reviewAll">导出发薪日送审总名单</button>
+    </div>
+    <textarea class="copybox" id="copyBox" hidden readonly aria-label="分配结果"></textarea>
+  </section>
+
+  <section class="step" id="stepSum" hidden>
+    <h2><span class="n">6</span>总结</h2>
+    <p class="msg" style="margin-top:0">自动整理，项目名称可以直接改。</p>
+    <div class="tablewrap"><table id="sumTable" style="min-width:560px"></table></div>
+    <div class="row" style="margin-top:10px"><button class="btn" id="copySum">复制总结，贴到 Excel</button></div>
+  </section>
+</div>
+
+<div class="modal" id="expModal" hidden role="dialog" aria-modal="true" aria-labelledby="expTitle">
+  <div class="mbox" style="width:min(1100px,100%)">
+    <div class="mhead"><h3 id="expTitle">导出预览（跟薪酬组 Excel 模版同格式）</h3><button class="btn" id="expClose" aria-label="关闭">✕</button></div>
+    <p class="msg" style="margin:0 0 8px">按「复制」后，到 Excel 点选 A1 再贴上，会保留合并储存格、框线和粗体。</p>
+    <div class="tablewrap expwrap" style="max-height:60vh;overflow:auto;background:#fff;color:#000" id="expPreview"></div>
+    <div class="row" style="margin-top:10px"><button class="btn primary" id="expCopy">复制，贴到 Excel</button></div>
+  </div>
+</div>
+<div class="modal" id="manualCopy" hidden role="dialog" aria-modal="true"><div class="mbox" style="width:min(800px,100%)"><div class="mhead"><h3>请手动复制</h3><button class="btn" onclick="this.closest('.modal').hidden=true" aria-label="关闭">✕</button></div><p class="msg" style="margin:0 0 8px">浏览器不允许自动复制。下面的内容已经全选，请按 <b>Ctrl+C</b>（Mac 按 ⌘+C）复制，再到 Excel 贴上。</p><textarea style="width:100%;height:50vh;font-family:ui-monospace,Consolas,monospace;font-size:12px" readonly></textarea></div></div>
+<div class="modal" id="revModal" hidden role="dialog" aria-modal="true" aria-labelledby="revTitle">
+  <div class="mbox" style="width:min(1300px,100%)">
+    <div class="mhead"><h3 id="revTitle">发薪日送审总名单</h3><button class="btn" id="revClose" aria-label="关闭">✕</button></div>
+    <p class="msg" style="margin:0 0 8px">发薪栏依工资发放方式自动带出：1 = 发薪（USDT），0 = 不发（现金、暂缓、其他发放方式）。这里只能查看，要修改请回 OA 改资料后重新导入。</p>
+    <div class="row" style="margin-bottom:8px;gap:8px"><span class="seg"><button class="segb on" data-revf="all">全部</button><button class="segb" data-revf="usdt">只看 USDT</button><button class="segb" data-revf="hold">只看暂缓</button><button class="segb" data-revf="other" title="现金发放，以及其他发放方式">其他</button></span><span id="revSum" class="formula"></span><span style="flex:1"></span><button class="btn" id="revDl">下载 Excel</button><button class="btn primary" id="revCopy">复制，贴到 Excel</button></div>
+    <div class="tablewrap" style="max-height:62vh;overflow:auto"><table id="revTable" class="ctable" style="min-width:1300px"></table></div>
+  </div>
+</div>
+<div class="modal" id="whoModal" hidden role="dialog" aria-modal="true" aria-labelledby="whoTitle">
+  <div class="mbox">
+    <div class="mhead"><h3 id="whoTitle"></h3><button class="btn" id="whoClose" aria-label="关闭">✕</button></div>
+    <div class="tablewrap" style="max-height:60vh;overflow:auto"><table id="whoTable" style="min-width:560px"></table></div>
+    <div class="row" style="margin-top:10px"><button class="btn" id="whoCopy">复制这份名单，贴到 Excel</button></div>
+  </div>
+</div>
+<script>
+(function(){
+/* 复制备援：1. 一般剪贴簿  2. 浏览器传统复制（不需要权限，保留表格格式）  3. 跳出文字框手动复制 */
+function copyRich(html,text){
+  return (async()=>{
+    try{if(navigator.clipboard){if(html&&window.ClipboardItem&&navigator.clipboard.write){await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([text],{type:'text/plain'})})]);return true}
+      if(navigator.clipboard.writeText){await navigator.clipboard.writeText(text);return true}}}catch(_){}
+    try{let ok=false;const h=e=>{e.clipboardData.setData('text/plain',text);if(html)e.clipboardData.setData('text/html',html);e.preventDefault();ok=true};
+      document.addEventListener('copy',h,true);const r=document.execCommand('copy');document.removeEventListener('copy',h,true);if(r&&ok)return true}catch(_){}
+    const m=document.getElementById('manualCopy');if(m){const ta=m.querySelector('textarea');ta.value=text;m.hidden=false;ta.focus();ta.select()}
+    throw Object.assign(new Error('manual'),{manual:true});
+  })();
+}
+window.__copyRich=copyRich;
+const W=4, SEP=' › ';
+/* 暂缓分组：在「暂缓表」分页设定，每个事业群归到哪一组；预设 SSC暂缓（SSC）、HQ暂缓（其他） */
+const HKEY='payroll-allocator-holdgroups-v1';
+function loadHoldCfg(){try{const v=JSON.parse(localStorage.getItem(HKEY)||'null');if(v&&Array.isArray(v.groups)&&v.groups.length&&v.map){v.emp=v.emp||{};v.skip=v.skip||{};return v}}catch(_){}return {groups:['SSC暂缓','HQ暂缓'],map:{SSC:0},emp:{},skip:{}}}
+function saveHoldCfg(){try{localStorage.setItem(HKEY,JSON.stringify(st.holdCfg))}catch(_){}}
+function holdGroupOf(g){const c=st.holdCfg,i=c.map[g];return c.groups[i!==undefined&&c.groups[i]!==undefined?i:c.groups.length-1]}
+/* 每位暂缓员工归哪一组：你在明细里选过的优先；没选过的，SSC 事业群归第一组，其他归最后一组 */
+const hKey=(h,i)=>h.code||('#'+i+'|'+h.name+'|'+h.g);
+/* 特例不发：按「薪资年月 + 员工」记住，只影响当月 */
+const skipKey=(h,i)=>(h.month||'')+'|'+hKey(h,i);
+const isSkip=(h,i)=>!!st.holdCfg.skip[skipKey(h,i)];
+function holdGroupOfH(h,i){const c=st.holdCfg,k=hKey(h,i),v=c.emp[k];return v!==undefined&&c.groups[v]!==undefined?c.groups[v]:holdGroupOf(h.g)}
+const isHold=id=>st.nodes.has(id)&&st.holdNames.has(N(id).path[0]);
+const st={nodes:new Map(),roots:[],open:new Set(),checked:new Set(),days:[],defaultCap:0,draft:{date:'',cap:0},target:'new',notice:null,total:0,planDays:0,rules:[],pickMode:'top',held:[],other:[],hasWay:false,locked:new Set(),tab:'main',cashRows:[],cashDate:'',allGroups:[],otherRows:[],viewFold:new Set(),sumLabels:{},revChecks:{},phpRate:0,usdtRate:{},prev:null,prevName:'',newOverride:{},batches:[],trx:loadTrx(),addrState:loadAddrState(),holdCfg:loadHoldCfg(),holdNames:new Set(),baseData:null};
+const $=id=>document.getElementById(id);
+const N=id=>st.nodes.get(id);
+const fmt=n=>Math.round(n).toLocaleString('en-US');
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const WX=['#5B6870','#7A5C99','#2E86AB','#C0392B','#3D7A3D','#B5651D'];
+const wc=w=>w<4?`var(--w${w+1})`:WX[(w-4)%WX.length];
+const WD=['周日','周一','周二','周三','周四','周五','周六'];
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+function nextWeekday(fromIso){const d=fromIso?new Date(fromIso+'T00:00:00'):new Date();do{d.setDate(d.getDate()+1)}while(d.getDay()===0||d.getDay()===6);return iso(d)}
+function showDate(s){if(!s)return'';const d=new Date(s+'T00:00:00');return isNaN(d)?s:`${d.getMonth()+1}/${d.getDate()} ${WD[d.getDay()]}`}
+
+/* ---------- tree ---------- */
+/* 组织完全照档案三栏：事业群 › 事业处 › 部门；不合并同名，空白就保持空白 */
+function orgPath(g,b,d){g=String(g??'').trim();b=String(b??'').trim();d=String(d??'').trim();if(!g&&!b&&!d)return [];if(!b&&!d)return [g];if(!d)return [g,b];return [g,b,d]}
+function clean(a){const o=[];a.map(x=>String(x||'').trim()).filter(Boolean).forEach(x=>{if(o[o.length-1]!==x)o.push(x)});return o}
+function build(rows){
+  const nodes=new Map(),roots=[];
+  const get=path=>{const id=path.join(SEP);if(!nodes.has(id)){const n={id,path:path.slice(),name:path[path.length-1],depth:path.length-1,parent:null,children:[],own:0,ownH:0,amount:0,heads:0,emps:[]};
+    if(path.length>1){const p=get(path.slice(0,-1));n.parent=p.id;p.children.push(id)}else roots.push(id);nodes.set(id,n)}return nodes.get(id)};
+  rows.forEach(r=>{const n=get(r.path);n.own+=r.amount;n.ownH+=r.heads;n.emps.push({a:r.amount,code:r.code||'',month:r.month||'',bp:r.bp||'',name:r.name||'',pos:r.pos||'',rmb:r.rmb,rem:r.rem||'',orig:r.orig||'',addr:r.addr||''})});
+  [...nodes.values()].forEach(n=>{if(n.own>0&&n.children.length){const c=get([...n.path,'']);c.own+=n.own;c.ownH+=n.ownH;c.emps.push(...n.emps);n.emps=[];n.own=0;n.ownH=0}});
+  nodes.forEach(n=>n.emps.forEach(e=>e.leaf=n.id));
+  const sum=id=>{const n=nodes.get(id);n.amount=n.own;n.heads=n.ownH;n.children.forEach(c=>{sum(c);n.amount+=nodes.get(c).amount;n.heads+=nodes.get(c).heads})};
+  roots.forEach(sum);
+  roots.sort((a,b)=>(st.holdNames.has(a)?1:0)-(st.holdNames.has(b)?1:0));
+  Object.assign(st,{nodes,roots,open:new Set(),checked:new Set(),days:[],target:'new',notice:null,rules:loadRules(),locked:new Set()});
+  st.total=roots.reduce((a,id)=>a+nodes.get(id).amount,0);
+  applyPlan();
+  st.draft={date:nextWeekday(),cap:st.defaultCap};
+}
+function applyPlan(){}
+const placed=()=>{const m=new Map();st.days.forEach((d,i)=>d.items.forEach(it=>m.set(it.id,i)));return m};
+function hasPlacedInside(id,pm){const n=N(id);if(pm.has(id))return true;return n.children.some(c=>hasPlacedInside(c,pm))}
+function visibleUnits(){const o=[];const v=id=>{const n=N(id);if(st.open.has(id)&&n.children.length)n.children.forEach(v);else o.push(id)};st.roots.forEach(v);return o}
+
+/* ---------- 条件 ---------- */
+const RTEXT={first:'优先发',last:'最后发'};
+/* 条件存在这台电脑的浏览器里（只有部门名称和条件，不含薪资资料） */
+const RKEY='payroll-allocator-rules-v1';
+function saveRules(){try{localStorage.setItem(RKEY,JSON.stringify(st.rules.map(r=>({id:r.id,type:r.type,day:r.day,with:r.with}))))}catch(_){}}
+function loadRules(){try{const v=JSON.parse(localStorage.getItem(RKEY)||'[]');return Array.isArray(v)?v.filter(r=>r&&typeof r.id==='string'&&['last','day','maxdays','alone','together'].includes(r.type)&&(r.type!=='together'||typeof r.with==='string')):[]}catch(_){return[]}}
+const ruleText=r=>r.type==='day'?`指定第 ${r.day} 天发`:r.type==='maxdays'?`最多分连续 ${r.day} 天发`:r.type==='alone'?'独自一天发':r.type==='together'?`和 ${(r.with||'').split(SEP).join(' / ')} 同一天发`:RTEXT[r.type];
+const tagText=r=>r.type==='day'?`第${r.day}天`:r.type==='maxdays'?`连续≤${r.day}天`:r.type==='alone'?'独自一天':r.type==='last'?'最后发':ruleText(r);
+const isOrderRule=r=>r.type!=='maxdays'&&r.type!=='alone'&&r.type!=='together';
+const ruleCat=(t,w)=>t==='together'?'together:'+w:t==='maxdays'||t==='alone'?t:'order';
+function related(a,b){const A=N(a).path,B=N(b).path,k=Math.min(A.length,B.length);for(let i=0;i<k;i++)if(A[i]!==B[i])return false;return true}
+function ruleOf(id){return st.rules.find(r=>isOrderRule(r)&&st.nodes.has(r.id)&&related(r.id,id))||null}
+function isUnder(id,anc){const A=N(anc).path,B=N(id).path;return B.length>=A.length&&A.every((x,i)=>B[i]===x)}
+function aloneRuleOf(id){return st.rules.find(r=>r.type==='alone'&&st.nodes.has(r.id)&&related(r.id,id))||null}
+/* 「同一天发」：把相关的条件合成一组一组 */
+function togetherSets(){
+  const par=new Map(),f=x=>{while(par.get(x)!==x){par.set(x,par.get(par.get(x)));x=par.get(x)}return x};
+  const tr=st.rules.filter(r=>r.type==='together'&&st.nodes.has(r.id)&&st.nodes.has(r.with));
+  tr.forEach(r=>{[r.id,r.with].forEach(x=>{if(!par.has(x))par.set(x,x)});par.set(f(r.id),f(r.with))});
+  const m=new Map();[...par.keys()].forEach(x=>{const k=f(x);if(!m.has(k))m.set(k,[]);m.get(k).push(x)});
+  return [...m.values()];
+}
+function partnersOf(id,units){const sets=togetherSets().filter(set=>set.some(x=>related(x,id)));if(!sets.length)return[id];
+  const out=new Set([id]);sets.forEach(set=>units.forEach(u=>{if(set.some(x=>related(x,u)))out.add(u)}));return [...out]}
+function maxRuleOf(id){return st.rules.find(r=>r.type==='maxdays'&&st.nodes.has(r.id)&&related(r.id,id))||null}
+/* 「最多分 N 天」的状态：这一天该排除哪些部门、哪些部门必须这一天一起排完 */
+function maxDaysState(dayIdx){
+  const pm=placed(),excluded=new Set(),together=[],prefer=[];
+  st.rules.filter(r=>r.type==='maxdays'&&st.nodes.has(r.id)).forEach(r=>{
+    const used=new Set();pm.forEach((d,id)=>{if(related(r.id,id))used.add(d)});
+    const members=visibleUnits().filter(id=>!pm.has(id)&&related(r.id,id));
+    if(!members.length||used.has(dayIdx))return;
+    if(!used.size)return;
+    const last=Math.max(...used);
+    /* 必须连续：只能接在已用日子的隔天；用满天数或已经断开就不能再排 */
+    if(used.size>=r.day||dayIdx!==last+1)members.forEach(id=>excluded.add(id));
+    else if(used.size===r.day-1)together.push(members);
+    else prefer.push(...members);
+  });
+  return {excluded,together,prefer:new Set(prefer)};
+}
+/* 同一个事业处（事业群 + 事业处）要同一天发完 */
+const groupKey=id=>N(id).path.slice(0,2).join(SEP);
+function groupsOf(ids){if(st.relaxSoft)return ids.map(x=>[x]);const m=new Map();ids.forEach(id=>{const k=groupKey(id);if(!m.has(k))m.set(k,[]);m.get(k).push(id)});return [...m.values()]}
+function splitGroups(){const m=new Map();st.days.forEach((d,i)=>d.items.forEach(it=>{const k=groupKey(it.id);if(!m.has(k))m.set(k,{days:new Set(),amt:0});const g=m.get(k);g.days.add(i);g.amt+=it.amount}));
+  return [...m.entries()].filter(([k,g])=>g.days.size>1).map(([k,g])=>({name:k.split(SEP).join(' / '),days:[...g.days].sort((a,b)=>a-b),fits:g.amt<=st.defaultCap+0.5}))}
+function ordered(ids){
+  const rank=id=>{const r=ruleOf(id);if(!r)return 1000;if(r.type==='first')return st.rules.indexOf(r);if(r.type==='last')return 2000+st.rules.indexOf(r);return 1000};
+  return ids.map((id,i)=>({id,i,k:rank(id)})).sort((a,b)=>a.k-b.k||a.i-b.i).map(x=>x.id);
+}
+/* ---------- wallets ---------- */
+const quota=()=>st.total/W;
+function walletTotals(){const t=new Array(W).fill(0);st.days.forEach(d=>d.items.forEach(it=>(it.parts||[]).forEach(p=>t[p.wallet]+=p.amount)));return t}
+function dayPer(d){const t=new Array(W).fill(0);d.items.forEach(it=>(it.parts||[]).forEach(p=>t[p.wallet]+=p.amount));return t}
+/* 原本资料的组织路径：拿掉工具为了分组自动加的「（直属）」 */
+const realPath=p=>(p||[]).filter(x=>!/（直属）$/.test(x));
+function uniq(arr){return [...new Set(arr.filter(Boolean))].join('/')}
+function monthOf(id){return uniq(empsOf(id).map(e=>e.month))}
+function bpOf(id){return uniq(empsOf(id).map(e=>e.bp))}
+function empsOf(id){const n=N(id);return n.children.length?n.children.flatMap(empsOf):n.emps}
+/* 每次排入或撤回后重新分钱包。规则：
+   1. 以员工为单位，一个员工只走一个钱包。
+   2. 一般部门最多拆给 2 个钱包；超过当天总额一半的大部门，才可以拆给 3～4 个钱包（否则当天不可能平均）。
+   3. 每一天的 4 个钱包，金额和人数都平均（每天平均，整个月自然也平均）。
+   做法：先把整个部门放进最缺钱的钱包，再反复尝试「移动一个员工」或「对调两个员工」，只要更平均且不违反规则就采用。 */
+const MAX_WALLETS_PER_UNIT=2, SPLIT_PENALTY=1e-5;
+function rebalance(){
+  let cumA=new Array(W).fill(0),cumC=new Array(W).fill(0),totA=0,totC=0;
+  st.days.forEach(d=>{
+    const units=d.items.slice().sort((a,b)=>b.amount-a.amount);
+    const emps=[];units.forEach((it,ui)=>empsOf(it.id).forEach(e=>emps.push({a:e.a,code:e.code,ref:e,u:ui,w:0,nw:isNewEmp(e)?1:0})));
+    const T=emps.reduce((s,e)=>s+e.a,0),n=emps.length;
+    if(!n){d.items.forEach(it=>it.parts=[]);return}
+    totA+=T;totC+=n;
+    const tA=new Array(W).fill(T/W),tC=new Array(W).fill(n/W);
+    const lim=units.map(it=>it.amount>T/2+0.5?W:MAX_WALLETS_PER_UNIT);
+    const nA=T/W||1,nC=n/W||1,NN=emps.reduce((a,e)=>a+e.nw,0),tN=NN/W,nN=Math.max(1,NN/W);
+    const A=new Array(W).fill(0),C=new Array(W).fill(0),NW=new Array(W).fill(0);
+    const cnt=units.map(()=>new Array(W).fill(0));
+    /* 金额、人数、第一次打款的人数，三个都尽量平均 */
+    const g=(a,c,w,nn)=>((a-tA[w])/nA)**2+((c-tC[w])/nC)**2+(NN?((nn-tN)/nN)**2:0);
+    const used=u=>cnt[u].filter(x=>x>0).length;
+    // 初始：部门从大到小，放进剩余额度最多的钱包；放不下的部分放进下一个剩余最多的钱包（所以一个部门最多 2 个钱包）
+    const rem=tA.slice();
+    units.forEach((it,ui)=>{
+      const es=emps.filter(e=>e.u===ui).sort((x,y)=>y.a-x.a);
+      const order=[...Array(W).keys()].sort((a,b)=>rem[b]-rem[a]).slice(0,lim[ui]);
+      let k=0,filled=0;
+      es.forEach(e=>{let w=order[k];if(k<order.length-1&&filled>0&&filled+e.a/2>rem[w]){k++;w=order[k];filled=0}
+        filled+=e.a;e.w=w;A[w]+=e.a;C[w]++;NW[w]+=e.nw;if(!e.nw)cnt[ui][w]++});
+      for(let w=0;w<W;w++)rem[w]=tA[w]-A[w];
+    });
+    const usedAfter=(u,from,to)=>{const c=cnt[u].slice();c[from]--;c[to]++;return c.filter(x=>x>0).length};
+    let improved=true,pass=0;
+    while(improved&&pass++<40){
+      improved=false;
+      for(const e of emps){
+        const u=e.w;
+        for(let v=0;v<W;v++){
+          if(v===u)continue;
+          /* 第一次打款的人不受「一个部门最多 2 个钱包」限制，才能平均分到 4 个钱包 */
+          const k=e.nw?used(e.u):usedAfter(e.u,u,v);if(k>lim[e.u])continue;
+          const before=g(A[u],C[u],u,NW[u])+g(A[v],C[v],v,NW[v])+SPLIT_PENALTY*used(e.u);
+          const after=g(A[u]-e.a,C[u]-1,u,NW[u]-e.nw)+g(A[v]+e.a,C[v]+1,v,NW[v]+e.nw)+SPLIT_PENALTY*k;
+          if(after<before-1e-12){A[u]-=e.a;C[u]--;A[v]+=e.a;C[v]++;NW[u]-=e.nw;NW[v]+=e.nw;if(!e.nw){cnt[e.u][u]--;cnt[e.u][v]++}e.w=v;improved=true;break}
+        }
+      }
+      for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){
+        const x=emps[i],y=emps[j],u=x.w,v=y.w;if(u===v||(x.a===y.a&&x.nw===y.nw))continue;
+        let kx,ky;
+        if(x.u===y.u){kx=used(x.u);ky=0}else{kx=x.nw?used(x.u):usedAfter(x.u,u,v);ky=y.nw?used(y.u):usedAfter(y.u,v,u);if(kx>lim[x.u]||ky>lim[y.u])continue}
+        const before=g(A[u],C[u],u,NW[u])+g(A[v],C[v],v,NW[v])+SPLIT_PENALTY*(used(x.u)+(x.u===y.u?0:used(y.u)));
+        const after=g(A[u]-x.a+y.a,C[u],u,NW[u]-x.nw+y.nw)+g(A[v]-y.a+x.a,C[v],v,NW[v]-y.nw+x.nw)+SPLIT_PENALTY*(kx+ky);
+        if(after<before-1e-12){A[u]+=y.a-x.a;A[v]+=x.a-y.a;NW[u]+=y.nw-x.nw;NW[v]+=x.nw-y.nw;if(x.u!==y.u){if(!x.nw){cnt[x.u][u]--;cnt[x.u][v]++}if(!y.nw){cnt[y.u][v]--;cnt[y.u][u]++}}x.w=v;y.w=u;improved=true}
+      }
+    }
+    units.forEach((it,ui)=>{const m=new Map();emps.filter(e=>e.u===ui).forEach(e=>{const p=m.get(e.w)||{wallet:e.w,amount:0,heads:0,codes:[],list:[]};p.amount+=e.a;p.heads++;if(e.code)p.codes.push(e.code);p.list.push(e.ref);m.set(e.w,p)});it.parts=[...m.values()].sort((a,b)=>a.wallet-b.wallet)});
+    for(let w=0;w<W;w++){cumA[w]+=A[w];cumC[w]+=C[w]}
+  });
+}
+
+/* ---------- render ---------- */
+function render(){
+  try{if(st.nodes.size>0)computeSerials()}catch(_){}
+  const loadedData=st.nodes.size>0, ready=loadedData&&st.defaultCap>0;
+  const estDays=st.defaultCap>0?Math.ceil(st.total/st.defaultCap):0;
+  $('formula').innerHTML=st.defaultCap>0?`应发总额 <b>${fmt(st.total)}</b> ÷ 每天 <b>${fmt(st.defaultCap)}</b>，最少要 <b>${estDays}</b> 天。${st.planDays?`你填了 ${st.planDays} 天，系统会在 ${st.planDays} 天内排完。`:''}某一天不一样的话，在表格里直接改那天的预计拨款。`:'请填每天预计拨款。';
+  if(document.activeElement!==$('capDefault'))$('capDefault').value=st.defaultCap||'';
+  ['stepUnits','stepRules','step2'].forEach(x=>$(x).classList.toggle('locked',!ready));
+  const pm=placed();
+
+  // 暂缓表与其他发放方式
+  const hasHold=st.hasWay&&st.held.length>0, hasOther=st.hasWay&&(st.otherRows||[]).length>0;
+  if((st.tab==='hold'&&!hasHold)||(st.tab==='other'&&!hasOther))st.tab='main';
+  $('walletSec').hidden=st.tab!=='wallet';
+  if(st.tab==='wallet')renderWallet();
+  $('tabs').hidden=!loadedData||st.tab==='wallet';
+  $('leadText').innerHTML=st.tab==='wallet'?'作业二照顺序操作：① 导入当天核准名单 → ② 汇率与矿工费 → ③ 出款钱包设定 → ④ 分钱包的条件、跟老板请款（含矿工费）→ ⑤ 下载 UC 打款文件。':'作业一照顺序操作：① 导入薪资表 → ② 每天预计拨款 → ③ 设定排的条件 → ④ 选择分配单位 → ⑤ 自动排、调整 → ⑥ 总结，复制到 Excel。';
+  document.querySelectorAll('[data-job]').forEach(b=>{const on=(b.dataset.job==='2')===(st.tab==='wallet');b.classList.toggle('on',on);b.setAttribute('aria-selected',on)});
+  $('tabHold').hidden=!hasHold;$('tabOther').hidden=!hasOther;
+  $('otherCount').textContent=(st.otherRows||[]).length;
+  $('otherSec').hidden=!hasOther||st.tab!=='other';
+  if(hasOther){
+    const rows=st.otherRows,sum=rows.reduce((a,r)=>a+r.amount,0);
+    $('otherSummary').innerHTML=st.other.map(([k,o])=>`<span class="chip on">${esc(k)}：<button class="who" style="display:inline" data-list="other:${esc(k)}">${o.heads} 人</button>，${fmt(o.amount)}</span>`).join('');
+    $('otherTable').innerHTML=`<thead><tr><th>工号</th><th>姓名</th><th>事业群</th><th>事业处</th><th>部门</th><th class="num">实发工资PHP</th><th>工资发放方式</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.g)}</td><td>${esc(r.b)}</td><td>${esc(r.d)}</td><td class="num">${fmt(r.amount)}</td><td>${esc(r.way)}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="5">合计 <button class="who inl" data-list="imp:other">${rows.length} 人</button></td><td class="num">${fmt(sum)}</td><td></td></tr></tfoot>`;
+  }
+  $('holdCount').textContent=st.held.length;
+  document.querySelectorAll('[data-tab]').forEach(b=>{const on=b.dataset.tab===st.tab;b.classList.toggle('on',on);b.setAttribute('aria-selected',on)});
+  ['step1','stepUnits','stepRules','step2'].forEach(x=>$(x).hidden=st.tab!=='main');$('stepCap').hidden=st.tab!=='main'||!loadedData;
+  $('holdSec').hidden=!hasHold||st.tab!=='hold';
+  if(hasHold){
+    const gs=st.holdCfg.groups,byG=new Map();
+    (st.held||[]).forEach(h=>{const o=byG.get(h.g)||{heads:0,amount:0};o.heads++;if(h.ok)o.amount+=h.amount;byG.set(h.g,o)});
+    const gStat=gs.map(name=>{let heads=0,amount=0;(st.held||[]).forEach((h,i)=>{if(!isSkip(h,i)&&holdGroupOfH(h,i)===name){heads++;if(h.ok)amount+=h.amount}});return {heads,amount}});
+    if(!$('hgGroups').contains(document.activeElement)||document.activeElement.tagName!=='INPUT'||document.activeElement.type==='checkbox'){
+      const allG=(st.allGroups||[]).filter(Boolean);
+      $('hgGroups').innerHTML=gs.map((name,i)=>{const isLast=i===gs.length-1;
+        const chips=allG.map(g=>{const on=holdGroupOf(g)===name,dflt=on&&isLast&&st.holdCfg.map[g]===undefined;
+          return `<label class="chip${on?' on':''}${dflt?' dflt':''}" title="${dflt?'没有指定的事业群，预设归在最后一组':''}"><input type="checkbox" data-hgpick="${i}" data-g="${esc(g)}" ${on?'checked':''}>${esc(g)}</label>`}).join('');
+        return `<div class="hgrow"><input value="${esc(name)}" data-hgname="${i}" aria-label="第 ${i+1} 组名称"><small><button class="who" style="display:inline" data-list="holdgrp:${esc(name)}">${gStat[i].heads} 人</button>，${fmt(gStat[i].amount)}</small>${gs.length>1?`<button class="x" data-hgdel="${i}">删除</button>`:''}</div><div class="chips">${chips||'<span class="hint">导入后会列出表单里的事业群</span>'}</div>`}).join('');
+    }
+    const hs=st.held.reduce((a,h)=>a+h.amount,0);
+    $('holdTable').innerHTML=`<thead><tr><th>工号</th><th>姓名</th><th>事业群</th><th>事业处</th><th>部门</th><th class="num">实发工资PHP</th><th>工资发放方式</th><th>归入</th><th>特例不发</th></tr></thead><tbody>${st.held.length?st.held.map((h,hi)=>`<tr class="${h.ok?'':'notin'}${isSkip(h,hi)?' skiprow':''}"><td>${esc(h.code)}</td><td>${esc(h.name)}</td><td>${esc(h.g)}</td><td>${esc(h.b)}</td><td>${esc(h.d)}</td><td class="num">${h.ok?fmt(h.amount):`${esc(h.raw||'（空白）')}<small class="warnline">${!isFinite(toNum(h.raw))?'读不到金额':'金额为 0 或负数'}，没有排进分配</small>`}</td><td>${esc(h.way)}</td><td><select data-hgemp="${esc(hKey(h,hi))}" aria-label="${esc(h.name||h.code)} 归入">${st.holdCfg.groups.map((name,gi)=>`<option value="${gi}" ${holdGroupOfH(h,hi)===name?'selected':''}>${esc(name)}</option>`).join('')}</select>${st.holdCfg.emp[hKey(h,hi)]!==undefined?`<button class="x" data-hgreset="${esc(hKey(h,hi))}" title="改回按事业群的分组">改回预设</button>`:''}</td><td class="ck"><input type="checkbox" data-hgskip="${esc(skipKey(h,hi))}" ${isSkip(h,hi)?'checked':''} aria-label="${esc(h.name||h.code)} 特例不发"></td></tr>`).join(''):'<tr><td colspan="9" class="empty">这个月没有暂缓的员工。</td></tr>'}</tbody><tfoot><tr><td colspan="5">暂缓合计 <button class="who inl" data-list="imp:hold">${st.held.length} 人</button>${st.held.some((h,i)=>isSkip(h,i))?`，其中特例不发 ${st.held.filter((h,i)=>isSkip(h,i)).length} 人（${fmt(st.held.reduce((a,h,i)=>a+(isSkip(h,i)&&h.ok?h.amount:0),0))}）`:''}${st.held.some(h=>!h.ok)?`（其中 ${st.held.filter(h=>!h.ok).length} 人金额有问题，没有排进分配，已用红字标出）`:''}</td><td class="num">${fmt(hs)}</td><td></td><td></td><td></td></tr></tfoot>`;
+    $('copyHold').disabled=!st.held.length;
+  }
+  // 分配单位树
+  if(ready){
+    const pmT=placed(),rowsT=[];
+    const vt=id=>{const n=N(id),open=st.open.has(id)&&n.children.length>0;
+      const lv=['事业群','事业处','部门'][n.depth]||'下层';
+      const btn=n.children.length&&!isHold(id)?`<button class="tbtn" data-tog="${esc(id)}" aria-label="${open?'合起':'拆开'} ${esc(n.name)}" title="${open?'合起来整组排':'拆开到下一层'}">${open?'－':'＋'}</button>`:'<span class="tph"></span>';
+      let stat;
+      if(open){const k=visibleUnits().filter(u=>isUnder(u,id)).length;stat=`<span class="tstat">已拆开，${k} 个单位</span>`}
+      else if(pmT.has(id))stat=`<span class="tstat">第 ${pmT.get(id)+1} 天</span>`;
+      else stat=n.amount>st.defaultCap+0.5?`<span class="tstat big">超过上限，请拆开</span>`:`<span class="tstat un">未排</span>`;
+      rowsT.push(`<div class="trow${open?' open':''}" style="--lv:${n.depth}"><div class="tn">${btn}${open?esc(n.name):`<b>${esc(n.name)}</b>`}${isHold(id)?'<span class="rtag hold">最后一天发</span>':`<span class="tlv">${lv}</span>`}</div><div class="theads"><button class="who" data-list="unit:${esc(id)}">${n.heads} 人</button></div><div class="tamt">${fmt(n.amount)}</div>${stat}</div>`);
+      if(open)n.children.forEach(vt)};
+    st.roots.forEach(vt);
+    $('tlist').innerHTML=rowsT.join('');
+  }
+  // rules
+  if(ready){
+    $('ruleList').innerHTML=st.rules.length?`<ol>${st.rules.map((r,i)=>{const ok=st.nodes.has(r.id)&&(r.type!=='together'||st.nodes.has(r.with));return `<li${ok?'':' style="color:var(--muted)"'}><b>${esc(r.id.split(SEP).join(' / '))}</b>：${ruleText(r)}${ok?'':'（这次的资料里没有这个部门，暂不套用）'}<button class="x" data-rdel="${i}">删除</button></li>`}).join('')}</ol>`:'<p class="none">还没有条件。没有条件时，按表格的顺序排。</p>';
+    const opts=[];const v=id=>{if(isHold(id))return;const n=N(id);opts.push(`<option value="${esc(id)}">${'　'.repeat(n.depth)}${esc(n.name)}</option>`);n.children.forEach(v)};st.roots.forEach(v);
+    const cur=$('rUnit').value;$('rUnit').innerHTML=opts.join('');if(cur&&st.nodes.has(cur))$('rUnit').value=cur;
+    const cur2=$('rUnit2').value;$('rUnit2').innerHTML=opts.join('');if(cur2&&st.nodes.has(cur2))$('rUnit2').value=cur2;
+  }
+  // 排发放日期：一张表，每个事业部一行，直接选日期（参照薪酬组 Excel 模版，右边加 4 个钱包）
+  if(ready){
+  }
+  $('notice').innerHTML=st.notice?`<div class="notice${st.notice.ok?' ok':''}">${st.notice.text}</div>`:'';
+  const vis=visibleUnits(), ord=new Map(vis.map((id,i)=>[id,i]));
+  const unplaced=vis.filter(id=>!pm.has(id));
+  const tot=walletTotals(), q=quota();
+  const dayOpts=sel=>`<option value="-1" ${sel<0?'selected':''}>未排</option>`+st.days.map((d,i)=>`<option value="${i}" ${sel===i?'selected':''}>第 ${i+1} 天 ${showDate(d.date)}</option>`).join('')+`<option value="new">＋新的一天</option>`;
+  const tagsOf=id=>(isHold(id)?'<span class="rtag hold" title="暂缓的员工，一定排在最后一天">暂缓·最后一天</span>':'')+[ruleOf(id),maxRuleOf(id),aloneRuleOf(id)].filter(Boolean).map(r=>`<span class="rtag" title="${esc(ruleText(r))}">${tagText(r)}</span>`).join('');
+  /* 一个部门一行：上层名称用浅灰小字（点 ▾ 合起），部门名称粗体（有下层就有 ▸ 拆开），按层级缩排 */
+  const nameCell=id=>{const n=N(id);
+    const parents=n.path.length>1?`<span class="parents">${n.path.slice(0,-1).map(esc).join(' › ')} ›</span>`:'';
+    const nNew=st.prev?empsOf(id).filter(isNewEmp).length:0;
+    return `<div class="lvl" style="--lv:${n.depth}"><span class="nm2">${parents}<b>${esc(n.name)}</b>${tagsOf(id)}${nNew?`<button class="who inl first" data-list="newunit:${esc(id)}" title="第一次打款">首次 ${nNew}</button>`:''}</span></div>`};
+  /* 同一天里，同一个事业群拆开的连续几行，左边加一条括号线：按 − 收起成一行合计，按 ＋ 展开（只是显示） */
+  const blockRows=(ids,dayIdx)=>{const out=[];let k=0;
+    while(k<ids.length){const n=N(ids[k]),root=n.path[0];
+      if(n.path.length>1){let m=k;while(m<ids.length&&N(ids[m]).path[0]===root&&N(ids[m]).path.length>1)m++;
+        const grp=ids.slice(k,m),key=dayIdx+'|'+root;
+        if(grp.length>=2){if(st.viewFold.has(key))out.push({fold:{root,ids:grp,key},cls:''});else grp.forEach((id,q)=>out.push({id,cls:'',gut:q===0?'start':q===grp.length-1?'end':'mid',key}));k=m;continue}}
+      out.push({id:ids[k],cls:''});k++}
+    return out};
+  const gutCell=r=>r.fold?`<td class="gut"><button class="fold" data-fold="${esc(r.fold.key)}" title="展开">＋</button></td>`:r.gut==='start'?`<td class="gut g-start"><button class="fold" data-fold="${esc(r.key)}" title="收起">－</button></td>`:r.gut?`<td class="gut g-${r.gut}"></td>`:'<td class="gut"></td>';
+  const dayOptsPlain=()=>`<option value="-1">未排</option>`+st.days.map((d,i)=>`<option value="${i}">第 ${i+1} 天 ${showDate(d.date)}</option>`).join('')+`<option value="new">＋新的一天</option>`;
+  const WH=[0,1,2,3].map(w=>`<th class="num w wcol" style="--wc:${wc(w)}">钱包 ${w+1}</th>`).join('');
+  let html=`<thead><tr><th class="gut"></th><th>年月</th><th>所属BP</th><th>事业群</th><th class="dept">事业部</th><th class="num">金额</th><th>发放日期</th><th>第几天</th><th class="num">总额</th><th class="num">预计拨款</th><th class="num">应余</th><th class="num">实余</th>${WH}</tr></thead><tbody>`;
+  // 未排：另外一张表；同一事业群拆开的几行一样可以按 －／＋ 收起展开
+  {
+    let uh='';
+    if(unplaced.length){
+      const ua=unplaced.reduce((a,id)=>a+N(id).amount,0),uhd=unplaced.reduce((a,id)=>a+N(id).heads,0),br=blockRows(unplaced,-1);
+      uh=`<details class="fold-list unsched-box"${st.unschedOpen!==false?' open':''}><summary>未排（${unplaced.length} 个单位，${fmt(ua)}，<button class="who inl" data-list="unsched">${uhd} 人</button>）</summary>
+        <div class="tablewrap" style="margin-top:8px"><table class="utbl"><thead><tr><th class="gut"></th><th>年月</th><th>所属BP</th><th>事业群</th><th class="dept">事业部</th><th class="num">金额</th><th class="num">人数</th><th>发放日期</th></tr></thead><tbody>`;
+      br.forEach(r=>{
+        if(r.fold){const ids=r.fold.ids,sum=ids.reduce((a,id)=>a+N(id).amount,0),hd=ids.reduce((a,id)=>a+N(id).heads,0);
+          uh+=`<tr class="foldrow">${gutCell(r)}<td>${esc(uniq(ids.map(monthOf)))}</td><td>${esc(uniq(ids.map(bpOf)))}</td><td>${esc(r.fold.root)}</td><td class="dept"><b>${esc(r.fold.root)}</b><small class="split">已收起 ${ids.length} 个，按左边 ＋ 展开</small></td><td class="num">${fmt(sum)}</td><td class="num"><button class="who inl" data-list="units:${esc(ids.join('|'))}">${hd}</button></td><td><select class="daysel" data-movegroup="${esc(ids.join('|'))}"><option value="" selected>整组排到…</option>${dayOptsPlain()}</select></td></tr>`;return}
+        const id=r.id,n=N(id),big=st.defaultCap>0&&n.amount>st.defaultCap+0.5;
+        uh+=`<tr>${gutCell(r)}<td>${esc(monthOf(id))}</td><td>${esc(bpOf(id))}</td><td>${isHold(id)?'':esc(n.path[0])}</td><td class="dept">${nameCell(id)}${big?`<small class="warnline">超过一天的预计拨款${n.children.length?'，请在第 4 步按 ＋ 拆开':''}</small>`:''}</td><td class="num">${fmt(n.amount)}</td><td class="num"><button class="who inl" data-list="unit:${esc(id)}">${n.heads}</button></td><td><select class="daysel" data-move="${esc(id)}" aria-label="${esc(n.name)} 发放日期">${dayOpts(-1)}</select></td></tr>`;
+      });
+      uh+='</tbody></table></div></details>';
+    }
+    $('unschedBox').innerHTML=uh;
+  }
+  let run=0,needSum=0,capSum=0;
+  st.days.forEach((d,i)=>{
+    const per=dayPer(d), daySum=per.reduce((a,c)=>a+c,0), surplus=d.cap-daySum; run+=surplus; needSum+=daySum; capSum+=d.cap;
+    const items=d.items.slice().sort((a,b)=>(ord.get(a.id)??0)-(ord.get(b.id)??0)), itemMap=new Map(items.map(it=>[it.id,it]));
+    const br=items.length?blockRows(items.map(it=>it.id),i):[];
+    const rs=Math.max(1,br.length)+1, over=surplus<-0.5;
+    const merged=`<td class="merged" rowspan="${rs}"><b>第 ${i+1} 天</b><input type="date" class="dinput" data-ddate="${i}" value="${esc(d.date)}" aria-label="第 ${i+1} 天日期"><button class="addto" data-fill="${i}">补满这天</button><button class="addto" data-dexport="${i}">导出送审名单</button>${d.items.some(it=>isHold(it.id))?`<button class="addto" data-dhold="${i}">导出暂缓名单</button>`:''}${items.length?'':`<button class="addto" data-delday="${i}">删除这天</button>`}</td>
+      <td class="num merged${over?' neg':''}" rowspan="${rs}"><b>${fmt(daySum)}</b></td>
+      <td class="num merged" rowspan="${rs}"><input type="number" class="cinput" min="0" step="100000" data-dcap="${i}" value="${d.cap}" aria-label="第 ${i+1} 天预计拨款"></td>
+      <td class="num merged${over?' neg':''}" rowspan="${rs}">${fmt(surplus)}</td><td class="num merged${run<-0.5?' neg':''}" rowspan="${rs}">${fmt(run)}</td>`;
+    if(!items.length)html+=`<tr class="daystart"><td class="gut"></td><td colspan="6" class="empty">这天还没有部门，可以在上面任一行的「发放日期」选第 ${i+1} 天，或按「补满这天」。</td>${merged}<td class="wcol"></td><td class="wcol"></td><td class="wcol"></td><td class="wcol"></td></tr>`;
+    br.forEach((r,j)=>{
+      let pre=r.pre,post=r.post,cls=r.cls;
+      if(r.fold){const its=r.fold.ids.map(id=>itemMap.get(id)),pw=new Array(W).fill(0),ph=new Array(W).fill(0);its.forEach(it=>(it.parts||[]).forEach(p=>{pw[p.wallet]+=p.amount;ph[p.wallet]+=p.heads}));
+        const sum=its.reduce((a,it)=>a+it.amount,0);
+        pre=`<td>${esc(uniq(r.fold.ids.map(monthOf)))}</td><td>${esc(uniq(r.fold.ids.map(bpOf)))}</td><td>${esc(r.fold.root)}</td><td class="dept"><b>${esc(r.fold.root)}</b><small class="split">已收起 ${r.fold.ids.length} 个事业处，按左边 ＋ 展开</small></td><td class="num">${fmt(sum)}</td><td><select class="daysel" data-movegroup="${esc(r.fold.ids.join('|'))}" aria-label="把 ${esc(r.fold.root)} 整组改到…"><option value="" selected>第 ${i+1} 天（整组改到…）</option>${dayOptsPlain()}</select></td>`;
+        post=pw.map((x,w)=>`<td class="num wcol">${x?`${fmt(x)}<button class="who" data-who="${i}~${w}~${esc(r.fold.ids.join('|'))}">${ph[w]} 人</button>`:''}</td>`).join('');cls='foldrow'}
+      if(r.id){const it=itemMap.get(r.id),n=N(it.id),pw=new Array(W).fill(0),ph=new Array(W).fill(0);(it.parts||[]).forEach(p=>{pw[p.wallet]+=p.amount;ph[p.wallet]+=p.heads});
+        const split='';
+        pre=`<td>${esc(monthOf(it.id))}</td><td>${esc(bpOf(it.id))}</td><td>${isHold(n.id)?'':esc(n.path[0])}</td><td class="dept">${nameCell(it.id)}${split}</td><td class="num">${fmt(it.amount)}</td><td><select class="daysel" data-move="${esc(it.id)}" aria-label="${esc(n.name)} 发放日期">${dayOpts(i)}</select><div class="rowbtns"><button class="mini" data-unsched="${esc(it.id)}" title="移回未排">移除</button></div></td>`;
+        post=pw.map((x,w)=>`<td class="num wcol">${x?`${fmt(x)}<button class="who" data-who="${i}~${w}~${esc(it.id)}">${ph[w]} 人</button>`:''}</td>`).join('');
+}
+      html+=`<tr class="${j===0?'daystart ':''}${cls}">${gutCell(r)}${pre}${j===0?merged:''}${post}</tr>`;
+    });
+    const perH=new Array(W).fill(0);d.items.forEach(it=>(it.parts||[]).forEach(p=>perH[p.wallet]+=p.heads));const dayH=perH.reduce((a,c)=>a+c,0);
+    html+=`<tr class="daysub"><td class="gut"></td><td colspan="4">第 ${i+1} 天 合计</td><td class="num">${fmt(daySum)}<button class="who" data-who="${i}~-1~">${dayH} 人</button>${(()=>{const k=st.prev?d.items.reduce((a,it)=>a+empsOf(it.id).filter(isNewEmp).length,0):0;return k?`<button class="who first" data-list="newday:${i}">首次 ${k} 人</button>`:''})()}</td><td></td>${per.map((x,w)=>`<td class="num wcol">${fmt(x)}<button class="who" data-who="${i}~${w}~">${perH[w]} 人</button></td>`).join('')}</tr>`;
+  });
+  const cg=cashGroups();
+  if(cg.length){
+    const cs=cg.reduce((a,g)=>a+g.amount,0);needSum+=cs;capSum+=cs;
+    cg.forEach((g,j)=>{
+      html+=`<tr class="${j===0?'daystart ':''}cashrow"><td class="gut"></td><td>${esc([...g.months].join('/'))}</td><td>${esc([...g.bps].join('/'))}</td><td>${esc(g.g)}</td><td class="dept"><b>${esc(g.name)}</b><span class="rtag">现金</span><button class="who" style="margin-left:0" data-whocash="${esc(g.g+'|'+g.name)}">${g.heads} 人</button></td><td class="num">${fmt(g.amount)}</td><td><span class="cashlbl">现金发放</span></td>`;
+      if(j===0)html+=`<td class="merged" rowspan="${cg.length}"><b>现金发放</b><input type="date" class="dinput" data-cashdate="1" value="${esc(cashDate())}" aria-label="现金发放日期"><small class="split">预设跟最后一天同一天</small></td><td class="num merged" rowspan="${cg.length}"><b>${fmt(cs)}</b><button class="who" data-whocash="">${cg.reduce((a,g)=>a+g.heads,0)} 人</button></td><td class="num merged" rowspan="${cg.length}">${fmt(cs)}</td><td class="num merged" rowspan="${cg.length}">0</td><td class="num merged${run<-0.5?' neg':''}" rowspan="${cg.length}">${fmt(run)}</td>`;
+      html+=`<td class="wcol"></td><td class="wcol"></td><td class="wcol"></td><td class="wcol"></td></tr>`;
+    });
+  }
+  const anySched=st.days.length>0;$('schedHead').hidden=!anySched;$('result').parentElement.hidden=!anySched&&unplaced.length>0;
+  if(!st.days.length&&!unplaced.length)html+=`<tr><td colspan="16" class="empty">导入后，事业部会显示在这里。</td></tr>`;
+  const allH=st.days.reduce((a,d)=>a+d.items.reduce((b,it)=>b+(it.parts||[]).reduce((c,p)=>c+p.heads,0),0),0)+cashGroups().reduce((a,g)=>a+g.heads,0);
+  html+=`</tbody><tfoot><tr><td class="gut"></td><td colspan="4">需收</td><td class="num">${fmt(needSum)}<button class="who" data-list="all">${allH} 人</button></td><td></td><td>拨款</td><td class="num">${fmt(needSum)}</td><td class="num">${fmt(capSum)}</td><td>差额</td><td class="num${capSum-needSum<-0.5?' neg':''}">${fmt(capSum-needSum)}</td>${tot.map((x,w)=>`<td class="num wcol">${fmt(x)}<button class="who" data-who="-1~${w}~">${st.days.reduce((a,d)=>a+d.items.reduce((b,it)=>b+(it.parts||[]).filter(p=>p.wallet===w).reduce((c,p)=>c+p.heads,0),0),0)} 人</button></td>`).join('')}</tr></tfoot>`;
+  $('result').innerHTML=html;
+  const sg=splitGroups();
+  const mdv=st.rules.filter(r=>r.type==='maxdays'&&st.nodes.has(r.id)).map(r=>{const u=new Set();placed().forEach((d,id)=>{if(related(r.id,id))u.add(d)});return {r,days:[...u].sort((a,b)=>a-b)}}).filter(x=>x.days.length>x.r.day||(x.days.length>1&&x.days[x.days.length-1]-x.days[0]!==x.days.length-1));
+  const mdHtml=mdv.length?`<div class="notice">提醒：${mdv.map(x=>`${esc(x.r.id.split(SEP).join(' / '))} 设了「${ruleText(x.r)}」，但现在分在第 ${x.days.map(d=>d+1).join('、')} 天`).join('<br>')}</div>`:'';
+  const rv=[];
+  st.rules.filter(r=>st.nodes.has(r.id)&&(r.type==='day'||r.type==='alone'||r.type==='last')).forEach(r=>{
+    const mine=[];st.days.forEach((d,i)=>{if(d.items.some(it=>related(r.id,it.id)))mine.push(i)});
+    if(r.type==='day'&&mine.length&&mine.some(i=>i!==r.day-1))rv.push(`${esc(r.id.split(SEP).join(' / '))} 设了「指定第 ${r.day} 天发」，但现在排在第 ${mine.map(i=>i+1).join('、')} 天`);
+    if(r.type==='last'&&mine.length){const pmL=placed();const lastDay=Math.max(-1,...[...pmL].filter(([id])=>{const q=ruleOf(id);return !isHold(id)&&(!q||q.type!=='last')}).map(([,d])=>d));
+      if(mine.some(i=>i<lastDay))rv.push(`${esc(r.id.split(SEP).join(' / '))} 设了「最后发」，但第 ${lastDay+1} 天还有其他部门在它后面`)}
+    if(r.type==='alone')mine.forEach(i=>{const others=st.days[i].items.filter(it=>!related(r.id,it.id));if(others.length)rv.push(`${esc(r.id.split(SEP).join(' / '))} 设了「独自一天发」，但第 ${i+1} 天还有：${others.map(it=>esc(N(it.id).name)).join('、')}`)});
+  });
+  togetherSets().forEach(set=>{
+    const units=visibleUnits().filter(u=>set.some(x=>related(x,u)));if(units.length<2)return;
+    const ds=new Set(units.map(dayIndexOf));
+    if(ds.size>1)rv.push(`${units.map(u=>esc(N(u).name)).join('、')} 设了「同一天发」，但现在${[...ds].map(d=>d<0?'有的未排':`第 ${d+1} 天`).join('、')}`);
+  });
+  {const lastIdx=st.days.reduce((m,d,i)=>d.items.length?i:m,-1);
+   visibleUnits().filter(isHold).forEach(id=>{const d=dayIndexOf(id);if(d>=0&&d!==lastIdx)rv.push(`${esc(N(id).name)} 应该排在最后一天（第 ${lastIdx+1} 天），但现在在第 ${d+1} 天`)})}
+  const rvHtml=rv.length?`<div class="notice">提醒：${rv.join('<br>')}</div>`:'';
+  $('splitWarn').innerHTML=rvHtml+mdHtml+(sg.length?`<div class="notice">提醒：同一个事业处应该同一天发完，但下面这些分在不同天：<br>${sg.map(g=>`${esc(g.name)}：第 ${g.days.map(d=>d+1).join('、')} 天${g.fits?'（这个事业处一天放得下，建议移到同一天）':'（金额超过一天上限，只能分天）'}`).join('<br>')}</div>`:'');
+  // 总结
+  const sr=summaryRows();
+  $('stepSum').hidden=st.tab!=='main'||!sr.length;
+  if(sr.length&&!$('sumTable').contains(document.activeElement)){
+    let sh='<thead><tr><th>日期</th><th>项目</th><th class="num">给款(peso)</th></tr></thead><tbody>';
+    sr.forEach((r,k)=>{const first=k===0||sr[k-1].date!==r.date;let span=1;if(first){for(let q=k+1;q<sr.length&&sr[q].date===r.date;q++)span++}
+      sh+=`<tr>${first?`<td rowspan="${span}" class="sumdate">${esc(r.date)}</td>`:''}<td><input class="sumlbl" data-sumkey="${esc(r.key)}" value="${esc(r.label)}" aria-label="项目名称"></td><td class="num">${fmt(r.amount)}</td></tr>`});
+    sh+=`</tbody><tfoot><tr><td></td><td>合计</td><td class="num"><b>${fmt(sr.reduce((a,r)=>a+r.amount,0))}</b></td></tr></tfoot>`;
+    $('sumTable').innerHTML=sh;
+  }
+  $('copy').disabled=!st.days.length;$('reviewAll').disabled=!st.days.some(d=>d.items.length);
+  $('reset').disabled=!st.days.length;
+  $('autoAll').disabled=!ready||!unplaced.length;
+}
+
+/* ---------- actions ---------- */
+function dayIndexOf(id){return st.days.findIndex(d=>d.items.some(it=>it.id===id))}
+function newDay(){const last=st.days[st.days.length-1];st.days.push({date:last?nextWeekday(last.date):nextWeekday(),cap:st.defaultCap,items:[]});return st.days.length-1}
+function moveUnit(id,v){
+  if(v==='-1')st.locked.delete(id);
+  st.days.forEach(d=>d.items=d.items.filter(it=>it.id!==id));
+  let i=v==='new'?newDay():Number(v);
+  if(i>=0&&st.days[i])st.days[i].items.push({id,wallet:0,amount:N(id).amount});
+}
+/* 拆开：原本排在哪天，拆开后的下一层就排在同一天 */
+function expandUnit(id){const i=dayIndexOf(id);st.days.forEach(d=>d.items=d.items.filter(it=>it.id!==id));st.open.add(id);if(i>=0)N(id).children.forEach(c=>st.days[i].items.push({id:c,wallet:0,amount:N(c).amount}))}
+/* 合起：底下全部排在同一天，合起后就排在那天；否则变回未排 */
+function collapseUnit(id){
+  const under=visibleUnits().filter(u=>u!==id&&N(u).path.length>N(id).path.length&&N(id).path.every((x,k)=>N(u).path[k]===x));
+  const days=new Set(under.map(dayIndexOf));
+  st.days.forEach(d=>d.items=d.items.filter(it=>!under.includes(it.id)));
+  const close=x=>{st.open.delete(x);N(x).children.forEach(close)};close(id);
+  const placedDays=[...days].filter(d=>d>=0).sort((a,b)=>a-b);
+  if(placedDays.length){const i=placedDays[0];st.days[i].items.push({id,wallet:0,amount:N(id).amount});
+    if(days.size>1)st.notice={text:`${esc(N(id).name)} 原本分在${[...days].map(d=>d<0?'未排':`第 ${d+1} 天`).join('、')}，合起后整组移到第 ${i+1} 天。如果这天超过预计拨款，请调整。`}}
+  return placedDays.length?placedDays[0]:-1;
+}
+function changed(){rebalance();render()}
+/* 计算比较久的动作：先显示「处理中」，让画面更新后再算，算完再重画 */
+function busy(fn,msg){const n=$('busyNote');if(n){n.textContent=msg||'正在重新分配钱包…';n.hidden=false}
+  setTimeout(()=>{try{fn()}finally{if(n)n.hidden=true;render()}},30)}
+/* 送审名单：dayIdx>=0 只导出那一天；-1 导出全部发薪日（含现金发放） */
+/* 发薪日送审总名单：排进发薪日的 + 现金发放 + 暂缓表 + 其他发放方式，全部员工一张 */
+function reviewAllRows(){const rows=[],seen=new Set();
+  const lastDay=st.days.reduce((m,d,i)=>d.items.length?i:m,-1);
+  st.days.forEach((d,i)=>whoList(i,-1,'').forEach(r=>{const e=r.ref,l=st.nodes.get(e.leaf),hold=l&&isHold(l.id),p=hold&&e.orig?e.orig.split(' / '):realPath(l?l.path:[]);
+    seen.add('h|'+e.code);rows.push({key:(hold?'H|':'U|')+e.code+'|'+i,def:!hold,date:d.date,day:`第${i+1}天`,month:e.month||'',code:e.code,name:e.name,pos:e.pos||'',frmb:e.rmb,rem:e.rem||'',g:p[0]||'',b:p[1]||'',d:p[2]||'',amt:e.a,addr:e.addr||'',way:hold?'暂缓':'USDT',grp:hold?N(l.id).name:'',note:''})}));
+  {const pm=placed();visibleUnits().filter(id=>!pm.has(id)&&!isHold(id)).forEach(id=>empsOf(id).forEach(e=>{const l=st.nodes.get(e.leaf),p=realPath(l?l.path:[]);rows.push({key:'N|'+e.code,def:false,date:'',day:'',month:e.month||'',code:e.code,name:e.name,pos:e.pos||'',frmb:e.rmb,rem:e.rem||'',g:p[0]||'',b:p[1]||'',d:p[2]||'',amt:e.a,addr:e.addr||'',way:'USDT',grp:'',note:'未排发放日期'})}))}
+  (st.cashRows||[]).forEach(r=>{rows.push({key:'C|'+r.code,def:false,date:cashDate(),day:'现金发放',month:r.month||'',code:r.code,name:r.ename,pos:r.pos||'',frmb:r.rmb,rem:r.rem||'',g:r.g,b:r.cb||'',d:r.cd||'',amt:r.amount,addr:'',way:'现金',grp:'',note:''})});
+  (st.held||[]).forEach((h,i)=>{if(seen.has('h|'+h.code)&&h.ok&&!isSkip(h,i))return;rows.push({key:'X|'+(h.code||i),def:false,date:'',day:'',month:h.month||'',code:h.code,name:h.name,pos:h.pos||'',frmb:h.rmb,rem:h.rem||'',g:h.g,b:h.b,d:h.d,amt:h.amount,addr:h.addr||'',way:h.way||'暂缓',grp:holdGroupOfH(h,i),note:isSkip(h,i)?'特例不发':!h.ok?'金额是 0 或读不到':''})});
+  (st.otherRows||[]).forEach((r,i)=>rows.push({key:'O|'+(r.code||i),def:false,date:'',day:'',month:r.month||'',code:r.code,name:r.name,pos:r.pos||'',frmb:r.rmb,rem:r.rem||'',g:r.g,b:r.b,d:r.d,amt:r.amount,addr:'',way:r.way,grp:'',note:'其他发放方式'}));
+  /* 发薪勾选只依工资发放方式自动带出（只有 USDT 打勾），不能在工具里修改；要改请回 OA */
+  const rate=Number(st.phpRate)||0;
+  rows.forEach(r=>{r.serial=serialOf(r.month||st.serialMonth,r.code);r.on=r.def;r.rate=rate||'';r.rmb=isFinite(r.frmb)?r.frmb:'';r.first=!!(st.prev&&r.code&&!st.prev.has(r.code)&&/^[UNH]\|/.test(r.key)&&st.newOverride[r.code]!==false)||st.newOverride[r.code]===true;r.note=[r.rem,r.note].filter(Boolean).join('；')});
+  rows.sort((a,b)=>(a.date||'9')<(b.date||'9')?-1:(a.date||'9')>(b.date||'9')?1:String(a.serial).localeCompare(String(b.serial)));
+  return rows}
+const REV_HEAD=['发薪','发放日期','薪资年月','序号','工号','姓名','事业群','事业处','部门','实发工资PHP','PHP→RMB 汇率','实发工资RMB','工资发放方式','第一次打款','备注'];
+const isHoldRow=r=>/^[HX]\|/.test(r.key);
+const revRows=()=>{const rows=reviewAllRows(),f=st.revFilter;return f==='hold'?rows.filter(isHoldRow):f==='usdt'?rows.filter(r=>/^[UN]\|/.test(r.key)):f==='other'?rows.filter(r=>/^[CO]\|/.test(r.key)):rows};
+function renderReview(){document.querySelectorAll('[data-revf]').forEach(b=>b.classList.toggle('on',b.dataset.revf===(st.revFilter||'all')));const rows=revRows(),on=rows.filter(r=>r.on);
+  $('revSum').innerHTML=`共 <b>${rows.length}</b> 人；发薪（1）<b>${on.length}</b> 人，${fmt(on.reduce((a,r)=>a+r.amt,0))} PHP`;
+  $('revTable').innerHTML=`<thead><tr>${REV_HEAD.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr class="${r.on?'':'revoff'}"><td class="ck"><b>${r.on?1:0}</b></td><td>${esc(r.date)}</td><td>${esc(r.month)}</td><td>${esc(r.serial)}</td><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.g)}</td><td>${esc(r.b)}</td><td>${esc(r.d)}</td><td class="num">${fmt(r.amt)}</td><td class="num">${r.rate===''?'':esc(String(r.rate))}</td><td class="num">${r.rmb===''?'':fmt2(r.rmb)}</td><td class="way${r.way==='暂缓'?' hold':''}">${esc(r.way)}</td><td class="first">${r.first?'是':''}</td><td>${esc(r.note)}</td></tr>`).join('')}</tbody>`;
+}
+function copyReviewAll(btn,rowsIn,title){const rows=rowsIn||revRows(),lab=btn.textContent,on=rows.filter(r=>r.on),tot=on.reduce((a,r)=>a+r.amt,0);
+  const B="border:1px solid #000;padding:2px 6px;font-family:Calibri,'Microsoft YaHei',sans-serif;font-size:11pt;";
+  const cells=r=>[r.on?1:0,r.date,r.month,r.serial,r.code,r.name,r.g,r.b,r.d,r.amt,r.rate,r.rmb===''?'':r.rmb,r.way,r.first?'是':'',r.note];
+  const html=`<table style="border-collapse:collapse"><tr>${REV_HEAD.map(h=>`<td style="${B}background:#DCE6F1;font-weight:bold;text-align:center">${h}</td>`).join('')}</tr>${rows.map(r=>`<tr>${cells(r).map((v,k)=>`<td style="${B}${k===0?'text-align:center;font-size:13pt;':''}${k===9||k===10||k===11?'text-align:right;':''}${k===3?'mso-number-format:&quot;\\@&quot;;':''}">${esc(String(v))}</td>`).join('')}</tr>`).join('')}</table>`;
+  const text=[REV_HEAD.join('\t'),...rows.map(r=>cells(r).join('\t'))].join('\n');
+  copyRich(html,text).then(()=>{btn.textContent=`已复制 ${rows.length} 人，到 Excel 贴上即可`}).catch(()=>{btn.textContent='请用跳出的视窗手动复制'}).finally(()=>setTimeout(()=>{btn.textContent=lab},3000));
+}
+function exportReview(dayIdx,btn,holdOnly){
+  /* 单天送审名单：格式跟发薪日送审总名单一样，只放这一天的人（现金发放日期是这天的也一起放） */
+  const d=st.days[dayIdx];if(!d)return;
+  const rows=reviewAllRows().filter(r=>(r.day===`第${dayIdx+1}天`||(r.day==='现金发放'&&r.date===d.date))&&(!holdOnly||isHoldRow(r)));
+  copyReviewAll(btn,rows,`第 ${dayIdx+1} 天（${d.date}）送审名单`);
+}
+/* ---------- 第一次打款：跟上个月打款名单比对工号，上月没有的就是第一次 ---------- */
+function newReason(e){if(!st.prev||!e.code)return '';return st.prev.has(e.code)?'':'上月名单没有这个工号'}
+/* 只是标注：工号一样，但这个月的钱包地址跟上个月不同（不算第一次打款，不另外打 TRX） */
+const shortAddr=a=>a&&a.length>14?a.slice(0,6)+'…'+a.slice(-4):(a||'');
+function addrChanged(e){if(!st.prev||!e||!e.code||!e.addr)return false;const pa=st.prev.get(e.code);return !!pa&&pa!==e.addr}
+const addrNote=e=>addrChanged(e)?`地址跟上月不同（上月 ${shortAddr(st.prev.get(e.code))} → 本月 ${shortAddr(e.addr)}）`:'';
+/* 每个月导入后，自动把「这个月要发的名单」（工号 + 钱包地址）记在这台电脑的浏览器里，下个月导入时自动拿来比对 */
+const PKEY='payroll-allocator-paid-v1';
+function loadPaid(){try{const v=JSON.parse(localStorage.getItem(PKEY)||'null');return v&&v.months?v:{months:{}}}catch(_){return {months:{}}}}
+function curMonth(){const ms=[...new Set([...(st.baseData||[]).map(r=>r.month),...(st.held||[]).map(h=>h.month)].filter(x=>/^\d{6}$/.test(x)))].sort();return ms[ms.length-1]||''}
+function savePaid(){const m=curMonth();if(!m)return;
+  const list=[];st.nodes.forEach(n=>n.emps.forEach(e=>{if(e.code)list.push([e.code,e.addr||''])}));
+  const v=loadPaid();v.months[m]=list;const keys=Object.keys(v.months).sort();while(keys.length>6)delete v.months[keys.shift()];
+  try{localStorage.setItem(PKEY,JSON.stringify(v))}catch(_){}}
+/* 作业二：记住每个月「实际打款」的名单（按打款日期的月份），导入核准名单时自动跟上个月比对 */
+const ym=d=>String(d||'').replace(/-/g,'').slice(0,6);
+function savePaidBatches(){const by={};(st.batches||[]).forEach(b=>{const m=ym(b.date);if(!m)return;(by[m]=by[m]||new Map());b.emps.forEach(e=>{if(e.code)by[m].set(e.code,e.addr||'')})});
+  const v=loadPaid();Object.entries(by).forEach(([m,map])=>v.months[m]=[...map.entries()]);const keys=Object.keys(v.months).sort();while(keys.length>6)delete v.months[keys.shift()];
+  try{localStorage.setItem(PKEY,JSON.stringify(v))}catch(_){}}
+function autoPrevW(){const ms=(st.batches||[]).map(b=>ym(b.date)).filter(Boolean).sort();if(!ms.length){if(!st.prevManual)st.prev=null;return}
+  if(st.prevManual)return;const m=ms[ms.length-1],v=loadPaid(),earlier=Object.keys(v.months).filter(k=>k<m).sort();
+  if(!earlier.length){st.prev=null;return}const pm=earlier[earlier.length-1];st.prev=new Map(v.months[pm]);st.prevName=`${pm.slice(0,4)} 年 ${Number(pm.slice(4))} 月`}
+/* 作业一：用「上个月实际打款的名单」比对，标出第一次打款的人（薪资月份 M 的上一份打款名单，是打款月份 ≤ M 的最近一份） */
+function autoPrevJob1(){if(st.prevManual)return;const m=st.serialMonth;if(!/^\d{6}$/.test(m||''))return;const v=loadPaid(),ks=Object.keys(v.months).filter(k=>k<=m).sort();
+  if(!ks.length){if(!(st.batches||[]).length)st.prev=null;return}const pm=ks[ks.length-1];st.prev=new Map(v.months[pm]);st.prevName=`${pm.slice(0,4)} 年 ${Number(pm.slice(4))} 月`}
+function autoPrev(){const m=curMonth();if(!m)return;const v=loadPaid(),earlier=Object.keys(v.months).filter(k=>k<m).sort();
+  if(!earlier.length){st.prev=null;st.prevAuto='';return}
+  const pm=earlier[earlier.length-1];st.prev=new Map(v.months[pm]);st.prevName=`${pm.slice(0,4)} 年 ${Number(pm.slice(4))} 月`;st.prevAuto=pm}
+function isNewEmp(e){if(!e||!e.code)return false;const o=st.newOverride[e.code];if(o!==undefined)return o;return !!newReason(e)}
+/* ---------- 钱包分配分页 ---------- */
+const r2=v=>Math.round(v*100)/100, fmt2=v=>v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+/* 进位规则：PHP→RMB 小数 2 位四舍五入；RMB→USDT 小数 2 位无条件舍去；TRX 显示小数 3 位 */
+const round2=v=>Math.round((v+Number.EPSILON)*100)/100, floor2=v=>Math.floor(v*100+1e-7)/100;
+const fmt3=v=>(Number(v)||0).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}), r3=v=>Math.round(v*1000)/1000;
+function rmbOf(php){const a=Number(st.phpRate)||0;return a>0?round2(php/a):null}
+function usdtOf(php,date){const b=Number(st.usdtRate[date])||0,rmb=rmbOf(php);return rmb!==null&&b>0?floor2(rmb/b):null}
+function walletDay(d){const out=[0,1,2,3].map(()=>({php:0,heads:0,usdt:0,rmb:0,list:[],nw:0}));
+  d.items.forEach(it=>(it.parts||[]).forEach(p=>{const o=out[p.wallet];o.php+=p.amount;o.heads+=p.heads;(p.list||[]).forEach(e=>{o.list.push(e);if(isNewEmp(e))o.nw++;if(addrChanged(e))o.chg=(o.chg||0)+1;const u=usdtOf(e.a,d.date);if(u!==null)o.usdt+=u;const m=rmbOf(e.a);if(m!==null)o.rmb+=m})}));
+  out.forEach(o=>{o.usdt=r2(o.usdt);o.rmb=r2(o.rmb);o.trx=trxNeed(o.heads,o.nw)});return out}
+/* TRX：第一次打款的人数 × 每人打的 TRX */
+function trxNeed(heads,nw){const v=Number(st.trx.perNew)||0;return v>0?r3(nw*v):null}
+function wName(w){return (st.wallets&&st.wallets[w]&&st.wallets[w].name)||`钱包 ${w+1}`}
+const wInfo=w=>st.wallets[w]||{name:`钱包 ${w+1}`,addr:'',payer:''};
+/* ---------- 钱包分配：资料来源是「每天核准后从 OA 导出的名单」，跟预估排程无关 ---------- */
+/* 分钱包：以事业处为一组；金额、人数、第一次打款人数都平均；一般事业处最多拆 2 个钱包，超过当天一半金额的才拆更多；第一次打款的人不受限制 */
+function allocCore(units,K){K=K||W;
+  /* 多试几种起始排法，取最平均的结果，避免卡在局部最好 */
+  let best=null,bestV=Infinity;
+  const t0=Date.now();
+  for(let t=0;t<4;t++){const r=allocTry(units,t,K,t0);if(r.v<bestV){bestV=r.v;best=r.ws}if(Date.now()-t0>900)break}
+  if(best)units.flatMap(u=>u.emps).forEach((e,i)=>e.w=best[i]);
+}
+function allocTry(units,seed,K,t0){t0=t0||Date.now();
+  const emps=[];units.forEach((u,ui)=>u.emps.forEach(e=>emps.push({e,a:e.a,u:ui,w:0,nw:0})));
+  const n=emps.length;if(!n)return {v:0,ws:[]};
+  const T=emps.reduce((s,x)=>s+x.a,0),tA=T/K,tC=n/K,NN=emps.reduce((s,x)=>s+x.nw,0),tN=NN/K,nA=tA||1,nC=tC||1,nN=Math.max(1,NN/K);
+  const lim=units.map(u=>u.amount>T/2+0.5?K:MAX_WALLETS_PER_UNIT);
+  /* 钱包分配的条件：「只用指定钱包」限制每个单位能用哪些钱包；「最多用几个钱包」限制整组（例如整个事业群）合计用几个 */
+  const rules=(st.wrules||[]);
+  const allW=[...Array(K).keys()];
+  const allowed=units.map(u=>{let ok=allW.slice();rules.forEach(r=>{if(r.type==='only'&&wruleHits(r,u.key))ok=ok.filter(w=>r.ws.includes(w))});return ok.length?ok:allW.slice()});
+  const maxR=rules.map((r,ri)=>({r,ri})).filter(x=>x.r.type==='max');
+  const uMax=units.map(u=>maxR.filter(x=>wruleHits(x.r,u.key)).map(x=>x.ri));
+  const gcnt={};maxR.forEach(x=>gcnt[x.ri]=new Array(K).fill(0));
+  const gUsed=ri=>gcnt[ri].filter(c=>c>0).length;
+  const okGroup=(ui,from,to)=>uMax[ui].every(ri=>{const c=gcnt[ri].slice();if(from>=0)c[from]--;c[to]++;return c.filter(v=>v>0).length<=rules[ri].n});
+  const A=new Array(K).fill(0),C=new Array(K).fill(0),NW=new Array(K).fill(0),cnt=units.map(()=>new Array(K).fill(0));
+  /* 金额最优先，其次第一次打款人数，再来人数 */
+  const g=(a,c,nn)=>100*((a-tA)/nA)**2+((c-tC)/nC)**2+(NN?4*((nn-tN)/nN)**2:0);
+  const used=u=>cnt[u].filter(x=>x>0).length;
+  const usedAfter=(u,from,to)=>{const c=cnt[u].slice();c[from]--;c[to]++;return c.filter(x=>x>0).length};
+  const place=(x,w)=>{x.w=w;A[w]+=x.a;C[w]++;NW[w]+=x.nw;if(!x.nw)cnt[x.u][w]++;uMax[x.u].forEach(ri=>gcnt[ri][w]++)};
+  const unplace=x=>{const w=x.w;A[w]-=x.a;C[w]--;NW[w]-=x.nw;if(!x.nw)cnt[x.u][w]--;uMax[x.u].forEach(ri=>gcnt[ri][w]--)};
+  let order=units.map((u,i)=>i).sort((a,b)=>units[b].amount-units[a].amount);
+  if(seed){let x=seed*9301+49297;const rnd=()=>(x=(x*16807)%2147483647)/2147483647;order=order.map(i=>({i,k:rnd()})).sort((a,b)=>a.k-b.k).map(o=>o.i)}
+  order.forEach(ui=>{const es=emps.filter(x=>x.u===ui).sort((x,y)=>y.a-x.a);
+    const rem=allW.map(w=>tA-A[w]);
+    let cand=allowed[ui].slice().sort((a,b)=>rem[b]-rem[a]);
+    uMax[ui].forEach(ri=>{const U=allW.filter(w=>gcnt[ri][w]>0),room=rules[ri].n-U.length;let added=0;
+      cand=cand.filter(w=>{if(U.includes(w))return true;if(added<room){added++;return true}return false})});
+    if(!cand.length)cand=allowed[ui].slice();
+    const ws=cand.slice(0,Math.max(1,lim[ui]));
+    const add=new Array(K).fill(0);
+    es.forEach(x=>{let w=ws.find(w=>add[w]+x.a<=rem[w]+0.5);if(w===undefined)w=ws.reduce((b,v)=>(rem[v]-add[v])>(rem[b]-add[b])?v:b,ws[0]);add[w]+=x.a;place(x,w)})});
+  let improved=true,pass=0;
+  while(improved&&pass++<40&&Date.now()-t0<1200){improved=false;
+    for(const x of emps){const u=x.w;
+      for(let v=0;v<K;v++){if(v===u||!allowed[x.u].includes(v)||!okGroup(x.u,u,v))continue;const k=x.nw?used(x.u):usedAfter(x.u,u,v);if(k>lim[x.u])continue;
+        const before=g(A[u],C[u],NW[u])+g(A[v],C[v],NW[v])+SPLIT_PENALTY*used(x.u);
+        const after=g(A[u]-x.a,C[u]-1,NW[u]-x.nw)+g(A[v]+x.a,C[v]+1,NW[v]+x.nw)+SPLIT_PENALTY*k;
+        if(after<before-1e-12){unplace(x);place(x,v);improved=true;break}}}
+    for(let i=0;i<n;i++){if(Date.now()-t0>1200)break;for(let j=i+1;j<n;j++){const x=emps[i],y=emps[j],u=x.w,v=y.w;if(u===v||(x.a===y.a&&x.nw===y.nw))continue;
+      if(!allowed[x.u].includes(v)||!allowed[y.u].includes(u))continue;
+      let kx,ky;if(x.u===y.u){kx=used(x.u);ky=0}else{kx=x.nw?used(x.u):usedAfter(x.u,u,v);ky=y.nw?used(y.u):usedAfter(y.u,v,u);if(kx>lim[x.u]||ky>lim[y.u])continue}
+      unplace(x);unplace(y);const okG=okGroup(x.u,-1,v)&&(()=>{uMax[x.u].forEach(ri=>gcnt[ri][v]++);const r=okGroup(y.u,-1,u);uMax[x.u].forEach(ri=>gcnt[ri][v]--);return r})();place(x,u);place(y,v);
+      if(!okG)continue;
+      const before=g(A[u],C[u],NW[u])+g(A[v],C[v],NW[v])+SPLIT_PENALTY*(used(x.u)+(x.u===y.u?0:used(y.u)));
+      const after=g(A[u]-x.a+y.a,C[u],NW[u]-x.nw+y.nw)+g(A[v]-y.a+x.a,C[v],NW[v]-y.nw+x.nw)+SPLIT_PENALTY*(kx+ky);
+      if(after<before-1e-12){unplace(x);unplace(y);place(x,v);place(y,u);improved=true}}}
+  }
+  let v=0;for(let w=0;w<K;w++)v+=g(A[w],C[w],NW[w]);units.forEach((u,ui)=>v+=SPLIT_PENALTY*used(ui));
+  return {v,ws:emps.map(x=>x.w)};
+}
+/* 条件对象：target 是「事业群」或「事业群|事业处」 */
+function wruleHits(r,key){const [g,b]=key.split('|');return r.target==='*'||r.target===g||r.target===key}
+const WRKEY='payroll-allocator-wrules-v1';
+function loadWRules(){try{const v=JSON.parse(localStorage.getItem(WRKEY)||'[]');return Array.isArray(v)?v.filter(r=>r&&r.target&&(r.type==='max'||r.type==='only')):[]}catch(_){return[]}}
+function saveWRules(){try{localStorage.setItem(WRKEY,JSON.stringify(st.wrules))}catch(_){}}
+const wruleText=r=>r.type==='max'?`最多用 ${r.n} 个钱包`:`只用 ${r.ws.map(w=>wName(w)).join('、')}`;
+/* 每个钱包每天最多 X USDT（预设 11 万）：当天 USDT 合计超过 4 × X，就加开钱包，直到每个钱包都不超过 */
+function batchUsdt(b){return r2(b.emps.reduce((a,e)=>{const u=bUsdt(e,b);return a+(u||0)},0))}
+function allocBatch(b){const m=new Map();b.emps.forEach(e=>{const k=e.g+'|'+(e.b||e.g);if(!m.has(k))m.set(k,{key:k,amount:0,emps:[]});const u=m.get(k);u.amount+=e.a;u.emps.push(e)});
+  const units=[...m.values()],cap=Number(st.wcap)||0,rated=Number(b.rate)>0&&Number(st.phpRate)>0;
+  /* 钱包数量固定用「出款钱包设定」里的钱包（目前 4 个），不会自动加开；超过每日上限只提醒 */
+  const K=Math.max(1,(st.wallets||[]).length||W);allocCore(units,K);b.K=K;
+}
+const bK=list=>Math.max(1,...list.map(b=>b.K||W));
+function wruleViol(b){const out=[];(st.wrules||[]).forEach(r=>{const es=b.emps.filter(e=>wruleHits(r,e.g+'|'+(e.b||e.g)));if(!es.length)return;const ws=[...new Set(es.map(e=>e.w))];
+  if(r.type==='max'&&ws.length>r.n)out.push(`${r.target.split('|').join(' / ')} 用了 ${ws.length} 个钱包，超过条件的 ${r.n} 个`);
+  if(r.type==='only'&&ws.some(w=>!r.ws.includes(w)))out.push(`${r.target.split('|').join(' / ')} 用到了不在指定范围的钱包`)});return out}
+function allocAllBatches(){(st.batches||[]).forEach(allocBatch)}
+const bRmb=e=>rmbOf(e.a), bUsdt=(e,b)=>{const r=Number(b.rate)||0,m=rmbOf(e.a);return m!==null&&r>0?floor2(m/r):null};
+function batchCells(list){const out=[...Array(bK(list))].map(()=>({php:0,heads:0,usdt:0,rmb:0,nw:0,chg:0,list:[],rated:true}));
+  list.forEach(b=>{const rated=Number(b.rate)>0;b.emps.forEach(e=>{const o=out[e.w||0];o.php+=e.a;o.heads++;o.list.push({e,b});
+    const m=bRmb(e);if(m!==null)o.rmb+=m;const u=bUsdt(e,b);if(u!==null)o.usdt+=u;if(!rated)o.rated=false;if(isNewEmp(e))o.nw++;if(addrChanged(e))o.chg++})});
+  out.forEach(o=>{o.usdt=r2(o.usdt);o.rmb=r2(o.rmb)});return out}
+function batchSel(key){/* key: 批次序号 或 -1=全部 */return key>=0?[st.batches[key]].filter(Boolean):(st.batches||[])}
+function listRows(key,w,filter){const rows=[];batchSel(key).forEach(b=>{const bi=st.batches.indexOf(b);b.emps.forEach(e=>{if(w>=0&&e.w!==w)return;if(filter&&!filter(e,b))return;
+  const u=bUsdt(e,b);rows.push({ref:e,code:e.code,name:e.name,g:e.g,unit:[e.b,e.d].filter(Boolean).join(' / ')||e.g,amount:e.a,wallet:e.w,dayText:`${b.date}`,usdt:u,note:[isNewEmp(e)?'第一次打款':'',addrNote(e)].filter(Boolean).join('；')})})});return rows}
+function renderWallet(){
+  /* 分钱包的条件 */
+  /* 部门人数（所有已导入的核准名单）：一般人数、第一次打款人数 */
+  const allEmps=(st.batches||[]).flatMap(b=>b.emps),hitE=t=>allEmps.filter(e=>wruleHits({target:t},e.g+'|'+(e.b||e.g)));
+  const cntTxt=t=>{const es=hitE(t);return es.length?`（${es.length} 人）`:''};
+  const ruleCnt=r=>{const es=hitE(r.target);return es.length?`（${es.length} 人）`:''};
+  $('wruleList').innerHTML=st.wrules.length?`<ol>${st.wrules.map((r,i)=>`<li><b>${r.target==='*'?'全部':esc(r.target.split('|').join(' / '))}</b>：${esc(wruleText(r))}<span class="hint" style="margin:0 0 0 4px">${esc(ruleCnt(r))}</span><button class="x" data-wrdel="${i}">删除</button></li>`).join('')}</ol>`:'<p class="none">还没有条件。</p>';
+  {const tg=new Set();(st.batches||[]).forEach(b=>b.emps.forEach(e=>{if(e.g){tg.add(e.g);if(e.b)tg.add(e.g+'|'+e.b)}}));st.wrules.forEach(r=>tg.add(r.target));
+   const cur=$('wrTarget').value,list=[...tg].sort((a,b)=>a.localeCompare(b));$('wrTarget').innerHTML=`<option value="*">全部${esc(cntTxt('*'))}</option>`+list.map(k=>`<option value="${esc(k)}">${k.includes('|')?'　'+esc(k.split('|')[1]):esc(k)}${esc(cntTxt(k))}</option>`).join('')||'<option value="">（导入核准名单后会列出事业群）</option>';if(cur&&(cur==='*'||list.includes(cur)))$('wrTarget').value=cur;
+
+   if(!$('wrWs').dataset.built){$('wrWs').innerHTML=st.wallets.map((x,w)=>`<label class="chip"><input type="checkbox" data-wrw="${w}">${esc(wName(w))}</label>`).join('');$('wrWs').dataset.built='1'}}
+  if(!$('wsetBody').contains(document.activeElement)){
+    $('wsetBody').innerHTML=st.wallets.map((x,w)=>{const c=addrCheck(x.addr);return `<tr><td><span class="wtag" style="--wc:${wc(w)}"></span>${w+1}${w>=4?` <button class="x" data-wsdel="${w}">删除</button>`:''}</td><td><input class="wsin" data-wset="${w}" data-k="name" value="${esc(x.name)}" aria-label="钱包 ${w+1} 名称"></td><td><input class="wsin addr" data-wset="${w}" data-k="addr" value="${esc(x.addr)}" placeholder="T 开头，34 码" aria-label="钱包 ${w+1} 出款地址"></td><td><input class="wsin" data-wset="${w}" data-k="payer" value="${esc(x.payer)}" placeholder="姓名" aria-label="钱包 ${w+1} 打款人员"></td><td>${c?`<span class="bad">${esc(c)}</span>`:'<span class="ok">✓</span>'}</td><td><input class="wsin num" type="number" step="0.001" data-wbal="${w}" data-k="trx" value="${x.bal&&x.bal.trx!=null?x.bal.trx:''}" placeholder="手动输入"><small class="wh">${x.bal&&x.bal.at?(x.bal.src==='chain'?'链上 ':'手动 ')+fmtAgo(x.bal.at):''}</small></td><td><input class="wsin num" type="number" step="0.01" data-wbal="${w}" data-k="usdt" value="${x.bal&&x.bal.usdt!=null?x.bal.usdt:''}" placeholder="手动输入"></td></tr>`}).join('');
+  }
+  const done=st.wallets.filter(x=>!addrCheck(x.addr)&&x.payer).length,nW=st.wallets.length;
+  document.querySelector('.wset>summary').textContent=`${done===nW?`${nW} 个钱包都设好了`:`已设好 ${done}／${nW} 个钱包`}（按 ＋／－ 展开或收起）`;
+  if(document.activeElement!==$('wcap'))$('wcap').value=st.wcap||'';
+  if(document.activeElement!==$('phpRate'))$('phpRate').value=st.phpRate||'';
+  $('phpRateNote').textContent=st.rate?`（资料里的汇率：${st.rate}）`:'';
+  document.querySelectorAll('[data-trx]').forEach(i=>{if(document.activeElement!==i)i.value=st.trx[i.dataset.trx]||''});
+  /* 第一次打款 */
+  const allE=(st.batches||[]).flatMap(b=>b.emps.map(e=>({e,b})));
+  if(st.prev){const cand=allE.filter(({e})=>newReason(e)||st.newOverride[e.code]!==undefined),chgN=allE.filter(({e})=>addrChanged(e)).length;
+    $('prevNote').innerHTML=`第一次打款（跟 ${esc(st.prevName)} 实际打款的名单比对工号）：<b>${allE.filter(({e})=>isNewEmp(e)).length}</b> 人${chgN?`；换地址 <button class="who inl" data-bchg="-1~-1">${chgN} 人</button>（不另外打 TRX）`:''}`;
+    $('newList').innerHTML=cand.length?`<details class="fold-list"${st.newListOpen?' open':''}><summary>第一次打款名单（${cand.filter(({e})=>isNewEmp(e)).length} 人${cand.some(({e})=>!isNewEmp(e))?`，另有 ${cand.filter(({e})=>!isNewEmp(e)).length} 人已取消`:''}）</summary><div class="tablewrap" style="margin-top:8px"><table class="ctable" style="min-width:640px"><thead><tr><th>第一次打款</th><th>工号</th><th>姓名</th><th>事业群</th><th>事业处／部门</th><th>原因</th><th>排在</th><th>收款地址状态</th></tr></thead><tbody>${cand.map(({e,b})=>`<tr><td class="ck"><input type="checkbox" data-newck="${esc(e.code)}" ${isNewEmp(e)?'checked':''}></td><td>${esc(e.code)}</td><td>${esc(e.name)}</td><td>${esc(e.g)}</td><td>${esc([e.b,e.d].filter(Boolean).join(' / '))}</td><td>${esc(newReason(e)||'人工加入')}</td><td>${esc(b.date)} · ${esc(wName(e.w))}</td><td>${e.addr?`<select class="wsin" data-astat="${esc(e.addr)}"><option value="" ${!addrStatus(e.addr)?'selected':''}>还没查（当新地址）</option><option value="new" ${addrStatus(e.addr)==='new'?'selected':''}>新地址（1.1）</option><option value="old" ${addrStatus(e.addr)==='old'?'selected':''}>已启用（0.268）</option></select>`:'<span class="bad">没有地址</span>'}</td></tr>`).join('')}</tbody></table></div><p class="hint" style="text-align:left">要补勾其他人：点钱包人数，在名单里勾「第一次打款」。</p></details>`:'';
+  }else{$('newList').innerHTML='';$('prevNote').innerHTML=(st.batches||[]).length?'这台电脑还没有上个月的打款名单，下个月起会自动比对。':'导入核准名单后，会自动跟上个月的打款名单比对。'}
+  /* 每天一张表 */
+  const rateA=Number(st.phpRate)||0,tw=trxWallet();
+  /* 跟老板请款：人数、TRX 费用（第一次补助）、转 TRX 的矿工费、本次转账的 USDT、转 USDT 的矿工费 */
+  const rowsFor=(cells,key,rated,sel)=>{let tot={heads:0,sub:0,feeT:0,usdt:0,feeU:0};const tb=trxBreak(sel,cells.length);
+    const body=cells.map((o,w)=>{const x=wInfo(w),t=tb[w];tot.heads+=o.heads;tot.sub+=t.sub;tot.feeT+=t.feeT;tot.usdt+=o.usdt;tot.feeU+=t.feeU;
+      return `<tr><td><span class="wtag" style="--wc:${wc(w)}"></span>${esc(x.payer||wName(w))}${t.nFirst?'<span class="rtag trxtag">打 TRX</span>':''}</td>
+        <td><button class="who inl" data-bwho="${key}~${w}">${o.heads}</button></td>
+        <td class="num">${fmt3(t.sub)}${t.nFirst?`<button class="who inl first" data-bnew="${key}~${w}">${t.nFirst}人</button>`:''}</td>
+        <td class="num" title="${t.nFirst?`${t.nFirst} 笔：用过的地址 ${t.nOld}、新地址 ${t.nNew}、还没查 ${t.nUnk}（还没查先当新地址）`:''}">${fmt3(t.feeT)}${t.nUnk?`<small class="wh" style="color:var(--w3)">${t.nUnk} 笔未查</small>`:''}</td>
+        <td class="num">${rated&&rateA>0?`<b>${fmt2(o.usdt)}</b>`:'<span class="hint" style="margin:0">待填汇率</span>'}</td>
+        <td class="num">${fmt3(t.feeU)}</td></tr>`}).join('');
+    return `<table class="wtbl reqtbl"><thead><tr><th>打款人员</th><th>人数</th><th>TRX 费用<br><small>（第一次补助）</small></th><th>转 TRX 的矿工费</th><th>本次转账的 USDT</th><th>转 USDT 的矿工费</th></tr></thead><tbody>${body}<tr class="wsub"><td>小计</td><td><button class="who inl" data-bwho="${key}~-1">${tot.heads}</button></td><td class="num">${fmt3(r3(tot.sub))}</td><td class="num">${fmt3(r3(tot.feeT))}</td><td class="num">${rated&&rateA>0?fmt2(r2(tot.usdt)):''}</td><td class="num">${fmt3(r3(tot.feeU))}</td></tr></tbody></table>`};
+
+  let h='';
+  let uh='';
+  (st.batches||[]).forEach((b,i)=>{const rated=Number(b.rate)>0;
+    const wv=wruleViol(b);
+    /* 余额检查：整理成一张小表（钱包 × TRX／USDT），只列不够或还没输入余额的 */
+    const K=b.K||W,tb=trxBreak([b],K),cl=batchCells([b]),ratedB=Number(b.rate)>0&&Number(st.phpRate)>0,chk=[];
+    for(let w=0;w<K;w++){if(!(b.emps.some(e=>e.w===w)||tb[w].all>0))continue;const tN=tb[w].all,tB=balOf(w),uN=cl[w].usdt,uB=usdtBalOf(w);
+      const tS=tB===null?null:r3(tN-tB),uS=!ratedB||uB===null?null:r2(uN-uB);
+      if(tB===null||uB===null||tS>1e-9||uS>0.005)chk.push({w,tN,tB,tS,uN,uB,uS})}
+    const cell=(need,bal,short,f,ok)=>bal===null?`<td class="num"><span class="hint" style="margin:0">没有余额</span></td>`:short===null?`<td class="num"><span class="hint" style="margin:0">待填汇率</span></td>`:short>0?`<td class="num"><b class="neg">还差 ${f(short)}</b><small class="wh">需要 ${f(need)}／目前 ${f(bal)}</small></td>`:`<td class="num"><span class="okc">✓ 够</span></td>`;
+    const chkHTML=chk.length?`<div class="balchk"><div class="balhead">${esc(b.date)} 余额检查（只列不够或还没输入余额的钱包）</div><table class="ctable balt"><thead><tr><th>钱包</th><th>TRX</th><th>USDT</th></tr></thead><tbody>${chk.map(c=>`<tr><td><span class="wtag" style="--wc:${wc(c.w)}"></span>${esc(wName(c.w))}${wInfo(c.w).payer?' · '+esc(wInfo(c.w).payer):''}</td>${cell(c.tN,c.tB,c.tS,fmt3)}${cell(c.uN,c.uB,c.uS,fmt2)}</tr>`).join('')}</tbody></table>${chk.some(c=>c.tB===null||c.uB===null)?'<p class="hint" style="text-align:left;margin:4px 0 0">没有余额的钱包，请在第 ③ 步输入目前余额，或按「查询链上余额」。</p>':''}</div>`:'';
+    h+=`${wv.length?`<div class="notice">${esc(b.date)}：${wv.map(esc).join('；')}</div>`:''}${chkHTML}<div class="wday"><div class="wdhead"><b>${esc(b.date)}</b><span class="hint" style="margin:0">${esc(b.file)}，${b.emps.length} 人</span><label>RMB→USDT 汇率 <input type="number" class="cinput" step="0.0001" min="0" data-brate="${i}" value="${b.rate||''}" placeholder="当天汇率" aria-label="${esc(b.date)} RMB→USDT 汇率"></label><label class="trxpick">这天由 <select class="wsin" data-btrxw="${i}" aria-label="${esc(b.date)} 由哪个钱包打 TRX">${st.wallets.map((x,w)=>`<option value="${w}" ${bTrxW(b)===w?'selected':''}>${esc(wName(w))}${x.payer?' · '+esc(x.payer):''}</option>`).join('')}</select> 打 TRX</label>
+      <span class="wdbtns"><button class="btn sm" data-bcopy="${i}">复制请款单</button><button class="btn sm" data-bdel="${i}">删除</button></span></div><div class="tablewrap">${rowsFor(batchCells([b]),i,rated,[b])}</div>${feeDetail(b,i)}</div>`;
+    uh+=`<div class="wday"><div class="wdhead"><b>${esc(b.date)}</b><span class="hint" style="margin:0">${esc(b.file)}，${b.emps.length} 人${rated?'':'；还没填当天汇率，USDT 金额会是空白'}</span></div>${ucBlock(b,i)}</div>`});
+  if(!(st.batches||[]).length)h='<p class="empty">还没有导入任何一天的核准名单。每天核准后，从 OA 导出当天的名单，按上方「导入当天核准名单」。</p>';
+  else if(st.batches.length>1)h+=`<div class="wday month"><div class="wdhead"><b>整个月</b>${st.batches.every(b=>Number(b.rate)>0)?'':'<span class="hint" style="margin:0">有日子还没填汇率，USDT 只加总已填的</span>'}<span class="wdbtns"><button class="btn sm" data-bcopy="-1">复制整个月请款单</button></span></div><div class="tablewrap">${rowsFor(batchCells(st.batches),-1,true,st.batches)}</div></div>`;
+  $('walletDays').innerHTML=h;
+  $('ucDays').innerHTML=uh||'<p class="empty">还没有导入任何一天的核准名单。</p>';
+}
+/* 复制成跟画面一样的表（保留格式） */
+function walletHTML(key){
+  const rateA=Number(st.phpRate)||0,sel=batchSel(key);
+  const cells=batchCells(sel),tb=trxBreak(sel,cells.length),rated=sel.every(b=>Number(b.rate)>0)&&rateA>0,title=key>=0?`${sel[0].date} 请款单${sel[0].rate?`（RMB→USDT ${sel[0].rate}）`:''}`:'整个月请款单';
+  const B="border:1px solid #000;padding:2px 8px;font-family:Calibri,'Microsoft YaHei',sans-serif;font-size:11pt;color:#000;";
+  const C=B+'text-align:center;',Nn=B+'text-align:right;',H=C+'background:#DCE6F1;font-weight:bold;',S='color:#0033CC;font-weight:bold;';
+  const head=['打款人员','人数','TRX 费用','转 TRX 的矿工费','本次转账的 USDT','转 USDT 的矿工费'];
+  let tot={h:0,s:0,ft:0,u:0,fu:0};
+  let x=`<table style="border-collapse:collapse"><tr><td colspan="6" style="${B}font-weight:bold">${esc(title)}</td></tr><tr>${head.map(t=>`<td style="${H}">${t}</td>`).join('')}</tr>`;
+  const lines=[title,head.join('\t')];
+  cells.forEach((o,w)=>{const wl=wInfo(w),t=tb[w];tot.h+=o.heads;tot.s+=t.sub;tot.ft+=t.feeT;tot.u+=o.usdt;tot.fu+=t.feeU;
+    x+=`<tr><td style="${C}">${esc(wl.payer||wName(w))}</td><td style="${C}">${o.heads}</td><td style="${Nn}">${fmt3(t.sub)}</td><td style="${Nn}">${fmt3(t.feeT)}</td><td style="${Nn}">${rated?fmt2(o.usdt):''}</td><td style="${Nn}">${fmt3(t.feeU)}</td></tr>`;
+    lines.push([wl.payer||wName(w),o.heads,t.sub.toFixed(3),t.feeT.toFixed(3),rated?o.usdt.toFixed(2):'',t.feeU.toFixed(3)].join('\t'))});
+  x+=`<tr><td style="${C}${S}">小计</td><td style="${C}${S}">${tot.h}</td><td style="${Nn}${S}">${fmt3(r3(tot.s))}</td><td style="${Nn}${S}">${fmt3(r3(tot.ft))}</td><td style="${Nn}${S}">${rated?fmt2(r2(tot.u)):''}</td><td style="${Nn}${S}">${fmt3(r3(tot.fu))}</td></tr></table>`;
+  lines.push(['小计',tot.h,r3(tot.s).toFixed(3),r3(tot.ft).toFixed(3),rated?r2(tot.u).toFixed(2):'',r3(tot.fu).toFixed(3)].join('\t'));
+  return {html:x,text:lines.join('\n')};
+}
+/* ---------- TRX：矿工费 + 第一次补助 ---------- */
+/* 每个钱包：USDT 笔数 × 打 U 矿工费；指定打 TRX 的钱包另外加上：第一次打款人数 × 补助，以及每笔 TRX 的矿工费（旧地址 0.268／新地址 1.1） */
+const TPKEY='payroll-allocator-trxparams-v2',ASKEY='payroll-allocator-addrstate-v1';
+function loadTrx(){const d={perNew:'30',feeU:'0.346',feeOld:'0.268',feeNew:'1.1'};try{return Object.assign(d,JSON.parse(localStorage.getItem(TPKEY)||'{}'))}catch(_){return d}}
+function saveTrx(){try{localStorage.setItem(TPKEY,JSON.stringify(st.trx))}catch(_){}}
+function loadAddrState(){try{return JSON.parse(localStorage.getItem(ASKEY)||'{}')||{}}catch(_){return{}}}
+function saveAddrState(){try{localStorage.setItem(ASKEY,JSON.stringify(st.addrState))}catch(_){}}
+const trxWallet=()=>{const i=(st.wallets||[]).findIndex(x=>x.trxPay);return i>=0?i:0};
+/* 每一天只由一个钱包打 TRX（第一次补助 + 打 TRX 的矿工费）；在每天的表格上方选，没选的沿用上次选的钱包 */
+const TWKEY='payroll-allocator-lasttrxw-v1';
+const lastTrxW=()=>{try{const v=Number(localStorage.getItem(TWKEY));return isFinite(v)?v:0}catch(_){return 0}};
+const bTrxW=b=>{const n=(st.wallets||[]).length||W,v=b&&b.trxW!=null?b.trxW:lastTrxW();return v<n?v:0};
+/* 地址状态：'new' 链上没有纪录（要启用，1.1）、'old' 已启用（0.268）、undefined 还没查（先当新地址算） */
+const addrStatus=a=>{const s=st.addrState[a];return s?s.s:undefined};
+function trxBreak(sel,K){const p=st.trx,fu=Number(p.feeU)||0,fo=Number(p.feeOld)||0,fn=Number(p.feeNew)||0,per=Number(p.perNew)||0;
+  const out=[...Array(K)].map(()=>({feeU:0,feeT:0,fee:0,sub:0,all:0,nFirst:0,nNew:0,nOld:0,nUnk:0}));
+  sel.forEach(b=>b.emps.forEach(e=>{const o=out[e.w||0];if(o)o.feeU+=fu}));
+  sel.forEach(b=>{const w=bTrxW(b);b.emps.filter(isNewEmp).forEach(e=>{const s=addrStatus(e.addr),t=out[w]||out[0];t.nFirst++;t.sub+=per;if(s==='old'){t.feeT+=fo;t.nOld++}else{t.feeT+=fn;if(s==='new')t.nNew++;else t.nUnk++}})});
+  out.forEach(o=>{o.feeU=r3(o.feeU);o.feeT=r3(o.feeT);o.fee=r3(o.feeU+o.feeT);o.sub=r3(o.sub);o.all=r3(o.fee+o.sub)});return out}
+/* 链上查询（TronGrid 公开服务）：账号存在 = 已启用；顺便取 TRX、USDT 余额 */
+const USDT_CONTRACT='TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+async function chainAccount(addr){const r=await fetch(`https://api.trongrid.io/v1/accounts/${encodeURIComponent(addr)}`,{headers:{accept:'application/json'}});
+  if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();const a=j&&j.data&&j.data[0];
+  if(!a)return {exists:false,trx:0,usdt:0};
+  const u=(a.trc20||[]).map(o=>o[USDT_CONTRACT]).find(v=>v!==undefined);return {exists:true,trx:(a.balance||0)/1e6,usdt:u?Number(u)/1e6:0}}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function chainCheckFirsts(btn){const list=[...new Set((st.batches||[]).flatMap(b=>b.emps.filter(isNewEmp).map(e=>e.addr)).filter(a=>a&&!addrCheck(a)))];
+  if(!list.length){btn.textContent='没有要查的地址';setTimeout(()=>btn.textContent='上链查询地址',2500);return}
+  let ok=0,fail=0;for(let i=0;i<list.length;i++){btn.textContent=`查询中 ${i+1}/${list.length}…`;
+    try{const r=await chainAccount(list[i]);st.addrState[list[i]]={s:r.exists?'old':'new',at:Date.now()};ok++}catch(_){fail++;if(fail>=2&&!ok)break}
+    await sleep(250)}
+  saveAddrState();render();btn.textContent=fail&&!ok?'连不到链上（这个网址不允许，请用 GitHub 版本或手动标示）':`已查 ${ok} 笔${fail?`，${fail} 笔失败`:''}`;setTimeout(()=>btn.textContent='上链查询地址',5000)}
+async function chainCheckWallets(btn){let ok=0,fail=0;
+  for(let w=0;w<st.wallets.length;w++){const x=st.wallets[w];if(!x.addr||addrCheck(x.addr))continue;btn.textContent=`查询中 ${w+1}/${st.wallets.length}…`;
+    try{const r=await chainAccount(x.addr);x.bal={trx:r.trx,usdt:r.usdt,at:Date.now(),src:'chain'};ok++}catch(_){fail++}await sleep(250)}
+  saveWallets();render();btn.textContent=fail&&!ok?'连不到链上（这个网址不允许，请用 GitHub 版本或手动输入）':`已更新 ${ok} 个钱包${fail?`，${fail} 个失败`:''}`;setTimeout(()=>btn.textContent='查询链上余额',5000)}
+const balOf=w=>{const b=(st.wallets[w]||{}).bal;return b&&b.trx!==''&&b.trx!=null?Number(b.trx):null};
+const usdtBalOf=w=>{const b=(st.wallets[w]||{}).bal;return b&&b.usdt!==''&&b.usdt!=null?Number(b.usdt):null};
+const fmtAgo=t=>{if(!t)return'';const d=new Date(t);return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`};
+
+/* ---------- UC 打款文件：一个钱包一天一份；一份文件只放一种币别（USDT=00，TRX=01） ---------- */
+let DL=null;try{if(window.claude&&window.claude.use)window.claude.use('downloads').then(d=>{DL=d;render()}).catch(()=>{});else if(typeof Blob!=='undefined'&&'download' in document.createElement('a'))DL={save:async({filename,data})=>{const u=URL.createObjectURL(new Blob([data],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));const a=document.createElement('a');a.href=u;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000)}}}catch(_){}
+const UC_HEAD=['序号','收款账户','币种（USDT_TRC20 填 00，TRX 填 01，同一个文件只允许一个币种）','金额','备注'];
+/* 序号 = 一个员工一个号：薪资年月 + 流水号（例如 202609001）。用工号记住，同一个月里这位员工的号码固定不变，删除或重新导入某天名单也不会改；新出现的员工接着往下编 */
+const SKEY='payroll-allocator-serials-v1';
+function loadSerials(){try{const v=JSON.parse(localStorage.getItem(SKEY)||'null');return v&&typeof v==='object'?v:{}}catch(_){return{}}}
+function assignSerials(month,codes){if(!/^\d{6}$/.test(month||''))return 0;const store=loadSerials(),s=store[month]={codes:{},next:1};/* 每次导入月度薪资表都从 0001 重新编号 */let added=0;
+  codes.forEach(c=>{if(c&&!s.codes[c]){s.codes[c]=s.next++;added++}});
+  const ks=Object.keys(store).sort();while(ks.length>6)delete store[ks.shift()];try{localStorage.setItem(SKEY,JSON.stringify(store))}catch(_){}return added}
+function serialOf(month,code){if(!code)return '';if(st.serialCache&&month===st.serialMonth)return st.serialCache.get(code)||'';const s=loadSerials()[month];if(!s||!s.codes[code])return '';return month+String(s.codes[code]).padStart(Math.max(4,String(s.next).length),'0')}
+/* 序号：部门排好后，按发薪日期依序编（同一天按表格顺序）；接着未排、现金、其他发放方式；暂缓的员工一律排在最后 */
+function computeSerials(){const m=st.serialMonth;if(!/^\d{6}$/.test(m||''))return;
+  const order=[],seen=new Set(),add=c=>{if(c&&!seen.has(c)){seen.add(c);order.push(c)}};
+  const vis=visibleUnits(),ord=new Map(vis.map((id,i)=>[id,i])),placedIds=new Set();
+  st.days.map((d,i)=>({d,i})).sort((a,b)=>(a.d.date||'')<(b.d.date||'')?-1:(a.d.date||'')>(b.d.date||'')?1:a.i-b.i).forEach(({d})=>d.items.slice().sort((a,b)=>(ord.get(a.id)??0)-(ord.get(b.id)??0)).forEach(it=>{placedIds.add(it.id);if(!isHold(it.id))empsOf(it.id).forEach(e=>add(e.code))}));
+  vis.filter(id=>!placedIds.has(id)&&!isHold(id)).forEach(id=>empsOf(id).forEach(e=>add(e.code)));
+  (st.cashRows||[]).forEach(r=>add(r.code));(st.otherRows||[]).forEach(r=>add(r.code));
+  (st.held||[]).forEach(h=>add(h.code));
+  const w=Math.max(4,String(order.length).length),cache=new Map(),codes={};
+  order.forEach((c,i)=>{codes[c]=i+1;cache.set(c,m+String(i+1).padStart(w,'0'))});
+  st.serialCache=cache;const key=order.join(',');
+  if(key!==st.serialKey){st.serialKey=key;const store=loadSerials();store[m]={codes,next:order.length+1};try{localStorage.setItem(SKEY,JSON.stringify(store))}catch(_){}}
+}
+function serialMap(){const store=loadSerials();let dirty=false;const out=new Map(),tmp={};
+  (st.batches||[]).slice().sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0).forEach(b=>b.emps.slice().sort((x,y)=>(x.ord||0)-(y.ord||0)).forEach(e=>{
+    const m=/^\d{6}$/.test(e.month||'')?e.month:ym(b.date);const s=store[m]=store[m]||{codes:{},next:1};
+    let n;if(e.code){n=s.codes[e.code];if(!n){n=s.codes[e.code]=s.next++;dirty=true}}else{tmp[m]=tmp[m]||{};n=s.next+(tmp[m].k=(tmp[m].k||0)+1)-1}
+    out.set(e,{m,n})}));
+  if(dirty){const ks=Object.keys(store).sort();while(ks.length>6)delete store[ks.shift()];try{localStorage.setItem(SKEY,JSON.stringify(store))}catch(_){}}
+  const res=new Map();out.forEach((v,e)=>{const w=Math.max(4,String((store[v.m]||{}).next||1).length);res.set(e,v.m+String(v.n).padStart(w,'0'))});return res}
+function ucRows(b,w,cur){const per=Number(st.trx.perNew)||0,sm=serialMap();
+  return b.emps.filter(e=>cur==='00'?(w<0||e.w===w):(isNewEmp(e)&&(w<0||bTrxW(b)===w))).map(e=>{const amt=cur==='00'?bUsdt(e,b):per;return {e,seq:sm.get(e)||'',addr:e.addr||'',cur,amt,bad:addrCheck(e.addr||'')}}).sort((x,y)=>String(x.seq).localeCompare(String(y.seq)))}
+function ucFileName(b,w,cur){const ww=w>=0?w:(cur==='01'?bTrxW(b):trxWallet()),x=wInfo(ww);return `UC打款_${b.date}_${cur==='01'?'第一次补助_':''}${wName(ww)}${x.payer?'_'+x.payer:''}_${cur==='00'?'USDT':'TRX'}.xlsx`.replace(/[\\/:*?"<>|\s]+/g,'_')}
+/* 第 ⑤ 步：TRX 矿工费明细（第一次发薪员工的收款地址状态，决定打 TRX 的矿工费 0.268 或 1.1） */
+/* 第 ⑥ 步：打款给员工，不含矿工费：每个钱包打出去的 USDT ＋ 第一次补助 TRX */
+function payTable(b,bi,rated){const cells=batchCells([b]),tb=trxBreak([b],cells.length),rateA=Number(st.phpRate)||0;let tu=0,tt=0,th=0;
+  const rows=cells.map((o,w)=>{const x=wInfo(w),t=tb[w];tu+=o.usdt;tt+=t.sub;th+=o.heads;
+    return `<tr><td><span class="wtag" style="--wc:${wc(w)}"></span>${esc(x.payer||wName(w))}${t.nFirst?'<span class="rtag trxtag">打 TRX</span>':''}</td><td><button class="who inl" data-bwho="${bi}~${w}">${o.heads}</button></td><td class="num">${rated&&rateA>0?`<b>${fmt2(o.usdt)}</b>`:'<span class="hint" style="margin:0">待填汇率</span>'}</td><td class="num">${t.nFirst?`${fmt3(t.sub)}<button class="who inl first" data-bnew="${bi}~${w}">${t.nFirst}人</button>`:'—'}</td><td class="addrcell">${x.addr?esc(x.addr):'<span class="hint" style="margin:0">请在第 ③ 步设定</span>'}</td></tr>`}).join('');
+  return `<div class="tablewrap"><table class="wtbl paytbl"><thead><tr><th>打款人员</th><th>人数</th><th>打给员工 USDT</th><th>打给员工 TRX（第一次补助）</th><th>出款钱包地址</th></tr></thead><tbody>${rows}<tr class="wsub"><td>小计</td><td>${th}</td><td class="num">${rated&&rateA>0?fmt2(r2(tu)):''}</td><td class="num">${fmt3(tt)}</td><td></td></tr></tbody></table></div>`}
+function feeDetail(b,bi){const list=b.emps.filter(isNewEmp),tw=bTrxW(b);if(!list.length)return '';
+  const p=st.trx,fo=Number(p.feeOld)||0,fn=Number(p.feeNew)||0,sm=serialMap();
+  const n={old:0,new:0,unk:0};list.forEach(e=>{const s=addrStatus(e.addr);s==='old'?n.old++:s==='new'?n.new++:n.unk++});
+  const ast=a=>`<select class="wsin" data-astat="${esc(a)}"><option value="" ${!addrStatus(a)?'selected':''}>还没查（当新地址 ${fn}）</option><option value="new" ${addrStatus(a)==='new'?'selected':''}>新地址（${fn}）</option><option value="old" ${addrStatus(a)==='old'?'selected':''}>用过的地址（${fo}）</option></select>`;
+  return `<details class="fold-list ucw feew"${(st.ucOpen||{})[bi+'-fee']?' open':''} data-uckey="${bi}-fee" style="margin:8px 12px 12px"><summary>TRX 矿工费明细（由 ${esc(wName(tw))} 打 TRX）：第一次发薪 ${list.length} 人，用过的地址 ${n.old}、新地址 ${n.new}、还没查 ${n.unk}</summary>
+    <div class="tablewrap" style="margin-top:8px"><table class="ctable" style="min-width:640px"><thead><tr><th>序号</th><th>工号</th><th>姓名</th><th>收款地址</th><th>地址状态（决定矿工费）</th></tr></thead><tbody>${list.slice().sort((x,y)=>String(sm.get(x)||'').localeCompare(String(sm.get(y)||''))).map(e=>`<tr><td>${esc(sm.get(e)||'')}</td><td>${esc(e.code)}</td><td>${esc(e.name)}</td><td class="addrcell">${esc(e.addr||'（没有地址）')}</td><td>${e.addr?ast(e.addr):''}</td></tr>`).join('')}</tbody></table></div></details>`}
+function ucBlock(b,bi){const K=b.K||W,rated=Number(b.rate)>0&&Number(st.phpRate)>0,per=Number(st.trx.perNew)||0;
+  const ast=a=>`<select class="wsin" data-astat="${esc(a)}"><option value="" ${!addrStatus(a)?'selected':''}>还没查（当新地址）</option><option value="new" ${addrStatus(a)==='new'?'selected':''}>新地址</option><option value="old" ${addrStatus(a)==='old'?'selected':''}>已启用</option></select>`;
+  const tbl=(rows,cur)=>`<table class="uctbl"><thead><tr>${UC_HEAD.map(c=>`<th>${esc(c)}</th>`).join('')}${cur==='01'?'<th>收款地址状态<br><small>（只用来算矿工费，不会导出）</small></th>':''}</tr></thead><tbody>${rows.map(r=>`<tr${r.bad?' class="badrow"':''}><td>${esc(String(r.seq))}</td><td class="addrcell">${r.addr?esc(r.addr):'（没有收款地址）'}${r.bad?`<small class="warnline">${esc(r.bad)}</small>`:''}</td><td>${cur}</td><td class="num">${r.amt===null?'待填汇率':cur==='00'?fmt2(r.amt):fmt3(r.amt)}</td><td></td>${cur==='01'?`<td>${r.addr?ast(r.addr):''}</td>`:''}</tr>`).join('')}</tbody></table>`;
+  let h='';
+  /* 一个钱包一份，只有 USDT（00） */
+  for(let w=0;w<K;w++){const u=ucRows(b,w,'00'),x=wInfo(w);if(!u.length)continue;
+    const uSum=r2(u.reduce((a,r)=>a+(r.amt||0),0)),badN=u.filter(r=>r.bad).length;
+    h+=`<details class="fold-list ucw"${(st.ucOpen||{})[bi+'-'+w]?' open':''} data-uckey="${bi}-${w}"><summary><span class="wtag" style="--wc:${wc(w)}"></span>${esc(wName(w))}${x.payer?' · '+esc(x.payer):''}：USDT ${u.length} 笔 ${rated?fmt2(uSum):'（待填汇率）'}${badN?`<span class="bad">，${badN} 笔收款地址有问题</span>`:''}</summary>
+      <div class="ucbtns"><button class="btn sm" data-ucdl="${bi}~${w}~00">${DL?'下载':'复制'} USDT 文件（00）</button></div><div class="tablewrap">${tbl(u,'00')}</div></details>`}
+  /* TRX（01）：一天一份，由当天选的钱包打 */
+  {const tw=bTrxW(b),all=ucRows(b,-1,'01'),badN=all.filter(r=>r.bad).length,x=wInfo(tw);
+    const why=!st.prev?'还没有上个月的打款名单，所以还标不出第一次打款的人':!all.length?'这天没有第一次打款的员工':per<=0?'请先在第 ② 步填「第一次补助：每人几个 TRX」':'';
+    const tblT=rows=>`<table class="uctbl"><thead><tr>${UC_HEAD.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr${r.bad?' class="badrow"':''}><td>${esc(String(r.seq))}</td><td class="addrcell">${r.addr?esc(r.addr):'（没有收款地址）'}${r.bad?`<small class="warnline">${esc(r.bad)}</small>`:''}</td><td>01</td><td class="num">${fmt3(per)}</td><td></td></tr>`).join('')}</tbody></table>`;
+    h+=`<details class="fold-list ucw trxw"${(st.ucOpen||{})[bi+'-trx']?' open':''} data-uckey="${bi}-trx"><summary>TRX 第一次补助（由 ${esc(wName(tw))}${x.payer?' · '+esc(x.payer):''} 打）：${all.length} 笔${per>0?` ${fmt3(all.length*per)} TRX`:''}${why?`<span class="hint" style="margin:0 0 0 8px">（${esc(why)}）</span>`:''}${badN?`<span class="bad">，${badN} 笔收款地址有问题</span>`:''}</summary>
+      ${all.length?`<div class="ucbtns"><button class="btn sm" data-ucdl="${bi}~${tw}~01" ${per>0?'':'disabled'}>${DL?'下载':'复制'} TRX 文件（01）</button></div><div class="tablewrap">${tblT(all)}</div>`:''}</details>`}
+  return h?`<div class="ucfiles">${h}</div>`:'';
+}
+async function ucExport(bi,w,cur,btn){
+  const b=st.batches[bi];if(!b)return;return ucSave(ucRows(b,w,cur),cur,ucFileName(b,w,cur),btn);
+}
+/* 产生 UC 格式的 xlsx 并下载；不能下载时改用复制 */
+async function ucSave(rows,cur,fname,btn){
+  const aoa=[UC_HEAD,...rows.map(r=>[String(r.seq),r.addr,cur,cur==='00'?Number((r.amt||0).toFixed(2)):Number(r.amt.toFixed(3)),''])];
+  const lab=btn.dataset.lab||(btn.dataset.lab=btn.textContent),done=(t,ms)=>{btn.textContent=t;clearTimeout(btn._t);btn._t=setTimeout(()=>{btn.textContent=lab;delete btn.dataset.ok},ms||3000)};
+  /* 不用浏览器的确认视窗（有些环境会被挡掉），改成「再按一次」 */
+  if(!rows.length){done(cur==='01'?'没有第一次补助的 TRX 资料':'没有资料',3000);return}
+  if(cur==='00'&&rows.some(r=>r.amt===null)){done('请先填 PHP→RMB 汇率和当天的 RMB→USDT 汇率',4000);return}
+  const badN=rows.filter(r=>r.bad).length;
+  if(badN&&btn.dataset.ok!=='1'){btn.dataset.ok='1';done(`有 ${badN} 笔收款地址有问题，再按一次仍要下载`,6000);return}
+  delete btn.dataset.ok;
+  if(DL&&typeof XLSX!=='undefined'){try{
+      const ws=XLSX.utils.aoa_to_sheet(aoa);rows.forEach((r,i)=>{const c=ws[XLSX.utils.encode_cell({r:i+1,c:2})];if(c){c.t='s';c.v=cur}const q=ws[XLSX.utils.encode_cell({r:i+1,c:0})];if(q){q.t='s';q.v=String(r.seq)}});
+      ws['!cols']=[{wch:12},{wch:40},{wch:30},{wch:14},{wch:12}];
+      const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Sheet1');
+      const buf=XLSX.write(wb,{type:'array',bookType:'xlsx'});
+      await DL.save({filename:fname,data:new Uint8Array(buf)});done('已下载');return}
+    catch(err){if(err&&err.code==='declined'){done('已取消');return}done('下载失败，改用复制：'+(err&&err.message||''),4000)}}
+  /* 复制时用 HTML 表格，币种栏设成文字格式，贴到 Excel 才不会把 00 变成 0 */
+  const text=aoa.map(r=>r.join('\t')).join('\n'),B="border:1px solid #000;padding:2px 6px;font-family:Calibri,sans-serif;font-size:11pt;";
+  const html=`<table style="border-collapse:collapse">${aoa.map((r,i)=>`<tr>${r.map((v,k)=>`<td style="${B}${k===2||k===0?'mso-number-format:&quot;\\@&quot;;':''}${i===0?'font-weight:bold;':''}">${esc(String(v))}</td>`).join('')}</tr>`).join('')}</table>`;
+  try{await copyRich(html,text);done('已复制，贴到 Excel 后存档')}catch(_){done('请用跳出的视窗手动复制')}
+}
+
+/* 导入当天核准名单 */
+function importBatch(f,rows){
+  const keys=rows.length?Object.keys(rows[0]):[],norm=v=>String(v).replace(/\s/g,'').toLowerCase(),find=c=>{for(const x of c){const ex=keys.find(k=>norm(k)===norm(x));if(ex)return ex}for(const x of c){const k=keys.find(k=>norm(k).includes(norm(x)));if(k)return k}};
+  const kA=find(['实发工资PHP','实发工资','应发']),kE=find(['工号']),kN=find(['姓名']),kG=find(['事业群']),kB=find(['事业处']),kD=find(['部门','事业部']),kAd=find(['充值地址','钱包地址','收款地址']),kDt=find(['发放日期','打款日期']),kM=find(['薪资年月','年月','Salary period']),kR=find(['汇率Peso','汇率']),kSeq=keys.find(k=>norm(k)==='序号');
+  if(!kA)throw new Error('找不到「实发工资PHP」这一栏。');
+  if(!kE)throw new Error('找不到「工号」这一栏。');
+  const t=(r,k)=>k?String(r[k]??'').trim():'';
+  const emps=[];let date='';
+  rows.forEach((r,ri)=>{const a=toNum(r[kA]);if(!isFinite(a)||a<=0)return;if(!date&&kDt)date=normDate(r[kDt]);
+    emps.push({ord:ri,seq:kSeq?(toNum(r[kSeq])||ri+1):ri+1,a,code:t(r,kE),name:t(r,kN),g:t(r,kG),b:t(r,kB),d:t(r,kD),addr:t(r,kAd),month:normMonth(t(r,kM)),w:0})});
+  if(!emps.length)throw new Error('名单里没有金额大于 0 的员工。');
+  if(kR&&!Number(st.phpRate)){const rv=rows.map(r=>toNum(r[kR])).find(v=>v>0);if(rv){st.phpRate=rv;st.rate=String(rv)}}
+  if(!date){const last=(st.batches||[]).map(b=>b.date).sort().pop();date=last?nextWeekday(last):nextWeekday()}
+  const ex=st.batches.findIndex(b=>b.date===date);
+  const b={date,file:f,emps,rate:ex>=0?st.batches[ex].rate:'',trxW:ex>=0?st.batches[ex].trxW:null};
+  if(ex>=0)st.batches[ex]=b;else st.batches.push(b);
+  st.batches.sort((x,y)=>x.date<y.date?-1:1);allocBatch(b);
+  return {b,replaced:ex>=0};
+}
+function normDate(v){const t=String(v??'').trim();if(!t)return'';let m=t.match(/^(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);if(m)return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  const n=Number(t);if(isFinite(n)&&n>20000&&n<80000){const d=new Date(Date.UTC(1899,11,30)+n*86400000);return d.toISOString().slice(0,10)}return ''}
+
+
+/* 点人数 → 列出那几位员工：day=-1 全部天，wallet=-1 全部钱包，units 空白=全部部门 */
+function whoList(day,wallet,units){
+  const set=units?new Set(units.split('|').filter(Boolean)):null,out=[];
+  st.days.forEach((d,i)=>{if(day>=0&&i!==day)return;d.items.forEach(it=>{if(set&&!set.has(it.id))return;(it.parts||[]).forEach(p=>{if(wallet>=0&&p.wallet!==wallet)return;
+    (p.list||[]).forEach(e=>{const leaf=st.nodes.get(e.leaf),path=leaf?leaf.path:[];const op=isHold(it.id)&&e.orig?e.orig.split(' / '):realPath(path);out.push({ref:e,day:i,wallet:p.wallet,code:e.code,name:e.name,g:op[0]||'',unit:op.slice(1).filter(Boolean).join(' / ')||op[0]||'',amount:e.a,rem:e.rem||'',first:isNewEmp(e),way:isHold(it.id)?'暂缓':'USDT',holdGroup:isHold(it.id)?N(it.id).name:''})})})})});
+  return out;
+}
+let whoRows=[];
+function openWho(day,wallet,units){
+  if(st.tab!=='wallet'){const t=[day>=0?`第 ${day+1} 天`:'整个月',units?units.split('|').map(id=>N(id).name).join('、'):''].filter(Boolean).join(' · ');return showSimple(t,whoList(day,wallet,units))}
+  whoRows=whoList(day,wallet,units);
+  const title=[day>=0?`第 ${day+1} 天`:'整个月',wallet>=0?wName(wallet):'全部钱包',units?units.split('|').map(id=>N(id).name).join('、'):''].filter(Boolean).join(' · ');
+  $('whoTitle').textContent=`${title}：${whoRows.length} 人`;
+  const showDay=day<0,showW=wallet<0,withU=whoRows.some(r=>usdtOf(r.amount,st.days[r.day]&&st.days[r.day].date)!==null);
+  whoRows.forEach(r=>{r.usdt=st.days[r.day]?usdtOf(r.amount,st.days[r.day].date):null});
+  $('whoTable').innerHTML=`<thead><tr>${showDay?'<th>天</th>':''}${showW?'<th>钱包</th>':''}<th>工号</th><th>姓名</th><th>事业群</th><th>事业处／部门</th><th class="num">实发工资PHP</th>${withU?'<th class="num">USDT</th>':''}<th>第一次打款</th>${whoRows.some(r=>addrChanged(r.ref))?'<th>备注</th>':''}</tr></thead><tbody>${whoRows.map(r=>`<tr>${showDay?`<td>第 ${r.day+1} 天</td>`:''}${showW?`<td>${esc(wName(r.wallet))}</td>`:''}<td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.g)}</td><td>${esc(r.unit)}</td><td class="num">${fmt(r.amount)}</td>${withU?`<td class="num">${r.usdt===null?'':fmt2(r.usdt)}</td>`:''}<td class="ck">${r.code?`<input type="checkbox" data-newck="${esc(r.code)}" ${r.ref&&isNewEmp(r.ref)?'checked':''} aria-label="${esc(r.name||r.code)} 第一次打款">`:''}</td>${whoRows.some(x=>addrChanged(x.ref))?`<td>${esc(addrNote(r.ref))}</td>`:''}</tr>`).join('')}</tbody><tfoot><tr><td colspan="${4+(showDay?1:0)+(showW?1:0)}">合计 ${whoRows.length} 人</td><td class="num">${fmt(whoRows.reduce((a,r)=>a+r.amount,0))}</td>${withU?`<td class="num">${fmt2(r2(whoRows.reduce((a,r)=>a+(r.usdt||0),0)))}</td>`:''}<td class="ck">${whoRows.filter(r=>r.ref&&isNewEmp(r.ref)).length} 人</td>${whoRows.some(r=>addrChanged(r.ref))?`<td>换地址 ${whoRows.filter(r=>addrChanged(r.ref)).length} 人</td>`:''}</tr></tfoot>`;
+  $('whoModal').hidden=false;$('whoClose').focus();
+}
+function closeWho(){$('whoModal').hidden=true}
+function openWhoRows(title){showList(title,whoRows.map(r=>({...r,dayText:`第 ${r.day+1} 天`,note:newReason(r.ref)||'人工加入'})))}
+/* 通用名单视窗：所有「几人」点下去都用这个 */
+/* 作业一的名单只列：工号、姓名、事业群、事业处／部门、实发工资PHP（金额有问题的才多一栏备注） */
+function showSimple(title,rows){
+  rows.forEach(r=>{if(!r.serial)r.serial=serialOf(st.serialMonth,r.code)});rows.sort((a,b)=>String(a.serial).localeCompare(String(b.serial)));
+  rows.forEach(r=>{r.snote=[r.rem,r.keepNote?r.note:''].filter(Boolean).join('；')});
+  const hasFirst=rows.some(r=>r.first);
+  whoRows=rows;st.listSimple=true;const note=rows.some(r=>r.snote);
+  $('whoTitle').textContent=`${title}：${rows.length} 人`;
+  $('whoTable').innerHTML=`<thead><tr><th>序号</th><th>工号</th><th>姓名</th><th>事业群</th><th>事业处／部门</th><th class="num">实发工资PHP</th><th>工资发放方式</th>${hasFirst?'<th>第一次打款</th>':''}${note?'<th>备注</th>':''}</tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.serial)}</td><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.g)}</td><td>${esc(r.unit)}</td><td class="num">${fmt(r.amount)}</td><td class="way${r.way==='暂缓'?' hold':''}">${esc(r.way||'USDT')}</td>${hasFirst?`<td class="first">${r.first?'是':''}</td>`:''}${note?`<td>${esc(r.snote||'')}</td>`:''}</tr>`).join('')}</tbody><tfoot><tr><td colspan="5">合计 ${rows.length} 人</td><td class="num">${fmt(rows.reduce((a,r)=>a+r.amount,0))}</td><td></td>${hasFirst?`<td class="first">${rows.filter(r=>r.first).length} 人</td>`:''}${note?'<td></td>':''}</tr></tfoot>`;
+  $('whoModal').hidden=false;$('whoClose').focus();
+}
+function showList(title,rows){
+  if(st.tab!=='wallet')return showSimple(title,rows);st.listSimple=false;
+  whoRows=rows;const showDay=rows.some(r=>r.dayText),showW=rows.some(r=>r.wallet>=0);
+  $('whoTitle').textContent=`${title}：${rows.length} 人`;
+  $('whoTable').innerHTML=`<thead><tr>${showDay?'<th>天</th>':''}${showW?'<th>钱包</th>':''}<th>工号</th><th>姓名</th><th>事业群</th><th>事业处／部门</th><th class="num">实发工资PHP</th>${rows.some(r=>r.usdt!=null)?'<th class="num">USDT</th>':''}${rows.some(r=>r.ref)?'<th>第一次打款</th>':''}${rows.some(r=>r.note)?'<th>备注</th>':''}</tr></thead><tbody>${rows.map(r=>`<tr>${showDay?`<td>${esc(r.dayText||'')}</td>`:''}${showW?`<td>${r.wallet>=0?esc(wName(r.wallet)):''}</td>`:''}<td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.g)}</td><td>${esc(r.unit)}</td><td class="num">${fmt(r.amount)}</td>${rows.some(x=>x.usdt!=null)?`<td class="num">${r.usdt==null?'':fmt2(r.usdt)}</td>`:''}${rows.some(x=>x.ref)?`<td class="ck">${r.ref&&r.code?`<input type="checkbox" data-newck="${esc(r.code)}" ${isNewEmp(r.ref)?'checked':''}>`:''}</td>`:''}${rows.some(x=>x.note)?`<td>${esc(r.note||'')}</td>`:''}</tr>`).join('')}</tbody><tfoot><tr><td colspan="${4+(showDay?1:0)+(showW?1:0)}">合计 ${rows.length} 人</td><td class="num">${fmt(rows.reduce((a,r)=>a+r.amount,0))}</td>${rows.some(r=>r.usdt!=null)?`<td class="num">${fmt2(r2(rows.reduce((a,r)=>a+(r.usdt||0),0)))}</td>`:''}${rows.some(r=>r.ref)?'<td></td>':''}${rows.some(r=>r.note)?'<td></td>':''}</tr></tfoot>`;
+  $('whoModal').hidden=false;$('whoClose').focus();
+}
+const empRow=(e,extra)=>{const l=st.nodes.get(e.leaf),hold=l&&isHold(l.id),p=hold&&e.orig?e.orig.split(' / '):realPath(l?l.path:[]);return {code:e.code,name:e.name,g:p[0]||'',unit:p.slice(1).filter(Boolean).join(' / ')||p[0]||'',amount:e.a,wallet:-1,rem:e.rem||'',first:isNewEmp(e),way:hold?'暂缓':'USDT',...extra}};
+const heldRow=h=>({code:h.code,name:h.name,g:h.g,unit:[h.b,h.d].filter(Boolean).join(' / ')||h.g,amount:h.amount,wallet:-1,rem:h.rem||'',way:'暂缓'});
+function openListKey(key){
+  const [type,...rest]=key.split(':'),arg=rest.join(':'),pm=placed();
+  const dayOf=id=>{const d=pm.get(id);return d===undefined?'未排':`第 ${d+1} 天`};
+  const sched=()=>whoList(-1,-1,'').map(r=>({...r,dayText:`第 ${r.day+1} 天`}));
+  const cashR=()=>(st.cashRows||[]).map(r=>({code:r.code,name:r.ename,g:r.g,unit:r.unit||r.g,amount:r.amount,wallet:-1,dayText:'现金发放',rem:r.rem||'',way:'现金'}));
+  if(type==='newall')return showList('第一次打款',visibleUnits().flatMap(u=>empsOf(u).filter(isNewEmp).map(e=>empRow(e,{dayText:dayOf(u)}))));
+  if(type==='newunit')return showList(`${N(arg).name} · 第一次打款`,empsOf(arg).filter(isNewEmp).map(e=>empRow(e,{dayText:dayOf(arg)})));
+  if(type==='newday'){const d=st.days[Number(arg)];return showList(`第 ${Number(arg)+1} 天 · 第一次打款`,d.items.flatMap(it=>empsOf(it.id).filter(isNewEmp).map(e=>empRow(e,{dayText:dayOf(it.id)}))))}
+  if(type==='unsched')return showList('未排',visibleUnits().filter(u=>!pm.has(u)).flatMap(u=>empsOf(u).map(e=>empRow(e,{dayText:'未排'}))));
+  if(type==='all')return showList('全部（排进日期 + 现金发放）',[...sched(),...cashR()]);
+  if(type==='units'){const ids=arg.split('|');return showList(ids.map(id=>N(id).name).join('、'),ids.flatMap(id=>empsOf(id).map(e=>empRow(e,{dayText:dayOf(id)}))))}
+  if(type==='unit'){const n=N(arg);return showList(n.path.join(' / '),empsOf(arg).map(e=>empRow(e,{dayText:dayOf(arg)})))}
+  if(type==='holdgrp'){return showList(`暂缓分组 · ${arg}`,(st.held||[]).map((h,i)=>({h,i})).filter(x=>!isSkip(x.h,x.i)&&holdGroupOfH(x.h,x.i)===arg).map(x=>({...heldRow(x.h),note:x.h.ok?'':'金额是 0 或读不到'})))}
+  if(type==='other')return showList(`其他发放方式 · ${arg}`,(st.otherRows||[]).filter(r=>r.way===arg).map(r=>({code:r.code,name:r.name,g:r.g,unit:[r.b,r.d].filter(Boolean).join(' / '),amount:r.amount,wallet:-1,rem:r.rem||'',way:r.way})));
+  if(type==='imp'){
+    if(arg==='alloc')return showList('排入分配',st.roots.flatMap(id=>visibleUnits().filter(u=>related(id,u))).filter((v,i,a)=>a.indexOf(v)===i).flatMap(u=>empsOf(u).map(e=>empRow(e,{dayText:dayOf(u)}))));
+    if(arg==='usdt')return showList('USDT',visibleUnits().filter(u=>!isHold(u)).flatMap(u=>empsOf(u).map(e=>empRow(e,{dayText:dayOf(u)}))));
+    if(arg==='hold')return showList('暂缓',(st.held||[]).map((h,i)=>({...heldRow(h),note:isSkip(h,i)?'特例不发':h.ok?holdGroupOfH(h,i):'金额是 0 或读不到'})));
+    if(arg==='holdbad')return showList('暂缓 · 金额是 0 或读不到',(st.held||[]).filter(h=>!h.ok).map(h=>({...heldRow(h),keepNote:true,note:h.raw?'原始内容：'+h.raw:'空白'})));
+    if(arg==='cash')return showList('现金发放',cashR());
+    if(arg==='other')return showList('其他发放方式',(st.otherRows||[]).map(r=>({code:r.code,name:r.name,g:r.g,unit:[r.b,r.d].filter(Boolean).join(' / '),amount:r.amount,wallet:-1,rem:r.rem||'',way:r.way})));
+  }
+}
+function openCash(key){
+  if(st.tab!=='wallet'){const [g,name]=key?key.split('|'):[null,null];return showSimple(`现金发放${key?' · '+name:''}`,(st.cashRows||[]).filter(r=>!key||(r.g===g&&r.name===name)).map(r=>({code:r.code,name:r.ename,g:r.g,unit:r.unit||r.g,amount:r.amount,rem:r.rem||'',way:'现金'})))}
+  const [g,name]=key?key.split('|'):[null,null];
+  const list=(st.cashRows||[]).filter(r=>!key||(r.g===g&&r.name===name));
+  whoRows=list.map(r=>({day:-1,wallet:-1,code:r.code,name:r.ename,g:r.g,unit:r.unit||r.g,amount:r.amount,cash:true}));
+  $('whoTitle').textContent=`现金发放${key?' · '+name:''}：${whoRows.length} 人`;
+  $('whoTable').innerHTML=`<thead><tr><th>工号</th><th>姓名</th><th>事业群</th><th>事业处／部门</th><th class="num">实发工资PHP</th></tr></thead><tbody>${whoRows.map(r=>`<tr><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.g)}</td><td>${esc(r.unit)}</td><td class="num">${fmt(r.amount)}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="4">合计 ${whoRows.length} 人</td><td class="num">${fmt(whoRows.reduce((a,r)=>a+r.amount,0))}</td></tr></tfoot>`;
+  $('whoModal').hidden=false;$('whoClose').focus();
+}
+/* 总结：每天一行「菲律宾USDT n-事业群」（不含暂缓），暂缓每组一行，现金一行 */
+function summaryRows(){
+  const out=[];let n=0;
+  st.days.forEach(d=>{if(!d.items.length)return;
+    const norm=d.items.filter(it=>!isHold(it.id)),hold=d.items.filter(it=>isHold(it.id));
+    if(norm.length){n++;const roots=[...new Set(norm.map(it=>N(it.id).path[0]))].sort((x,y)=>st.roots.indexOf(x)-st.roots.indexOf(y)).join('、');
+      out.push({date:d.date,key:'usdt'+n,label:`菲律宾USDT ${n}-${roots}`,amount:norm.reduce((a,it)=>a+it.amount,0)})}
+    hold.forEach(it=>out.push({date:d.date,key:'hold:'+it.id,label:`暂缓薪资-${N(it.id).name}`,amount:it.amount}));
+  });
+  const cg=cashGroups();
+  if(cg.length){const heads=cg.reduce((a,g)=>a+g.heads,0);out.push({date:cashDate(),key:'cash',label:`现金（${cg.map(g=>g.name).join('、')}-${heads}人）`,amount:cg.reduce((a,g)=>a+g.amount,0)})}
+  out.forEach(r=>{if(st.sumLabels[r.key])r.label=st.sumLabels[r.key]});
+  return out;
+}
+function holdRows(){return (st.held||[]).map((h,i)=>({h,i})).filter(x=>x.h.ok&&!isSkip(x.h,x.i)).map(({h,i})=>({path:[holdGroupOfH(h,i)],heads:1,amount:h.amount,code:h.code,pos:h.pos||'',rmb:h.rmb,rem:h.rem||'',addr:h.addr||'',month:h.month||'',bp:h.bp||'',name:h.name||'',orig:[h.g||'',h.b||'',h.d||''].join(' / ')}))}
+function buildAll(){st.holdNames=new Set(st.holdCfg.groups);build([...(st.baseData||[]),...holdRows()])}
+/* 改了暂缓分组：重建暂缓，其他已排好的部门保留 */
+function regroup(){
+  if(!st.baseData){render();return}
+  const keepDays=st.days.map(d=>({date:d.date,cap:d.cap,items:d.items.filter(it=>!isHold(it.id))})),keepOpen=new Set(st.open);
+  buildAll();
+  st.open=new Set([...keepOpen].filter(id=>st.nodes.has(id)));
+  st.days=keepDays.map(d=>({...d,items:d.items.filter(it=>st.nodes.has(it.id))}));
+  if(st.days.some(d=>d.items.length))placeHold();
+  changed();
+}
+function cashGroups(){const m=new Map();(st.cashRows||[]).forEach(r=>{const k=r.g+'|'+r.name;const o=m.get(k)||{g:r.g,name:r.name,amount:0,heads:0,months:new Set(),bps:new Set()};o.amount+=r.amount;o.heads++;if(r.month)o.months.add(r.month);if(r.bp)o.bps.add(r.bp);m.set(k,o)});return [...m.values()]}
+function cashDate(){const last=st.days[st.days.length-1];return st.cashDate||(last?last.date:'')}
+/* 排的时候预留给暂缓的空间：最后一天的可用额度 = 预计拨款 − 暂缓金额 */
+function effCap(i){const base=st.days[i]?st.days[i].cap:st.defaultCap;return base-(st.reserve&&st.reserve.day===i?st.reserve.amt:0)}
+/* 暂缓：直接放进最后一天（跟最后发的部门同一天），不另外开一天；超过预计拨款就先把最后一天能往前挪的部门挪走 */
+function placeHold(){
+  const hs=visibleUnits().filter(id=>isHold(id)&&dayIndexOf(id)<0);if(!hs.length)return;
+  st.days=st.days.filter(d=>d.items.length);
+  if(!st.days.length)newDay();
+  const last=st.days[st.days.length-1];
+  hs.forEach(id=>last.items.push({id,wallet:0,amount:N(id).amount}));
+  const over=()=>last.items.reduce((a,it)=>a+it.amount,0)>last.cap+0.5;
+  for(let i=0;i<st.days.length-1&&over();i++)pullFromLater(i);
+}
+/* 未排、而且金额超过每天预计拨款的单位，自动往下拆，直到放得下或已经是最细的一层 */
+function autoSplit(){let k=0,loop=true;
+  while(loop){loop=false;const pm=placed();
+    visibleUnits().forEach(id=>{const n=N(id);if(!pm.has(id)&&n.children.length&&n.amount>st.defaultCap+0.5){expandUnit(id);k++;loop=true}})}
+  return k}
+/* 目前的排法违反了几条规则（交换时用来确认不会变差） */
+function violations(){
+  /* 先后顺序：你设的条件（最重要）> 不超过预计拨款 > 同一事业处同一天（金额过大时可以例外） */
+  let hard=0,capV=0,soft=0;const pm=placed(),sumD=d=>d.items.reduce((a,it)=>a+it.amount,0);
+  st.days.forEach((d,i)=>{if(sumD(d)>effCap(i)+0.5)capV++});
+  splitGroups().forEach(g=>{if(g.fits)soft++});
+  st.rules.filter(r=>st.nodes.has(r.id)).forEach(r=>{
+    const mine=[...pm].filter(([id])=>related(r.id,id)).map(([,d])=>d);
+    if(r.type==='day'&&mine.some(d=>d!==r.day-1))hard++;
+    if(r.type==='alone')new Set(mine).forEach(d=>{if(st.days[d].items.some(it=>!related(r.id,it.id)))hard++});
+    if(r.type==='maxdays'){const u=[...new Set(mine)].sort((a,b)=>a-b);if(u.length>r.day||(u.length>1&&u[u.length-1]-u[0]!==u.length-1))hard++}
+    if(r.type==='last'){const lastDay=Math.max(-1,...[...pm].filter(([id])=>{const q=ruleOf(id);return !isHold(id)&&(!q||q.type!=='last')}).map(([,d])=>d));if(mine.some(d=>d<lastDay))hard++}
+  });
+  togetherSets().forEach(set=>{const ds=new Set([...pm].filter(([id])=>set.some(x=>related(x,id))).map(([,d])=>d));if(ds.size>1)hard++});
+  const lastIdx=st.days.reduce((m,d,i)=>d.items.length?i:m,-1);pm.forEach((d,id)=>{if(isHold(id)&&d!==lastIdx)hard++});
+  return hard*10000+capV*100+(st.relaxSoft?0:soft);
+}
+/* 交换补满：前面的日子和后面日子的部门对调，只要前面那天更满、两天都不超过预计拨款、规则没有变差 */
+function swapCompact(){
+  let changed=false;const sumD=d=>d.items.reduce((a,it)=>a+it.amount,0);
+  for(let i=0;i<st.days.length-1;i++){
+    let improved=true,guard=0;
+    while(improved&&guard++<50){
+      improved=false;const di=st.days[i];
+      outer:for(const a of di.items){if(st.locked.has(a.id)||isHold(a.id))continue;
+        for(let j=i+1;j<st.days.length;j++){const dj=st.days[j];
+          for(const b of dj.items){if(st.locked.has(b.id)||isHold(b.id)||b.amount<=a.amount+0.5)continue;
+            if(sumD(di)-a.amount+b.amount>effCap(i)+0.5||sumD(dj)-b.amount+a.amount>effCap(j)+0.5)continue;
+            const before=violations();
+            di.items=di.items.filter(x=>x!==a).concat([b]);dj.items=dj.items.filter(x=>x!==b).concat([a]);
+            if(violations()>before){di.items=di.items.filter(x=>x!==b).concat([a]);dj.items=dj.items.filter(x=>x!==a).concat([b]);continue}
+            improved=changed=true;break outer;
+          }}}
+      if(pullFromLater(i).length)improved=changed=true;
+    }
+  }
+  return changed;
+}
+/* 从后面的日子把没锁定的部门移到第 i 天，补到最接近预计拨款；回传 [部门, 原本第几天] */
+function pullFromLater(i){
+  const d=st.days[i],sum=()=>d.items.reduce((a,it)=>a+it.amount,0);
+  if(effCap(i)-sum()<=0.5)return [];
+  const snap=()=>st.days.map(x=>x.items.slice()), restore=sn=>st.days.forEach((x,j)=>x.items=sn[j]);
+  const v0=violations(), base=snap();
+  const tryPull=filter=>{
+    const moved=[],orig=new Map();
+    st.days.forEach((x,j)=>{if(j<=i)return;x.items.forEach(it=>{if(!st.locked.has(it.id)&&!isHold(it.id)&&filter(it.id))orig.set(it.id,j)})});
+    if(!orig.size)return moved;
+    st.days.forEach((x,j)=>{if(j>i)x.items=x.items.filter(it=>!orig.has(it.id))});
+    const got=pickFor(i+1,effCap(i),sum(),new Set(orig.keys()),'fit');
+    got.forEach(id=>{d.items.push({id,wallet:0,amount:N(id).amount});moved.push([id,orig.get(id)])});
+    orig.forEach((j,id)=>{if(!got.has(id))st.days[j].items.push({id,wallet:0,amount:N(id).amount})});
+    return moved;
+  };
+  /* 先全部候选一起试；补完如果违反的条件变多，就退回，改成只挪没有设条件的部门 */
+  let moved=tryPull(()=>true);
+  if(violations()>v0){restore(base);
+    const free=id=>!maxRuleOf(id)&&!aloneRuleOf(id)&&!ruleOf(id)&&partnersOf(id,visibleUnits()).length<2;
+    moved=tryPull(free);
+    if(violations()>v0){restore(base);moved=[]}
+  }
+  return moved;
+}
+/* 补满这天：先从未排的挑；还有空间，再从后面的日子把没锁定的部门移过来 */
+function fillDay(i){
+  const d=st.days[i],sum=()=>d.items.reduce((a,it)=>a+it.amount,0);
+  const fromUn=pickFor(i+1,d.cap,sum(),undefined,'fit');fromUn.forEach(id=>d.items.push({id,wallet:0,amount:N(id).amount}));
+  const before=st.days.map(x=>x.items.map(it=>it.id).join('|')).join('#');
+  const moved=pullFromLater(i);
+  if(d.cap-sum()>0.5){let g=0;while(g++<50){let did=false;const sumD=x=>x.items.reduce((a,it)=>a+it.amount,0);
+    outer:for(const a of d.items){if(st.locked.has(a.id)||isHold(a.id))continue;for(let j=i+1;j<st.days.length;j++){const dj=st.days[j];for(const b of dj.items){
+      if(st.locked.has(b.id)||isHold(b.id)||b.amount<=a.amount+0.5)continue;if(sumD(d)-a.amount+b.amount>d.cap+0.5||sumD(dj)-b.amount+a.amount>dj.cap+0.5)continue;
+      const v0=violations();d.items=d.items.filter(x=>x!==a).concat([b]);dj.items=dj.items.filter(x=>x!==b).concat([a]);
+      if(violations()>v0){d.items=d.items.filter(x=>x!==b).concat([a]);dj.items=dj.items.filter(x=>x!==a).concat([b]);continue}
+      moved.push([b.id,j]);did=true;break outer}}}
+    if(!did)break}}
+  const emptied=[...new Set(moved.map(m=>m[1]))].filter(j=>!st.days[j].items.length);
+  const parts=[];
+  if(fromUn.size)parts.push(`从未排补进 ${[...fromUn].map(id=>esc(N(id).name)).join('、')}`);
+  if(moved.length)parts.push(`从后面的日子移过来 ${moved.map(([id,j])=>`${esc(N(id).name)}（原第 ${j+1} 天）`).join('、')}`);
+  st.notice=parts.length?{ok:true,text:`第 ${i+1} 天${parts.join('；')}。${emptied.length?`第 ${emptied.map(j=>j+1).join('、')} 天已经空了，可以按「删除这天」。`:''}`}
+    :{text:`第 ${i+1} 天补不进任何部门：未排的和后面日子的部门都放不下，或被条件挡住（锁定、指定天数、独自一天发、同一天发等）。`};
+  changed();
+}
+document.addEventListener('click',e=>{
+  const hr=e.target.closest('[data-hgreset]');if(hr){delete st.holdCfg.emp[hr.dataset.hgreset];saveHoldCfg();regroup();return}
+  if(e.target.id==='hgAdd'){let k=st.holdCfg.groups.length+1,n=`暂缓${k}`;while(st.holdCfg.groups.includes(n))n=`暂缓${++k}`;st.holdCfg.groups.push(n);saveHoldCfg();regroup();return}
+  const hd=e.target.closest('[data-hgdel]');if(hd){const i=Number(hd.dataset.hgdel);st.holdCfg.groups.splice(i,1);[st.holdCfg.map,st.holdCfg.emp].forEach(m=>Object.keys(m).forEach(k=>{const v=m[k];if(v===i)delete m[k];else if(v>i)m[k]=v-1}));saveHoldCfg();regroup();return}
+  const wl=e.target.closest('[data-list]');if(wl){openListKey(wl.dataset.list);return}
+  const wc2=e.target.closest('[data-whocash]');if(wc2){openCash(wc2.dataset.whocash);return}
+  const dx=e.target.closest('[data-dexport]');if(dx){exportReview(Number(dx.dataset.dexport),dx);return}
+  const dh=e.target.closest('[data-dhold]');if(dh){exportReview(Number(dh.dataset.dhold),dh,true);return}
+  const rf=e.target.closest('[data-revf]');if(rf){st.revFilter=rf.dataset.revf;renderReview();return}
+  const ud=e.target.closest('[data-ucdl]');if(ud){const [bi,w,cur]=ud.dataset.ucdl.split('~');ucExport(Number(bi),Number(w),cur,ud);return}
+  if(e.target.id==='chainBal'){chainCheckWallets(e.target);return}
+  if(e.target.id==='chainFirst'){chainCheckFirsts(e.target);return}
+  if(e.target.id==='wsAdd'){st.wallets.push({name:`钱包 ${st.wallets.length+1}`,addr:'',payer:''});saveWallets();$('wrWs').dataset.built='';busy(allocAllBatches);return}
+  const wsd=e.target.closest('[data-wsdel]');if(wsd){wsd.blur();st.wallets.splice(Number(wsd.dataset.wsdel),1);saveWallets();$('wrWs').dataset.built='';busy(allocAllBatches);return}
+  if(e.target.id==='wrAdd'){const target=$('wrTarget').value,type=$('wrType').value;
+    if(!target){$('wruleList').insertAdjacentHTML('afterbegin','<p class="notice">请先导入当天核准名单，才能选择事业群或事业处。</p>');return}
+    const r=type==='max'?{target,type,n:Math.max(1,parseInt($('wrNum').value,10)||2)}:{target,type,ws:[...document.querySelectorAll('[data-wrw]')].filter(c=>c.checked).map(c=>Number(c.dataset.wrw))};
+    if(type==='only'&&!r.ws.length){$('wruleList').insertAdjacentHTML('afterbegin','<p class="notice">请至少勾选一个钱包。</p>');return}
+    st.wrules=st.wrules.filter(x=>!(x.target===target&&x.type===type));st.wrules.push(r);saveWRules();busy(allocAllBatches);return}
+  const wd2=e.target.closest('[data-wrdel]');if(wd2){st.wrules.splice(Number(wd2.dataset.wrdel),1);saveWRules();busy(allocAllBatches);return}
+  const bd=e.target.closest('[data-bdel]');if(bd){st.batches.splice(Number(bd.dataset.bdel),1);autoPrevW();busy(allocAllBatches);return}
+  const bw=e.target.closest('[data-bwho]');if(bw){const [k,w]=bw.dataset.bwho.split('~').map(Number);showList(`${k>=0?st.batches[k].date:'整个月'} · ${w>=0?wName(w):'全部钱包'}`,listRows(k,w));return}
+  const bn=e.target.closest('[data-bnew]');if(bn){const [k,w]=bn.dataset.bnew.split('~').map(Number);showList(`${k>=0?st.batches[k].date:'整个月'} · 第一次补助${w>=0?`（由 ${wName(w)} 打 TRX）`:''}`,listRows(k,-1,(e,b)=>isNewEmp(e)&&(w<0||bTrxW(b)===w)).map(r=>({...r,note:[{new:'新地址（链上没有纪录）',old:'已启用地址'}[addrStatus(r.ref.addr)]||'还没上链查询',r.note].filter(Boolean).join('；')})));return}
+  const bc=e.target.closest('[data-bchg]');if(bc){const [k,w]=bc.dataset.bchg.split('~').map(Number);showList(`${k>=0?st.batches[k].date:'整个月'}${w>=0?' · '+wName(w):''} · 钱包地址跟上月不同`,listRows(k,w,addrChanged).map(r=>({...r,note:addrNote(r.ref)})));return}
+  const wcp=e.target.closest('[data-bcopy]');if(wcp){const r=walletHTML(Number(wcp.dataset.bcopy)),lab=wcp.textContent;
+    copyRich(r.html,r.text).then(()=>{wcp.textContent='已复制'}).catch(()=>{wcp.textContent='请用跳出的视窗手动复制'}).finally(()=>setTimeout(()=>{wcp.textContent=lab},2500));return}
+  const wg=e.target.closest('[data-whochg]');if(wg){const [d,w]=wg.dataset.whochg.split('~').map(Number);whoRows=whoList(d,w,'').filter(r=>addrChanged(r.ref));showList(`${d>=0?`第 ${d+1} 天 · `:''}${w>=0?`钱包 ${w+1} · `:''}钱包地址跟上月不同`,whoRows.map(r=>({...r,dayText:`第 ${r.day+1} 天`,note:addrNote(r.ref)})));return}
+  const wn=e.target.closest('[data-whonew]');if(wn){const [d,w]=wn.dataset.whonew.split('~').map(Number);whoRows=whoList(d,w,'').filter(r=>r.ref&&isNewEmp(r.ref));openWhoRows(`${d>=0?`第 ${d+1} 天`:'整个月'} · 钱包 ${w+1} · 第一次打款`);return}
+  const wb=e.target.closest('[data-who]');if(wb){const [d,w,u]=wb.dataset.who.split('~');openWho(Number(d),Number(w),u||'');return}
+  if(e.target.id==='whoClose'||e.target.id==='whoModal'){closeWho();return}
+  if(e.target.id==='whoCopy'&&st.listSimple){const L=['序号\t工号\t姓名\t事业群\t事业处／部门\t实发工资PHP\t工资发放方式\t第一次打款\t备注',...whoRows.map(r=>[r.serial||'',r.code,r.name,r.g,r.unit,Math.round(r.amount),r.way||'USDT',r.first?'是':'',r.snote||''].join('\t'))];
+    copyRich(null,L.join('\n')).then(()=>{$('whoCopy').textContent='已复制，到 Excel 贴上即可';setTimeout(()=>{$('whoCopy').textContent='复制这份名单，贴到 Excel'},3000)}).catch(()=>{$('whoCopy').textContent='请用跳出的视窗手动复制'});return}
+  if(e.target.id==='whoCopy'){const L=['天\t钱包\t工号\t姓名\t事业群\t事业处／部门\t实发工资PHP',...whoRows.map(r=>[r.dayText||(r.cash?'现金发放':(r.day>=0?`第${r.day+1}天`:'')),r.wallet>=0?`钱包${r.wallet+1}`:'',r.code,r.name,r.g,r.unit,Math.round(r.amount)].join('\t'))];
+    copyRich(null,L.join('\n')).then(()=>{$('whoCopy').textContent='已复制，到 Excel 贴上即可';setTimeout(()=>{$('whoCopy').textContent='复制这份名单，贴到 Excel'},3000)}).catch(()=>{$('whoCopy').textContent='请用跳出的视窗手动复制'});return}
+  const fo=e.target.closest('[data-fold]');if(fo){const k=fo.dataset.fold;st.viewFold.has(k)?st.viewFold.delete(k):st.viewFold.add(k);render();return}
+  const jb=e.target.closest('[data-job]');if(jb){st.tab=jb.dataset.job==='2'?'wallet':(st.job1Tab||'main');render();window.scrollTo({top:0});return}
+  const tb=e.target.closest('[data-tab]');if(tb){st.tab=tb.dataset.tab;st.job1Tab=st.tab;render();window.scrollTo({top:0});return}
+  const t=e.target.closest('[data-tog]');
+  if(t){const id=t.dataset.tog;st.notice=null;st.open.has(id)?collapseUnit(id):expandUnit(id);changed();return}
+  const fl=e.target.closest('[data-fill]');
+  if(fl){fillDay(Number(fl.dataset.fill));return}
+  const dd=e.target.closest('[data-delday]');
+  if(dd){st.days.splice(Number(dd.dataset.delday),1);st.notice=null;changed();return}
+  if(e.target.id==='treeAutoSplit'){const k=autoSplit();st.notice={ok:true,text:k?`已自动拆开 ${k} 个超过上限的单位。`:'没有超过上限、又能再拆的单位。'};changed();return}
+  if(e.target.id==='treeCollapse'){[...st.roots].forEach(id=>{if(st.open.has(id))collapseUnit(id)});st.notice=null;changed();return}
+  if(e.target.id==='treeLevel1'){[...st.roots].forEach(id=>{if(N(id).children.length&&!st.open.has(id))expandUnit(id)});st.notice=null;changed();return}
+  if(e.target.id==='reviewAll'){renderReview();$('revModal').hidden=false;return}
+  if(e.target.id==='revCopy'){copyReviewAll(e.target);return}
+  if(e.target.id==='revDl'){const rows=revRows(),btn=e.target,lab=btn.textContent;
+    const aoa=[REV_HEAD,...rows.map(r=>[r.on?1:0,r.date,r.month,String(r.serial),r.code,r.name,r.g,r.b,r.d,r.amt,r.rate,r.rmb,r.way,r.first?'是':'',r.note])];
+    if(!DL||typeof XLSX==='undefined'){btn.textContent='这里不能下载，请用复制';setTimeout(()=>btn.textContent=lab,2500);return}
+    try{const ws=XLSX.utils.aoa_to_sheet(aoa);rows.forEach((r,i)=>{const c=ws[XLSX.utils.encode_cell({r:i+1,c:3})];if(c){c.t='s';c.v=String(r.serial)}});ws['!cols']=[{wch:5},{wch:11},{wch:9},{wch:12},{wch:20},{wch:12},{wch:10},{wch:14},{wch:14},{wch:12},{wch:10},{wch:12},{wch:10},{wch:10},{wch:16}];
+      const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'送审总名单');
+      DL.save({filename:`发薪日送审总名单_${st.serialMonth||''}.xlsx`,data:new Uint8Array(XLSX.write(wb,{type:'array',bookType:'xlsx'}))}).then(()=>{btn.textContent='已下载'}).catch(()=>{btn.textContent='已取消'}).finally(()=>setTimeout(()=>btn.textContent=lab,2500))}catch(_){btn.textContent='下载失败';setTimeout(()=>btn.textContent=lab,2500)}
+    return}
+  if(e.target.id==='revClose'||e.target.id==='revModal'){$('revModal').hidden=true;return}
+  if(e.target.id==='autoAll'){autoSplit();autoAll();return}
+  const us=e.target.closest('[data-unsched]');
+  if(us){const ps=partnersOf(us.dataset.unsched,visibleUnits());ps.forEach(x=>moveUnit(x,'-1'));
+    st.notice={ok:true,text:`${ps.map(x=>esc(N(x).name)).join('、')} 已移回未排${ps.length>1?'（设了「同一天发」，一起移除）':''}。`};changed();return}
+  const ra=e.target.closest('[data-reauto]');
+  if(ra){const id=ra.dataset.reauto,ps=partnersOf(id,visibleUnits()),o=dayIndexOf(id);ps.forEach(x=>moveUnit(x,'-1'));
+    autoAll(new Set(ps),o);
+    /* 别天都放不下，就放回原本那天 */
+    const back=ps.filter(x=>dayIndexOf(x)<0);
+    if(back.length&&o>=0){back.forEach(x=>moveUnit(x,String(o)));rebalance();st.notice={text:`${back.map(x=>esc(N(x).name)).join('、')} 在其他日子都放不下，放回第 ${o+1} 天。`};render()}
+    else if(!back.length){const nd=dayIndexOf(id);st.notice={ok:true,text:`${ps.map(x=>esc(N(x).name)).join('、')} 已重新排到第 ${nd+1} 天。`};render()}
+    return}
+  const lk=e.target.closest('[data-lock]');
+  if(lk){const id=lk.dataset.lock;st.locked.has(id)?st.locked.delete(id):st.locked.add(id);render();return}
+  if(e.target.id==='addDay'){newDay();st.notice=null;changed();return}
+  if(e.target.id==='reset'){st.days=[];st.locked.clear();st.notice=null;changed();return}
+  if(e.target.id==='rAdd'){const id=$('rUnit').value,type=$('rType').value,day=Math.max(1,parseInt($('rDay').value,10)||1);if(!id)return;
+    const w=type==='together'?$('rUnit2').value:undefined;
+    if(type==='together'&&(!w||w===id)){st.notice={text:'「同一天发」要选两个不同的部门。'};render();return}
+    st.rules=st.rules.filter(r=>!((r.id===id&&ruleCat(r.type,r.with)===ruleCat(type,w))||(type==='together'&&r.type==='together'&&r.id===w&&r.with===id)));st.rules.push({id,type,day,with:w});saveRules();render();return}
+  const rd=e.target.closest('[data-rdel]');if(rd){st.rules.splice(Number(rd.dataset.rdel),1);saveRules();render();return}
+});
+document.addEventListener('toggle',e=>{const c=e.target.classList;if(!c||!c.contains('fold-list'))return;if(c.contains('ucw')){st.ucOpen=st.ucOpen||{};st.ucOpen[e.target.dataset.uckey]=e.target.open;return}if(c.contains('unsched-box'))st.unschedOpen=e.target.open;else st.newListOpen=e.target.open},true);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('whoModal').hidden)closeWho();$('expModal').hidden=true;$('revModal').hidden=true}});
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.movegroup!==undefined){if(!t.value)return;let v=t.value;if(v==='new')v=String(newDay());
+    const ids=t.dataset.movegroup.split('|').filter(id=>st.nodes.has(id));ids.forEach(id=>moveUnit(id,v));
+    st.notice={ok:true,text:`${ids.length} 个部门一起移到${v==='-1'?'未排':`第 ${Number(v)+1} 天`}。`};changed();return}
+  if(t.dataset.move!==undefined){
+    const ps=partnersOf(t.dataset.move,visibleUnits());let v=t.value;
+    if(v==='new')v=String(newDay());
+    ps.forEach(id=>moveUnit(id,v));
+    st.notice=ps.length>1?{ok:true,text:`设了「同一天发」，${ps.map(id=>esc(N(id).name)).join('、')} 一起移动了。`}:null;changed();return}
+  if(t.dataset.hgpick!==undefined){const i=Number(t.dataset.hgpick),g=t.dataset.g,last=st.holdCfg.groups.length-1;
+    if(t.checked)st.holdCfg.map[g]=i;else if(i!==last)delete st.holdCfg.map[g];else{st.notice={text:'最后一组是预设分组，没被其他组选走的事业群都会归在这里。要把它移走，请在其他组勾选。'};render();return}
+    saveHoldCfg();regroup();return}
+  if(t.dataset.hgskip!==undefined){if(t.checked)st.holdCfg.skip[t.dataset.hgskip]=true;else delete st.holdCfg.skip[t.dataset.hgskip];saveHoldCfg();regroup();return}
+  if(t.dataset.hgemp!==undefined){st.holdCfg.emp[t.dataset.hgemp]=Number(t.value);saveHoldCfg();regroup();return}
+  if(t.dataset.hgname!==undefined){const i=Number(t.dataset.hgname),v=t.value.trim();if(!v||st.holdCfg.groups.some((g,j)=>j!==i&&g===v)||[...st.nodes.values()].some(n=>n.depth===0&&!st.holdNames.has(n.id)&&n.id===v)){t.value=st.holdCfg.groups[i];st.notice={text:'组名不能空白，也不能跟其他组或事业群同名。'};render();return}
+    st.holdCfg.groups[i]=v;saveHoldCfg();regroup();return}
+  if(t.dataset.wset!==undefined){const w=Number(t.dataset.wset),k=t.dataset.k;st.wallets[w][k]=k==='addr'?t.value.trim():t.value.trim()||(k==='name'?`钱包 ${w+1}`:'');saveWallets();render();return}
+  if(t.dataset.trx!==undefined){st.trx[t.dataset.trx]=t.value;saveTrx();render();return}
+  if(t.dataset.wbal!==undefined){const x=st.wallets[Number(t.dataset.wbal)];x.bal=x.bal||{};x.bal[t.dataset.k]=t.value===''?null:Number(t.value);x.bal.at=Date.now();x.bal.src='manual';saveWallets();render();return}
+  if(t.dataset.btrxw!==undefined){const b=st.batches[Number(t.dataset.btrxw)];if(b){b.trxW=Number(t.value);try{localStorage.setItem(TWKEY,String(b.trxW))}catch(_){}}render();return}
+  if(t.dataset.astat!==undefined){if(t.value)st.addrState[t.dataset.astat]={s:t.value,at:Date.now(),manual:true};else delete st.addrState[t.dataset.astat];saveAddrState();render();return}
+  if(t.dataset.newck!==undefined){st.newOverride[t.dataset.newck]=t.checked;busy(()=>{allocAllBatches();rebalance()});return}
+  if(t.id==='phpRate'){st.phpRate=Number(t.value)||0;render();return}
+  if(t.dataset.brate!==undefined){const b=st.batches[Number(t.dataset.brate)];if(b)b.rate=Number(t.value)>0?Number(t.value):'';render();return}
+  if(t.id==='wcap'){st.wcap=Math.max(0,Number(t.value)||0);try{localStorage.setItem(CAPKEY,String(st.wcap))}catch(_){}render();return}
+  if(t.dataset.sumkey!==undefined){st.sumLabels[t.dataset.sumkey]=t.value;render();return}
+  if(t.dataset.cashdate!==undefined){st.cashDate=t.value;render();return}
+  if(t.dataset.ddate!==undefined){st.days[Number(t.dataset.ddate)].date=t.value;render();return}
+  if(t.dataset.dcap!==undefined){st.days[Number(t.dataset.dcap)].cap=Number(t.value)||0;render();return}
+  if(t.id==='wrType'){$('wrN').hidden=t.value!=='max';$('wrWs').hidden=t.value!=='only';return}
+  if(t.id==='rType'){const v=t.value;$('rWithWrap').hidden=v!=='together';$('rDayWrap').hidden=v!=='day'&&v!=='maxdays';$('rDayPre').textContent=v==='maxdays'?'最多':'第';if(v==='maxdays'&&Number($('rDay').value)<2)$('rDay').value=2;return}
+  if(t.id==='capDefault'){const old=st.defaultCap;st.defaultCap=Math.max(0,Number(t.value)||0);saveCap();
+    st.days.forEach(d=>{if(d.cap===old)d.cap=st.defaultCap});changed();return}
+  if(t.id==='planDays'){
+    st.planDays=Math.max(0,parseInt(t.value,10)||0);applyPlan();
+    render();if(st.planDays>0)$('step2').scrollIntoView({behavior:'smooth',block:'start'});return}
+});
+/* 由上往下把剩下的部门排进去：先补已排日子的空位，放不下就开新的一天 */
+/* ---------- 勾选方式 ---------- */
+const MODES={
+  top:{name:'由上往下',desc:'按表格顺序，放得下就放，放不下就跳过。会照顺序，但前面的日子不一定能排满。'},
+  big:{name:'由大到小',desc:'先勾金额大的部门，再用小部门补空位。'},
+  fit:{name:'最接近上限（推荐）',desc:'每天都找出最接近预计拨款的组合：前面的日子先排满，天数最少，余额留给最后一天。'},
+  avg:{name:'每天平均',desc:'目标是「剩下的金额 ÷ 剩下的天数」，让每天金额差不多。'},
+  heads:{name:'每天人数平均',desc:'目标是「剩下的人数 ÷ 剩下的天数」，让每天人数差不多。'}
+};
+const MKEY='payroll-allocator-pickmode-v1', CKEY='payroll-allocator-capdefault-v1', WKEY='payroll-allocator-wallets-v1';
+function loadWallets(){try{const v=JSON.parse(localStorage.getItem(WKEY)||'null');if(Array.isArray(v)&&v.length>=4)return v}catch(_){}return [0,1,2,3].map(i=>({name:`钱包 ${i+1}`,addr:'',payer:''}))}
+const CAPKEY='payroll-allocator-wcap-v1';
+function loadWcap(){try{const v=localStorage.getItem(CAPKEY);return v===null?110000:Number(v)||0}catch(_){return 110000}}
+function saveWallets(){try{localStorage.setItem(WKEY,JSON.stringify(st.wallets))}catch(_){}}
+/* TRON 地址基本检查：T 开头、34 码、只用 Base58 字元（不含 0 O I l） */
+function addrCheck(a){if(!a)return '还没填';if(!/^T/.test(a))return '要 T 开头';if(a.length!==34)return `长度 ${a.length}，应为 34`;if(/[^1-9A-HJ-NP-Za-km-z]/.test(a))return '含有不允许的字元';return ''}
+function loadCap(){try{const v=Number(localStorage.getItem(CKEY));return v>0?v:26500000}catch(_){return 26500000}}
+function saveCap(){try{localStorage.setItem(CKEY,String(st.defaultCap))}catch(_){}}
+function loadMode(){try{const v=localStorage.getItem(MKEY);return MODES[v]?v:'fit'}catch(_){return'fit'}}
+function saveMode(){try{localStorage.setItem(MKEY,st.pickMode)}catch(_){}}
+/* 0/1 背包：在不超过上限 R 的前提下，挑出金额总和最接近 goal 的组合 */
+function chooseByAmount(items,R,goal){
+  const n=items.length;if(!n||R<=0)return[];
+  const u=Math.max(1,Math.ceil(R/20000)),S=Math.floor(R/u);
+  const wt=items.map(g=>Math.ceil(g.amt/u)),reach=new Uint8Array(S+1),take=new Uint8Array(n*(S+1));reach[0]=1;
+  for(let i=0;i<n;i++){const w=wt[i];if(w>S)continue;for(let s=S;s>=w;s--)if(reach[s-w]&&!reach[s]){reach[s]=1;take[i*(S+1)+s]=1}}
+  let best=0,bd=Infinity;for(let s=0;s<=S;s++)if(reach[s]){const dd=Math.abs(s*u-goal);if(dd<bd||(dd===bd&&s>best)){bd=dd;best=s}}
+  const out=[];let s=best;for(let i=n-1;i>=0&&s>0;i--)if(take[i*(S+1)+s]){out.push(items[i]);s-=wt[i]}
+  return out;
+}
+/* 在不超过上限 R 的前提下，挑出人数最接近 goal 的组合（同样人数取金额较小的） */
+function chooseByHeads(items,R,goal){
+  const n=items.length;if(!n||R<=0)return[];
+  const H=items.reduce((a,g)=>a+g.heads,0),dp=new Float64Array(H+1).fill(Infinity),take=new Uint8Array(n*(H+1));dp[0]=0;
+  for(let i=0;i<n;i++){const h=items[i].heads,a=items[i].amt;for(let x=H;x>=h;x--){const v=dp[x-h]+a;if(v<dp[x]&&v<=R+0.5){dp[x]=v;take[i*(H+1)+x]=1}}}
+  let best=0,bd=Infinity;for(let x=0;x<=H;x++)if(dp[x]<=R+0.5){const dd=Math.abs(x-goal);if(dd<bd){bd=dd;best=x}}
+  const out=[];let x=best;for(let i=n-1;i>=0&&x>0;i--)if(take[i*(H+1)+x]){out.push(items[i]);x-=items[i].heads}
+  return out;
+}
+/* 决定某一天要勾哪些部门：先放指定这天的、优先发的，再按勾选方式挑一般部门；其他都排完才轮到最后发的 */
+function pickFor(dayNo,cap,already,only,modeOverride){
+  const pm=placed(), rem=visibleUnits().filter(id=>!pm.has(id)&&(!only||only.has(id))), typ=id=>(ruleOf(id)||{}).type;
+  const bigLimit=Number(st.defaultCap)||cap, picked=new Set();
+  let R=cap-already;
+  const toGroups=ids=>groupsOf(ordered(ids)).flatMap(g=>{const t=g.reduce((a,id)=>a+N(id).amount,0);return t>bigLimit+0.5?g.map(x=>[x]):[g]})
+    .map(g=>({ids:g,amt:g.reduce((a,id)=>a+N(id).amount,0),heads:g.reduce((a,id)=>a+N(id).heads,0)}));
+  let add=g=>{if(!g.ids.length)return true;if(g.amt<=R+0.5){g.ids.forEach(id=>picked.add(id));R-=g.amt;return true}return false};
+  const fitsEver=rem.filter(id=>N(id).amount<=bigLimit+0.5);
+  const remAmt=fitsEver.reduce((a,id)=>a+N(id).amount,0)+already, remHeads=fitsEver.reduce((a,id)=>a+N(id).heads,0);
+  const planD=st.planDays||(st.defaultCap>0?Math.ceil(st.total/st.defaultCap):1);
+  const remDays=Math.max(1,planD-(dayNo-1));
+  const run=groups=>{
+    const mode=modeOverride||st.pickMode, usedAmt=cap-R-already;
+    if(mode==='big')groups.slice().sort((a,b)=>b.amt-a.amt).forEach(add);
+    else if(mode==='fit')chooseByAmount(groups,R,R).forEach(add);
+    else if(mode==='avg')chooseByAmount(groups,R,Math.max(0,Math.min(cap,remAmt/remDays)-already-usedAmt)).forEach(add);
+    else if(mode==='heads'){const ph=[...picked].reduce((a,id)=>a+N(id).heads,0);chooseByHeads(groups,R,Math.max(0,remHeads/remDays-ph)).forEach(add)}
+    else groups.forEach(add);
+  };
+  const mds=maxDaysState(dayNo-1), tog=new Set(mds.together.flat());
+  let elig=rem.filter(id=>!isHold(id)&&!(typ(id)==='day'&&ruleOf(id).day!==dayNo)&&!mds.excluded.has(id)&&!tog.has(id));
+  /* 「独自一天发」：这天已经有它，就只补同一组；这天已经有别的部门，就不放它；空的一天轮到它排第一时，这天只放它 */
+  const dayObj=st.days[dayNo-1], existing=dayObj?dayObj.items.map(it=>it.id):[];
+  const exAlone=existing.map(aloneRuleOf).find(Boolean);
+  if(exAlone){toGroups(elig.filter(id=>{const r=aloneRuleOf(id);return r&&r.id===exAlone.id})).forEach(add);return picked}
+  if(!existing.length&&!mds.together.length){
+    const top=[...elig.filter(id=>typ(id)==='day'),...elig.filter(id=>mds.prefer.has(id)),...ordered(elig.filter(id=>typ(id)!=='last'&&typ(id)!=='day'&&!mds.prefer.has(id))),...ordered(elig.filter(id=>typ(id)==='last'))][0];
+    const ar=top&&aloneRuleOf(top);
+    if(ar){const othersFirst=typ(top)==='last'&&rem.some(id=>!aloneRuleOf(id)&&typ(id)!=='last');
+      if(!othersFirst){toGroups(ordered(elig.filter(id=>{const r=aloneRuleOf(id);return r&&r.id===ar.id}))).forEach(add);return picked}}
+  }
+  elig=elig.filter(id=>!aloneRuleOf(id));
+  /* 「同一天发」：同组已经排在别天的，这天不能放；同组已经排在这天的，优先补进来；要放就整组一起放 */
+  const pmT=placed(), tPrefer=new Set();
+  togetherSets().forEach(set=>{
+    const inSet=u=>set.some(x=>related(x,u));
+    const days=new Set();pmT.forEach((d,u)=>{if(inSet(u))days.add(d)});
+    const mem=elig.filter(inSet);
+    if(days.size&&!days.has(dayNo-1))elig=elig.filter(u=>!mem.includes(u));
+    else if(days.has(dayNo-1))mem.forEach(u=>tPrefer.add(u));
+  });
+  const baseAdd=add;
+  add=g=>{const ids=new Set();g.ids.forEach(id=>partnersOf(id,elig).forEach(x=>{if(!picked.has(x))ids.add(x)}));
+    const all=[...ids];return baseAdd({ids:all,amt:all.reduce((a,id)=>a+N(id).amount,0),heads:all.reduce((a,id)=>a+N(id).heads,0)})};
+  toGroups(elig.filter(id=>tPrefer.has(id))).forEach(add);
+  /* 「最多分连续 N 天」：到了最后一天，剩下的部门必须这一天全部一起排；还没到最后一天，也要先接着排，才不会断开 */
+  mds.together.forEach(ids=>add({ids,amt:ids.reduce((a,id)=>a+N(id).amount,0),heads:ids.reduce((a,id)=>a+N(id).heads,0)}));
+  toGroups(elig.filter(id=>mds.prefer.has(id))).forEach(add);
+  toGroups(elig.filter(id=>typ(id)==='day'&&!mds.prefer.has(id))).forEach(add);
+  toGroups(elig.filter(id=>typ(id)==='first'&&!mds.prefer.has(id))).forEach(add);
+  run(toGroups(elig.filter(id=>!typ(id)&&!mds.prefer.has(id))));
+  const othersLeft=rem.filter(id=>!isHold(id)&&typ(id)!=='last'&&!picked.has(id)&&!(typ(id)==='day'&&ruleOf(id).day<dayNo)&&!mds.excluded.has(id));
+  if(!othersLeft.length)run(toGroups(elig.filter(id=>typ(id)==='last')));
+
+  return picked;
+}
+/* 一键自动排完：用目前的勾选方式，一天一天自动勾选并确定 */
+function scheduleCore(only,avoid){
+  st.days.forEach((d,i)=>{if(i===avoid)return;const ids=pickFor(i+1,effCap(i),d.items.reduce((a,it)=>a+it.amount,0),only);ids.forEach(id=>d.items.push({id,wallet:0,amount:N(id).amount}))});
+  let guard=0;
+  while(guard++<60){
+    const dayNo=st.days.length+1, last=st.days[st.days.length-1];
+    const ids=pickFor(dayNo,effCap(dayNo-1),0,only);if(!ids.size)break;
+    st.days.push({date:last?nextWeekday(last.date):nextWeekday(),cap:st.defaultCap,items:[...ids].map(id=>({id,wallet:0,amount:N(id).amount}))});
+  }
+  /* 往前补满：前面的日子先装到最接近预计拨款，余额留给最后一天（「每天平均」两种方式不做） */
+  if(!only&&st.pickMode!=='avg'&&st.pickMode!=='heads'){
+    for(let i=0;i<st.days.length-1;i++)pullFromLater(i);
+    for(let k=0;k<5&&swapCompact();k++){}
+    st.days=st.days.filter(d=>d.items.length);
+  }
+}
+function autoAll(only,avoid){
+  /* 有暂缓、又是从头排：先排一次看要几天，再在最后一天预留暂缓的空间重排，暂缓就不用另外开一天 */
+  const H=visibleUnits().filter(id=>isHold(id)&&dayIndexOf(id)<0).reduce((a,id)=>a+N(id).amount,0);
+  const P=st.planDays>0?st.planDays:0;let mergedInfo=null;
+  if(!only&&!st.days.some(d=>d.items.length)){
+    /* 从头排：两种装法各试一次（暂缓先在最后一天预留空间），选天数最少、前面最满的 */
+    const snap=()=>st.days.map(d=>({date:d.date,cap:d.cap,items:d.items.map(it=>({...it}))}));
+    const runOnce=mode=>{const keep=st.pickMode;st.pickMode=mode;
+      st.reserve=null;st.days=[];scheduleCore();let n=st.days.length;
+      if(H>0){const target=P&&n>P?P:n;for(let k=0;k<3&&n>0;k++){const rd=(P&&n>=P?P:n)-1;st.days=[];st.reserve={day:Math.max(0,rd),amt:H};scheduleCore();const m=st.days.length;if(m===n||(P&&m<=P))break;n=m}}
+      st.reserve=null;st.pickMode=keep;return snap()};
+    const cands=['fit','big'].map(runOnce);
+    const score=ds=>[ds.length,...ds.map(d=>-d.items.reduce((a,it)=>a+it.amount,0))];
+    cands.sort((a,b)=>{const x=score(a),y=score(b);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]??0)-(y[i]??0);if(d)return d}return 0});
+    st.days=cands[0];
+    /* 有填天数、还是放不下：多出来的并到最后一天（第 P 天） */
+    if(P&&st.days.length>P){const extra=st.days.splice(P);const last=st.days[P-1];extra.forEach(d=>last.items.push(...d.items));mergedInfo={need:P+extra.length}}
+  }else scheduleCore(only,avoid);
+  placeHold();
+  if(mergedInfo){
+    /* 并到最后一天之后：先把前面几天的缺额补满，尽量消化超出的金额 */
+    const li=st.days.length-1,last=st.days[li],lsum=()=>last.items.reduce((a,it)=>a+it.amount,0);
+    /* 「最后发」的部门一定要在最后一天 */
+    st.rules.filter(r=>r.type==='last'&&st.nodes.has(r.id)).forEach(r=>st.days.forEach((d,j)=>{if(j===li)return;const mv=d.items.filter(it=>related(r.id,it.id));if(mv.length){d.items=d.items.filter(it=>!mv.includes(it));last.items.push(...mv)}}));
+    const before=lsum();
+    st.relaxSoft=true;
+    for(let round=0;round<4&&lsum()>last.cap+0.5;round++){
+      for(let i=0;i<li;i++)pullFromLater(i);
+      for(let k=0;k<3&&swapCompact();k++){}
+      if(lsum()<=last.cap+0.5)break;
+      /* 还是超出：把最后一天里的事业群拆成事业处，用小一点的单位再补 */
+      /* 只拆到事业处：事业群 → 事业处；事业处不再往下拆成部门 */
+      const ex=last.items.filter(it=>!isHold(it.id)&&N(it.id).children.length&&N(it.id).depth===0).map(it=>it.id);
+      if(!ex.length)break;ex.forEach(expandUnit);
+    }
+    st.relaxSoft=false;
+    st.days=st.days.filter(d=>d.items.length);
+    mergedInfo.over=lsum()-last.cap;mergedInfo.moved=before-lsum();mergedInfo.min=Math.ceil(st.total/P)}
+  const pm=placed(), left=visibleUnits().filter(id=>!pm.has(id)&&(!only||only.has(id)));
+  const tooBig=left.filter(id=>N(id).amount>st.defaultCap+0.5), other=left.filter(id=>N(id).amount<=st.defaultCap+0.5);
+  rebalance();
+  const probs=[];
+  if(tooBig.length)probs.push(`${tooBig.map(id=>esc(N(id).name)).join('、')} 金额超过一天的预计拨款，没有排进去，而且已经是最细的一层，请调高那天的预计拨款`);
+  const mdLeft=other.filter(id=>maxRuleOf(id)), restLeft=other.filter(id=>!maxRuleOf(id));
+  if(mdLeft.length)probs.push(`${mdLeft.map(id=>esc(N(id).name)).join('、')} 没有排进去：设了「${ruleText(maxRuleOf(mdLeft[0]))}」，必须在连续的日子发完，但剩下的金额超过那天的预计拨款，请调高那天的预计拨款`);
+  if(restLeft.length)probs.push(`${restLeft.map(id=>esc(N(id).name)).join('、')} 没有排进去（可能指定了已经过去的天），请检查条件`);
+  if(mergedInfo&&mergedInfo.over<=0.5)mergedInfo.ok=true;
+  if(mergedInfo&&mergedInfo.over>0.5)probs.unshift(`你设了 ${P} 天，但每天预计拨款 ${fmt(st.defaultCap)} 要 ${mergedInfo.need} 天才放得下，所以把多出来的部门并到第 ${P} 天${mergedInfo.moved>0.5?`，并已把 ${fmt(mergedInfo.moved)} 往前补满前面几天的缺额`:''}，第 ${P} 天还超出 ${fmt(mergedInfo.over)}。请调高第 ${P} 天的预计拨款，或把每天预计拨款调到 ${fmt(mergedInfo.min)} 以上再全部重排`);
+  st.notice=probs.length?{text:probs.join('。')+'。'}:violations()>0?{text:'已排好，但有部分条件没办法同时满足，请看下方红字提醒，再手动调整那几个部门的发放日期。'}:{ok:true,text:`已排好：前面的日子先排满，也遵守了你设的条件。想调整的话，直接改那一行的「发放日期」。`};
+  render();
+}
+function removeUnit(id){
+  st.days.forEach(d=>d.items=d.items.filter(it=>it.id!==id));
+  const before=st.days.length;st.days=st.days.filter(d=>d.items.length);
+  if(st.days.length!==before)st.target='new';
+  rebalance();render();
+}
+$('prevFile').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  if(typeof XLSX==='undefined'){$('prevNote').textContent='Excel 读取程序没有载入，请重新整理页面再试。';return}
+  const r=new FileReader();
+  r.onload=()=>{try{
+    const wb=XLSX.read(new Uint8Array(r.result),{type:'array'}),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+    const keys=rows.length?Object.keys(rows[0]):[],norm=v=>String(v).replace(/\s/g,'').toLowerCase(),find=c=>{for(const x of c){const ex=keys.find(k=>norm(k)===norm(x));if(ex)return ex}for(const x of c){const k=keys.find(k=>norm(k).includes(norm(x)));if(k)return k}};
+    const kE=find(['工号']),kA=find(['充值地址','钱包地址','收款地址']);
+    if(!kE)throw new Error('上个月的名单找不到「工号」栏位。');
+    const m=new Map();rows.forEach(x=>{const c=String(x[kE]??'').trim();if(c)m.set(c,kA?String(x[kA]??'').trim():'')});
+    st.prev=m;st.prevName=f.name+'（Excel 档案）';st.prevManual=true;st.newOverride={};busy(()=>{allocAllBatches();rebalance()});
+  }catch(err){$('prevNote').textContent='导入失败：'+err.message}e.target.value=''};
+  r.readAsArrayBuffer(f);
+});
+/* 所有 UC 打款明细：格式跟 UC 打款文件一样，USDT（00）一个档、TRX（01）一个档 */
+function ucAllRows(cur){const out=[];(st.batches||[]).forEach(b=>{if(cur==='00'){for(let w=0;w<(b.K||W);w++)out.push(...ucRows(b,w,'00'))}else if(Number(st.trx.perNew)>0)out.push(...ucRows(b,-1,'01').map(r=>({...r,amt:Number(st.trx.perNew)})))});return out}
+function ucAllName(cur){const ds=(st.batches||[]).map(b=>b.date).sort();return `UC打款_全部_${ds.length?ds[0]+(ds.length>1?'至'+ds[ds.length-1]:''):''}_${cur==='00'?'USDT':'TRX'}.xlsx`}
+$('ucAll00').addEventListener('click',e=>ucSave(ucAllRows('00'),'00',ucAllName('00'),e.currentTarget));
+$('ucAll01').addEventListener('click',e=>ucSave(ucAllRows('01'),'01',ucAllName('01'),e.currentTarget));
+
+$('batchFile').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  if(typeof XLSX==='undefined'){$('batchMsg').textContent='Excel 读取程序没有载入，请重新整理页面再试。';return}
+  const r=new FileReader();
+  r.onload=async()=>{try{const wb=XLSX.read(new Uint8Array(r.result),{type:'array'}),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+      $('batchMsg').textContent=`正在读取 ${f.name}，并分配钱包…`;await new Promise(r=>setTimeout(r,30));
+      const {b,replaced}=importBatch(f.name,rows);const before=st.prev;autoPrevW();if(st.prev!==before)allocAllBatches();savePaidBatches();
+      $('batchMsg').innerHTML=`已导入 <b>${esc(b.date)}</b>：${b.emps.length} 人，${fmt(b.emps.reduce((a,e)=>a+e.a,0))} PHP${replaced?'（同一天已有名单，已用新的取代）':''}。日期不对的话，请在档案加上「发放日期」栏位再导入。`;render()}
+    catch(err){$('batchMsg').textContent='导入失败：'+err.message}e.target.value=''};
+  r.readAsArrayBuffer(f);
+});
+$('copySum').addEventListener('click',async()=>{
+  const sr=summaryRows(),L=['日期\t项目\t给款(peso)'];
+  sr.forEach((r,k)=>L.push([k>0&&sr[k-1].date===r.date?'':r.date,r.label,Math.round(r.amount)].join('\t')));
+  L.push(['','合计',Math.round(sr.reduce((a,r)=>a+r.amount,0))].join('\t'));
+  try{await copyRich(null,L.join('\n'));$('copySum').textContent='已复制，到 Excel 贴上即可'}catch(_){$('copySum').textContent='请用跳出的视窗手动复制'}
+  setTimeout(()=>{$('copySum').textContent='复制总结，贴到 Excel'},3000);
+});
+$('copyOther').addEventListener('click',async()=>{
+  const L=['工号\t姓名\t事业群\t事业处\t部门\t实发工资PHP\t工资发放方式',...(st.otherRows||[]).map(r=>[r.code,r.name,r.g,r.b,r.d,Math.round(r.amount),r.way].join('\t'))];
+  try{await copyRich(null,L.join('\n'));$('copyOther').textContent='已复制，到 Excel 贴上即可'}catch(_){$('copyOther').textContent='请用跳出的视窗手动复制'}
+  setTimeout(()=>{$('copyOther').textContent='复制这张表，贴到 Excel'},3000);
+});
+$('copyHold').addEventListener('click',async()=>{
+  const L=['工号\t姓名\t事业群\t事业处\t部门\t实发工资PHP\t工资发放方式\t归入\t特例不发',...st.held.map((h,i)=>[h.code,h.name,h.g,h.b,h.d,Math.round(h.amount),h.way,holdGroupOfH(h,i),isSkip(h,i)?'是':''].join('\t'))];
+  const text=L.join('\n');
+  try{await copyRich(null,text);$('copyHold').textContent='已复制，到 Excel 贴上即可'}catch(_){$('copyHold').textContent='请用跳出的视窗手动复制'}
+  setTimeout(()=>{$('copyHold').textContent='复制暂缓表，贴到 Excel'},3000);
+});
+
+/* ---------- import ---------- */
+/* 金额读取：去掉 ₱、逗号、空格、文字等，只留数字、小数点、负号 */
+/* 年月统一成 202609：可读 202609、2026-09、2026/9、Excel 日期序号 */
+function normMonth(v){const t=String(v??'').trim();if(!t)return'';if(/^\d{6}$/.test(t))return t;
+  let m=t.match(/^(\d{4})\D+(\d{1,2})/);if(m)return m[1]+m[2].padStart(2,'0');
+  const n=Number(t);if(isFinite(n)&&n>20000&&n<80000){const d=new Date(Date.UTC(1899,11,30)+n*86400000);return d.getUTCFullYear()+String(d.getUTCMonth()+1).padStart(2,'0')}
+  return t}
+function toNum(v){if(typeof v==='number')return v;const t=String(v??'').replace(/[^0-9.\-]/g,'');return t===''||t==='-'||t==='.'?NaN:Number(t)}
+function msg(t,err){const m=$('importMsg');m.innerHTML=t;m.classList.toggle('err',!!err)}
+function loaded(label){
+  const groups=st.roots.filter(id=>!st.holdNames.has(id)).length;
+  const holdIn=st.roots.filter(id=>st.holdNames.has(id)).reduce((a,id)=>a+N(id).heads,0);
+  const allHeads=st.roots.reduce((a,id)=>a+N(id).heads,0), normal=allHeads-holdIn;
+  const bad=(st.held||[]).filter(h=>!h.ok).length, skip=(st.held||[]).filter((h,i)=>isSkip(h,i)).length;
+  const otherN=(st.otherRows||[]).length, cashN=(st.cashRows||[]).length, cashAmt=(st.cashRows||[]).reduce((a,r)=>a+r.amount,0);
+  const li=[];
+  {const allE=st.roots.flatMap(id=>empsOf(id)),nNew=allE.filter(isNewEmp).length;li.push(st.prev?`第一次打款：<button class="who inl first" data-list="newall">${nNew} 人</button>（跟 ${esc(st.prevName)} 实际打款的名单比对工号）`:'第一次打款：这台电脑还没有上个月的打款名单，暂时标不出来（作业二导入过核准名单后，下个月起就会自动比对）')}
+  if(st.reArranged)li.push(`<b>已用新的薪资表重新自动排好发放日期</b>（日期沿用之前的），请到第 ⑤ 步检查`);
+  if(st.serialMonth){li.push(`序号：排好发放日期后，按发薪日期从 ${st.serialMonth}0001 开始编；暂缓的员工排在最后。日期或部门有变动，序号会跟着重编`)}
+  li.push(`共 <b>${groups}</b> 个事业群，排入分配 <button class="who inl" data-list="imp:alloc">${allHeads} 人</button>，应发合计 <b>${fmt(st.total)}</b> PHP`);
+  if(st.hasWay){
+    li.push(`USDT：<button class="who inl" data-list="imp:usdt">${normal} 人</button>`);
+    if((st.held||[]).length)li.push(`暂缓：<button class="who inl" data-list="imp:hold">${st.held.length} 人</button>，其中 <b>${holdIn}</b> 人排在最后一天（按「暂缓表」分页的分组）${bad?`；<span class="bad"><button class="who inl bad" data-list="imp:holdbad">${bad} 人</button>金额是 0 或读不到，没有排进去</span>`:''}${skip?`；${skip} 人特例不发`:''}`);
+    if(cashN)li.push(`现金：<button class="who inl" data-list="imp:cash">${cashN} 人</button>，${fmt(cashAmt)} PHP（放在最后的「现金发放」）`);
+    if(otherN)li.push(`其他发放方式：<button class="who inl" data-list="imp:other">${otherN} 人</button>，不分配（见「其他发放方式」分页）`);
+  }else li.push('档案里没有「工资发放方式」栏位，所有员工都列入分配');
+  msg(`<b>${esc(label)}</b><ul class="msglist">${li.map(x=>`<li>${x}</li>`).join('')}</ul>`);$('planDays').value=st.planDays||'';render();$('stepCap').scrollIntoView({behavior:'smooth',block:'start'})}
+$('file').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  if(typeof XLSX==='undefined'){msg('Excel 读取程序没有载入，请重新整理页面再试。',true);return}
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(r.result),{type:'array'});
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+      if(!rows.length)throw new Error('第一个工作表没有资料。');
+      const keys=Object.keys(rows[0]);
+      const norm=v=>String(v).replace(/\s/g,'').toLowerCase();
+      const find=c=>{for(const x of c){const ex=keys.find(k=>norm(k)===norm(x));if(ex)return ex}for(const x of c){const k=keys.find(k=>norm(k).includes(norm(x)));if(k)return k}};
+      const kA=find(['实发工资PHP','实发工资','应发']),kG=find(['事业群']),kB=find(['事业处']),kD=find(['部门','事业部']),kC=find(['工资发放方式','发放方式','发放渠道']),kN=find(['姓名']),kPos=find(['岗位','职位']),kRmb=find(['实发工资RMB','人民币金额','实发工资人民币']),kRem=find(['备注']),kE=find(['工号']),kM=find(['薪资年月','年月','Salary period']),kAddr=find(['充值地址','钱包地址','收款地址']),kRate=find(['汇率Peso','汇率']),kP=find(['所属BP','BP']);
+      if(!kA)throw new Error('找不到「实发工资PHP」这一栏。');
+      if(!kG&&!kB&&!kD)throw new Error('找不到「事业群」「事业处」「部门」任何一栏。');
+      const data=[],held=[],other=new Map(),cash=[],otherRows=[];
+      const txt=k=>k?String(row_[k]??'').trim():'';let row_;
+      const seenG=new Set(),allCodes=[];let rate='',fileMonth='';
+      rows.forEach(row=>{
+        row_=row;if(kG&&txt(kG))seenG.add(txt(kG));if(kE&&txt(kE))allCodes.push(txt(kE));if(!fileMonth&&kM)fileMonth=normMonth(txt(kM));if(!rate&&kRate&&txt(kRate))rate=txt(kRate);
+        const a=toNum(row[kA]);
+        const way=txt(kC);
+        /* 工资发放方式：写「暂缓」的放进暂缓表；没写 USDT 的不分配 */
+        /* 现金：工资发放方式必须完全等于「现金」（前后空格不算）；「PESO现金」「现金暂缓」等都不算 */
+        if(kC&&way.replace(/\s/g,'')==='现金'){
+          if(isFinite(a)&&a>0){cash.push({g:txt(kG),name:txt(kB)||txt(kG),cb:txt(kB),cd:txt(kD),code:txt(kE),ename:txt(kN),pos:txt(kPos),rem:txt(kRem),rmb:kRmb?toNum(row[kRmb]):NaN,unit:[txt(kB),txt(kD)].filter(Boolean).join(' / '),amount:a,month:normMonth(txt(kM)),bp:txt(kP),way})}
+          return}
+        if(kC&&way.includes('暂缓')){const h={code:txt(kE),name:txt(kN),pos:txt(kPos),rem:txt(kRem),rmb:kRmb?toNum(row[kRmb]):NaN,g:txt(kG),b:txt(kB),d:txt(kD),addr:kAddr?txt(kAddr):'',amount:isFinite(a)?a:0,way,raw:kA?String(row[kA]??''):'',ok:isFinite(a)&&a>0};held.push(h);
+          /* 暂缓的员工合成一组「暂缓」，排在最后一天发 */
+          h.month=normMonth(txt(kM));h.bp=txt(kP);return}
+        if(kC&&!way.toUpperCase().includes('USDT')){const k=way||'（空白）',o=other.get(k)||{heads:0,amount:0};o.heads++;o.amount+=isFinite(a)?a:0;other.set(k,o);
+          otherRows.push({code:txt(kE),name:txt(kN),pos:txt(kPos),rem:txt(kRem),rmb:kRmb?toNum(row[kRmb]):NaN,g:txt(kG),b:txt(kB),d:txt(kD),month:normMonth(txt(kM)),amount:isFinite(a)?a:0,way:k});return}
+        if(!isFinite(a)||a<=0)return;
+        const path=orgPath(kG?row[kG]:'',kB?row[kB]:'',kD?row[kD]:'');if(path.length)data.push({path,heads:1,amount:a,code:kE?String(row[kE]).trim():'',month:normMonth(txt(kM)),bp:txt(kP),name:txt(kN),pos:txt(kPos),rmb:kRmb?toNum(row[kRmb]):NaN,rem:txt(kRem),addr:kAddr?txt(kAddr):''});
+      });
+      if(!data.length&&!held.length)throw new Error('没有找到要用 USDT 发放的员工，请确认档案内容。');
+      const prevDays=st.days.filter(d=>d.items.length).map(d=>d.date);st.reArranged=false;st.serialMonthPending=fileMonth;
+      st.serialMonth=fileMonth;st.serialAdded=0;st.serialCache=null;st.serialKey='';autoPrevJob1();st.rate=rate;st.phpRate=Number(String(rate).replace(/[^0-9.]/g,''))||0;st.baseData=data;st.held=held;st.allGroups=[...seenG];st.newOverride={};buildAll();st.other=[...other.entries()];st.otherRows=otherRows;st.hasWay=!!kC;st.cashRows=cash;st.cashDate='';
+      /* 重新导入：之前排过的话，用新的薪资表自动重排，日期沿用之前的 */
+      if(prevDays.length){try{autoSplit();autoAll();st.days.forEach((d,i)=>{if(prevDays[i])d.date=prevDays[i]});rebalance();st.reArranged=true}catch(_){}}
+      loaded(f.name);
+    }catch(err){msg('导入失败：'+esc(err.message),true)}
+    e.target.value='';
+  };
+  r.readAsArrayBuffer(f);
+});
+
+/* ---------- copy ---------- */
+/* ---------- 导出成薪酬组 Excel 模版的格式（合并储存格、框线、粗体），以 HTML 复制，贴进 Excel 会保留格式 ---------- */
+function exportModel(){
+  const fd=s=>{if(!s)return'';const d=new Date(s+'T00:00:00');return isNaN(d)?s:`${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`};
+  const vis=visibleUnits(),ord=new Map(vis.map((id,i)=>[id,i]));
+  const rows=[];let run=0,need=0,capS=0;
+  st.days.forEach((d,i)=>{if(!d.items.length)return;
+    const items=d.items.slice().sort((a,b)=>(ord.get(a.id)??0)-(ord.get(b.id)??0));
+    const sum=items.reduce((a,it)=>a+it.amount,0),sur=d.cap-sum;run+=sur;need+=sum;capS+=d.cap;
+    items.forEach((it,j)=>{const n=N(it.id),hold=isHold(it.id),emps=empsOf(it.id);
+      const g=hold?[...new Set(emps.map(e=>{const l=st.nodes.get(e.leaf);return (e.orig||'').split(' / ')[0]||(l?l.path[0]:'')}).filter(Boolean))].join('、'):n.path[0];
+      rows.push({month:monthOf(it.id),bp:bpOf(it.id),g,dept:n.name,amt:it.amount,blockStart:j===0,blockLen:items.length,total:sum,date:fd(d.date),cap:d.cap,sur,run})});
+  });
+  const cg=cashGroups();
+  if(cg.length){const cs=cg.reduce((a,g)=>a+g.amount,0);need+=cs;capS+=cs;
+    cg.forEach((g,j)=>rows.push({cash:true,month:[...g.months].join('/'),bp:[...g.bps].join('/'),g:`${g.name}-现金`,dept:'现金发放',amt:g.amount,blockStart:j===0,blockLen:cg.length,total:cs,date:fd(cashDate()),cap:cs,sur:0,run:0}))}
+  const months=[...new Set(rows.map(r=>r.month).filter(Boolean))];
+  const m=months[0]||'';const title=m.length===6?`${m.slice(0,4)}年${Number(m.slice(4))}月薪资应收款金额`:'薪资应收款金额';
+  return {rows,need,capS,title,rate:st.rate||''};
+}
+function exportHTML(){
+  const {rows,need,capS,title,rate}=exportModel();
+  const B="border:1px solid #000;padding:2px 6px;font-family:Calibri,'Microsoft YaHei',sans-serif;font-size:11pt;color:#000;";
+  const C=B+'text-align:center;vertical-align:middle;', Nn=B+'text-align:right;vertical-align:middle;mso-number-format:&quot;\\#\\,\\#\\#0&quot;;';
+  const H=C+'background:#1F4E79;color:#fff;font-weight:bold;';
+  const num=v=>fmt(v);
+  let h=`<table style="border-collapse:collapse"><tr>${['年月','所属BP','事业群','事业部','金额','总额','发放日期','预计给款','应余','实余'].map(t=>`<td style="${H}">${t}</td>`).join('')}</tr>`;
+  h+=`<tr><td colspan="5" style="${B}text-align:right">${esc(title)}</td><td style="${Nn}">${num(capS)}</td><td colspan="4" style="${B}">${rate?`汇率：${esc(rate)}`:''}</td></tr>`;
+  /* 所属BP：上下相同就合并 */
+  const bpSpan=new Array(rows.length).fill(1);
+  for(let i=0;i<rows.length;){let k=i+1;while(k<rows.length&&rows[k].bp===rows[i].bp&&!!rows[k].cash===!!rows[i].cash)k++;bpSpan[i]=k-i;for(let q=i+1;q<k;q++)bpSpan[q]=0;i=k}
+  rows.forEach((r,i)=>{const bold=r.cash?'font-weight:bold;':'';
+    h+=`<tr><td style="${C}${bold}">${esc(r.month)}</td>`;
+    if(bpSpan[i])h+=`<td rowspan="${bpSpan[i]}" style="${C}${bold}">${esc(r.bp)}</td>`;
+    h+=`<td style="${C}${bold}">${esc(r.g)}</td><td style="${C}${bold}">${esc(r.dept)}</td><td style="${Nn}${bold}">${num(r.amt)}</td>`;
+    if(r.blockStart){const rs=r.blockLen;h+=`<td rowspan="${rs}" style="${Nn}">${num(r.total)}</td><td rowspan="${rs}" style="${C}">${esc(r.date)}</td><td rowspan="${rs}" style="${Nn}">${num(r.cap)}</td><td rowspan="${rs}" style="${Nn}">${num(r.sur)}</td><td rowspan="${rs}" style="${Nn}">${num(r.run)}</td>`}
+    h+='</tr>'});
+  for(let k=0;k<3;k++)h+=`<tr>${('<td style="'+B+'">&nbsp;</td>').repeat(10)}</tr>`;
+  h+=`<tr><td style="${B}"></td><td style="${B}"></td><td style="${B}"></td><td style="${B}text-align:right">需收</td><td style="${Nn}">${num(need)}</td><td style="${Nn}">${num(need)}</td><td style="${C}">排款</td><td style="${Nn}">${num(capS)}</td><td style="${C}">差额</td><td style="${Nn}">${num(capS-need)}</td></tr></table>`;
+  return h;
+}
+function exportTSV(){
+  const {rows,need,capS,title,rate}=exportModel(),L=['年月\t所属BP\t事业群\t事业部\t金额\t总额\t发放日期\t预计给款\t应余\t实余',`\t\t\t${title}\t\t${Math.round(capS)}\t${rate?'汇率：'+rate:''}`];
+  rows.forEach(r=>L.push([r.month,r.bp,r.g,r.dept,Math.round(r.amt),r.blockStart?Math.round(r.total):'',r.blockStart?r.date:'',r.blockStart?Math.round(r.cap):'',r.blockStart?Math.round(r.sur):'',r.blockStart?Math.round(r.run):''].join('\t')));
+  L.push('','','',['','','','需收',Math.round(need),Math.round(need),'排款',Math.round(capS),'差额',Math.round(capS-need)].join('\t'));
+  return L.join('\n');
+}
+async function copyExport(btn,label){
+  const html=exportHTML(),text=exportTSV();
+  try{
+    if(window.ClipboardItem&&navigator.clipboard.write){await copyRich(html,text)}
+    else await copyRich(null,text);
+    btn.textContent='已复制，到 Excel 选 A1 贴上即可';
+  }catch(_){btn.textContent='浏览器不允许复制，请用下方预览手动选取复制'}
+  setTimeout(()=>{btn.textContent=label},3500);
+}
+$('copy').addEventListener('click',()=>{$('expPreview').innerHTML=exportHTML();$('expModal').hidden=false;$('expCopy').focus()});
+$('expCopy').addEventListener('click',()=>copyExport($('expCopy'),'复制，贴到 Excel'));
+$('expClose').addEventListener('click',()=>{$('expModal').hidden=true});
+$('expModal').addEventListener('click',e=>{if(e.target.id==='expModal')$('expModal').hidden=true});
+
+st.pickMode='fit';st.defaultCap=loadCap();st.wallets=loadWallets();st.wrules=loadWRules();st.wcap=loadWcap();
+render();
+})();
+</script>
+</body>
+</html>
