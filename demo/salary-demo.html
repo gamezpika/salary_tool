@@ -375,6 +375,15 @@ small.wh.neg{color:var(--danger);font-weight:600}
 .rc{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 4px;border:1px solid var(--line);border-radius:14px;background:var(--panel);font-size:13px}
 .rc b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--w2);color:#fff;font-size:11px}
 .rc #ruleCap{color:var(--muted)}
+.adjrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px}
+.adjin{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 8px;font:inherit;font-size:14px;color:inherit;min-width:0}
+#adjPerson{width:220px}.adjin.grow{flex:1;min-width:180px}
+.adjsum{display:flex;flex-wrap:wrap;gap:8px 18px;margin:8px 0;font-size:14px}
+.adjsum b{font-variant-numeric:tabular-nums}
+.adjtbl{min-width:1040px!important}
+.adjtbl td{vertical-align:middle}
+.adjtype{display:inline-block;padding:0 8px;border-radius:10px;font-size:12px;font-weight:600;white-space:nowrap;background:var(--dangerbg);color:var(--danger)}
+.adjtype.add{background:var(--soft);color:var(--ok);border:1px solid var(--ok)}
 .wsin.reqmiss{border:2px solid var(--danger);background:var(--dangerbg)}
 .wdhead .neg,#reqNeedDate,#wOrderChips .neg{color:var(--danger)}
 .btn.chkdone{position:relative}
@@ -537,6 +546,7 @@ nav.jobs .job.dm-lock small::after{content:"（没有权限）";color:var(--dang
     <h2><span class="n">1</span>导入资料</h2>
     <div class="impgrid">
       <div class="prevbox" id="curBox"><span class="previcon" id="curIcon" aria-hidden="true">!</span><div class="prevtxt"><span class="imptag">本月</span><b id="curNote"></b><small id="curSub">OA 的「菲律宾USDT薪资发放名单」。档案只在你的浏览器里读取，不会上传。</small></div><label class="btn prevbtn" for="file" id="curBtn">导入本月月度薪资表（Excel）</label><input type="file" id="file" accept=".xlsx,.xls,.csv" hidden></div>
+      <div class="prevbox" id="midBox"><span class="previcon" id="midIcon" aria-hidden="true">↺</span><div class="prevtxt"><span class="imptag">选用</span><b id="midNote">导入暂缓变更单</b><small id="midSub">作业三导出的变更单：中途暂缓的人移到暂缓表，补发的人从暂缓表拿掉。要先导入本月月度薪资表。</small></div><label class="btn prevbtn" for="midFile">导入暂缓变更单（Excel）</label><input type="file" id="midFile" accept=".xlsx,.xls,.csv" hidden></div>
       <div class="prevbox" id="prevBox"><span class="previcon" id="prevIcon" aria-hidden="true">!</span><div class="prevtxt"><span class="imptag">上个月</span><b id="prevNote1"></b><small id="prevSub1">用来比对第一次发薪（只要有「工号」栏）。过渡阶段：正式版会直接从资料库判断。</small></div><label class="btn prevbtn" for="prevFile1">导入上个月打款名单（Excel）</label><input type="file" id="prevFile1" accept=".xlsx,.xls,.csv" hidden></div>
     </div>
     <div class="msg" id="importMsg"></div>
@@ -602,8 +612,24 @@ nav.jobs .job.dm-lock small::after{content:"（没有权限）";color:var(--dang
       <p class="fhint">打款当天的 RMB → USDT 汇率；UC 打款文件和 USDT 余额检查都用这个汇率。有钱包超过上限会自动照上限重新分配。</p></div>
     <div id="payDiff"></div>
   </section>
+  <section class="step wstep ph-pay" id="adjSec">
+    <h2><span class="n">2</span>名单调整</h2>
+    <p class="msg" style="margin-top:0">有人临时不发或要补发，在下载 UC 文件前调整。其他人的钱包和序号不变。调整后记得回 OA 补改。</p>
+    <p class="neg" id="adjLockNote" style="margin:0 0 8px;font-weight:600;font-size:13.5px" hidden>UC 文件已经下载，不能再调整。</p>
+    <div class="subsec"><h3>员工暂缓</h3>
+      <div class="adjrow"><input class="adjin" id="adjPerson" list="adjPeople" placeholder="工号或姓名" aria-label="要暂缓的员工" autocomplete="off"><datalist id="adjPeople"></datalist><select class="adjin" id="adjGroup" aria-label="归入哪个暂缓分组"></select><input class="adjin grow" id="adjReason" placeholder="原因（必填）" aria-label="暂缓原因"><button class="btn" id="adjHold">暂缓这个人</button></div>
+      <div class="fhint" id="adjInfo"></div>
+    </div>
+    <div class="subsec"><h3>补发</h3>
+      <div class="adjrow"><select class="adjin" id="adjWallet" aria-label="由哪个钱包打"></select><input class="adjin grow" id="adjAddReason" placeholder="原因（必填）" aria-label="补发原因"><label class="btn" for="adjFile" id="adjFileBtn">导入补发名单（Excel）</label><input type="file" id="adjFile" accept=".xlsx,.xls,.csv" hidden></div>
+      <label class="fhint" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="adjAllowDup">我确认：名单里有人本月已在其他批次，仍要加入</label>
+      <div class="fhint">名单栏位和作业二相同，要有序号、工号、姓名、事业群、部门、实发工资PHP、实发工资RMB、PHP→RMB 汇率、第一次打款、钱包地址。</div>
+    </div>
+    <p class="msg" id="adjMsg" role="status"></p>
+    <div id="adjBody"></div>
+  </section>
   <section class="step wstep ph-pay">
-    <h2><span class="n">2</span>打款单与 UC 打款文件</h2>
+    <h2><span class="n">3</span>打款单与 UC 打款文件</h2>
     <p class="msg" style="margin-top:0">照 UC 格式下载：USDT 每个钱包一份；TRX 一天一份，只有领第一次补助的员工。USDT 用上面的打款汇率计算；矿工费由链上自动扣，不在文件里。</p>
     <div id="ucDays"></div>
     <div class="row" style="margin-top:10px"><button class="btn primary" id="payExportBtn">导出打款单（照请款信格式）</button><button class="btn" id="ucAll00">下载所有 USDT 打款明细（00）</button><button class="btn" id="ucAll01">下载所有 TRX 打款明细（01）</button></div>
@@ -959,7 +985,7 @@ function render(){
   $('walletSec').hidden=st.tab!=='wallet';$('job1Phase').hidden=st.tab==='wallet';
   if(st.tab==='wallet')renderWallet();
   $('tabs').hidden=!loadedData||st.tab==='wallet';
-  $('leadText').innerHTML=st.tab==='wallet'?((st.wjob||'2')==='3'?'作业三（打款日）：① 导入作业二导出的请款单、填打款汇率与上限 → ② 导出打款单、下载 UC 打款文件。':'作业二（请款日）：① 导入当天核准名单 → ② 汇率与矿工费 → ③ 出款钱包与请款单，导出请款单给老板。'):'作业一（月初、送审前）：① 导入资料 → ② 每天预计拨款 → ③ 设定排的条件 → ④ 选择分配单位 → ⑤ 排发放日期 → ⑥ 总结，导出送审名单。';
+  $('leadText').innerHTML=st.tab==='wallet'?((st.wjob||'2')==='3'?'作业三（打款日）：① 导入作业二导出的请款单、填打款汇率与上限 → ② 名单调整（有需要才做）→ ③ 导出打款单、下载 UC 打款文件。':'作业二（请款日）：① 导入当天核准名单 → ② 汇率与矿工费 → ③ 出款钱包与请款单，导出请款单给老板。'):'作业一（月初、送审前）：① 导入资料 → ② 每天预计拨款 → ③ 设定排的条件 → ④ 选择分配单位 → ⑤ 排发放日期 → ⑥ 总结，导出送审名单。';
   document.querySelectorAll('nav.jobs [data-job]').forEach(b=>{const j=b.dataset.job,on=j==='1'?st.tab!=='wallet':(st.tab==='wallet'&&(st.wjob||'2')===j);b.classList.toggle('on',on);b.setAttribute('aria-selected',on)});
   $('walletSec').dataset.w=st.wjob||'2';
   $('tabHold').hidden=!hasHold;$('tabOther').hidden=!hasOther;
@@ -1371,7 +1397,7 @@ function saveWRules(){try{localStorage.setItem(WRKEY,JSON.stringify(st.wrules))}
 const wruleText=r=>r.type==='max'?`最多用 ${r.n} 个钱包`:r.type==='trxw'?(()=>{const ws=Array.isArray(r.ws)?r.ws:[r.w];return `TRX 固定由 ${ws.map(w=>wLabel(w)).join('、')} 打${ws.length>1?'（每天轮流）':''}（每天自动带入，当天还是可以改）`})():`只用 ${r.ws.map(w=>wLabel(w)).join('、')}`;
 /* 每个钱包每天最多 X USDT（预设 11 万）：当天 USDT 合计超过 4 × X，就加开钱包，直到每个钱包都不超过 */
 function batchUsdt(b){return r2(b.emps.reduce((a,e)=>{const u=bUsdt(e,b);return a+(u||0)},0))}
-function allocBatch(b){const m=new Map();b.emps.forEach(e=>{const k=e.g+'|'+(e.b||e.g);if(!m.has(k))m.set(k,{key:k,amount:0,emps:[]});const u=m.get(k);u.amount+=e.a;u.emps.push(e)});
+function allocBatch(b){if(b.adj&&b.adj.length)return;const m=new Map();b.emps.forEach(e=>{const k=e.g+'|'+(e.b||e.g);if(!m.has(k))m.set(k,{key:k,amount:0,emps:[]});const u=m.get(k);u.amount+=e.a;u.emps.push(e)});
   const units=[...m.values()],cap=Number(st.wcap)||0,rated=Number(b.rate)>0&&Number(st.phpRate)>0;
   /* 钱包数量固定用「出款钱包设定」里的钱包（目前 4 个），不会自动加开；超过每日上限只提醒 */
   const nW=(st.wallets||[]).length||W,useW=usdtWs(),K=Math.max(1,useW.length);
@@ -1433,7 +1459,7 @@ function renderWallet(){
         $('cfgSplit').innerHTML=`<div class="tshead">第一次打款共 <b>${f}</b> 人，各钱包打几人：${b.trxPick?'<span class="rtag trxtag">已逐人指定</span>':''}</div>${uc.map(x=>`<label class="tsrow"><span class="wtag" style="--wc:${wc(x.w)}"></span><span class="tsname">${esc(wLabel(x.w))}</span><input type="number" min="0" step="1" class="fin sm" data-tsplit="${bi}~${x.w}" value="${x.n}" ${b.trxPick?'readonly title="已逐人指定，要改请按「逐人指定」"':''}> 人<small class="muted" data-tsamt="${x.w}">${per?`＝ ${fmt(x.n*per)} TRX`:''}</small></label>`).join('')}
         <div class="tsfoot"><span id="tsSum" data-tot="${f}" class="${ok?'okc':'neg'}">合计 ${sum}／${f} 人${ok?' ✓':''}</span><button class="btn sm" data-tsreset="${bi}">平均分</button><button class="btn sm" data-tspick="${bi}">逐人指定…</button></div>`}}}
    $('ruleCap').textContent=Number(st.wcap)>0?` ${fmt(st.wcap)} USDT `:'（没设）';
-   chainMarks();
+   chainMarks();renderAdj();
    {const o=wRules();$('wOrderChips').innerHTML=WRULE_ALL.map(k=>`<label class="chip ${o.includes(k)?'on':''}"><input type="checkbox" data-wrule="${k}" ${o.includes(k)?'checked':''}>${WRULE_NAME[k]}</label>`).join('')+(st.orderDirty?'<span class="neg" style="font-size:13px;font-weight:600">规则改了，按「自动排」才生效</span>':'');
     $('wAutoHint').textContent=(o.includes('serial')?'自动排：每个钱包拿一段连续的序号，再照顾其他勾选的规则。':'自动排：没勾序号连续，同一个钱包的序号可能跳号，对帐时要对照各钱包的名单。')+'每个钱包上限永远最优先（打款时）。'}
    const uw=usdtWs();$('cfgUsdt').innerHTML=st.wallets.map((x,w)=>`<label class="chip"><input type="checkbox" data-cfgusdt="${w}" ${uw.includes(w)?'checked':''}>${esc(wLabel(w))}</label>`).join('')}
@@ -1553,7 +1579,7 @@ async function exportReqXlsx(key,btn,kind){const lab=btn.textContent,done=t=>{bt
       c.s={border,alignment:{horizontal:'center',vertical:'center'},font:{name:'Microsoft YaHei',sz:12,bold:isH||isT,color:{rgb:isT?'0000FF':'000000'}},fill:(isH||isT)?{patternType:'solid',fgColor:{rgb:'C9DAF8'}}:undefined};
       if(ri>0&&typeof v==='number')c.z=ci===2?'#,##0':ci>=3?'#,##0.00':'0'}));
     ws['!cols']=[{wch:14},{wch:8},{wch:16},{wch:18},{wch:16}];ws['!rows']=aoa.map(()=>({hpt:24}));
-    const wb=L.utils.book_new();L.utils.book_append_sheet(wb,ws,kind==='pay'?'打款单':'请款单');if(kind!=='pay'){addDetailSheet(L,wb,b,border);addProgSheet(L,wb,b)}
+    const wb=L.utils.book_new();L.utils.book_append_sheet(wb,ws,kind==='pay'?'打款单':'请款单');if(kind!=='pay'){addDetailSheet(L,wb,b,border);addProgSheet(L,wb,b)}else if(b&&(b.adj||[]).length){L.utils.book_append_sheet(wb,L.utils.aoa_to_sheet([ADJ_HEAD,...adjRowsAoa(b)]),'名单调整')}
     await __DS(DL,{filename:fname,data:new Uint8Array(L.write(wb,{type:'array',bookType:'xlsx'}))});done('已导出')}
   catch(err){done(err&&err.code==='declined'?'已取消':'导出失败')}}
 function walletHTML(key){
@@ -1798,16 +1824,86 @@ async function ucSave(rows,cur,fname,btn){
       ws['!cols']=[{wch:12},{wch:40},{wch:30},{wch:14},{wch:12}];
       const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Sheet1');
       const buf=XLSX.write(wb,{type:'array',bookType:'xlsx'});
-      await __DS(DL,{filename:fname,data:new Uint8Array(buf)});done('已下载');return}
+      await __DS(DL,{filename:fname,data:new Uint8Array(buf)});adjLock();done('已下载');return}
     catch(err){if(err&&err.code==='declined'){done('已取消');return}done('下载失败，改用复制：'+(err&&err.message||''),4000)}}
   /* 复制时用 HTML 表格，币种栏设成文字格式，贴到 Excel 才不会把 00 变成 0 */
+  adjLock();
   const text=aoa.map(r=>r.join('\t')).join('\n'),B="border:1px solid #000;padding:2px 6px;font-family:Calibri,sans-serif;font-size:11pt;";
   const html=`<table style="border-collapse:collapse">${aoa.map((r,i)=>`<tr>${r.map((v,k)=>`<td style="${B}${k===2||k===0?'mso-number-format:&quot;\\@&quot;;':''}${i===0?'font-weight:bold;':''}">${esc(String(v))}</td>`).join('')}</tr>`).join('')}</table>`;
   try{await copyRich(html,text);done('已复制，贴到 Excel 后存档')}catch(_){done('请用跳出的视窗手动复制')}
 }
 
 /* 导入当天核准名单 */
-function importBatch(f,rows){
+/* ---------- 作业三：名单调整。暂缓＝把人从这批拿掉（金额记下来）；补发＝加进指定钱包。其他人的钱包和序号都不动 ---------- */
+const ADJKEY='payroll-demo-allocator-adj-v1';
+const adjBatch=()=>{const bs=st.batches||[],b=bs[bs.length-1];return b&&!b.cleared?b:null};
+const auditEvt=(cat,act,det,risk)=>{try{window.dispatchEvent(new CustomEvent('payroll:audit',{detail:{cat,act,det,risk}}))}catch(_){}};
+function adjSave(b){try{const v=JSON.parse(localStorage.getItem(ADJKEY)||'{}')||{};if((b.adj&&b.adj.length)||b.ucDone)v[b.date]={adj:b.adj||[],ucDone:!!b.ucDone,at:Date.now()};else delete v[b.date];const ks=Object.keys(v).sort();while(ks.length>30)delete v[ks.shift()];localStorage.setItem(ADJKEY,JSON.stringify(v))}catch(_){}}
+/* 重新整理后再导入同一天的请款单：把调整接回来 */
+function adjRestore(b){let r=null;try{r=(JSON.parse(localStorage.getItem(ADJKEY)||'{}')||{})[b.date]}catch(_){}if(!r)return 0;b.adj=r.adj||[];b.ucDone=!!r.ucDone;
+  b.adj.forEach(a=>{const has=b.emps.findIndex(e=>e.code===a.e.code);if(a.type==='hold'&&has>=0)b.emps.splice(has,1);if(a.type==='add'&&has<0)b.emps.push(a.e)});return b.adj.length}
+function adjLock(){(st.batches||[]).forEach(b=>{if(!b.ucDone){b.ucDone=true;adjSave(b)}});if(st.batches&&st.batches.length)renderAdj()}
+const adjUsdt=(a,b)=>{const u=bUsdt(a.e,b);return u==null?null:u};
+const adjAmt=a=>({php:a.e.a,rmb:a.e.rmbF>0?a.e.rmbF:(a.e.rateF>0?round2(a.e.a/a.e.rateF):0)});
+function adjWho(){return window.__payUser||''}
+function renderAdj(){const b=adjBatch();if(!$('adjBody'))return;
+  const lock=!b||b.ucDone;$('adjLockNote').hidden=!(b&&b.ucDone);
+  ['adjPerson','adjGroup','adjReason','adjHold','adjWallet','adjAddReason','adjAllowDup'].forEach(i=>{$(i).disabled=lock});$('adjFile').disabled=lock;$('adjFileBtn').style.opacity=lock?.45:1;$('adjFileBtn').style.pointerEvents=lock?'none':'';
+  if(!$('adjGroup').options.length||$('adjGroup').dataset.sig!==st.holdCfg.groups.join('|')){const cur=$('adjGroup').value;$('adjGroup').innerHTML=st.holdCfg.groups.map(g=>`<option>${esc(g)}</option>`).join('');$('adjGroup').dataset.sig=st.holdCfg.groups.join('|');if(st.holdCfg.groups.includes(cur))$('adjGroup').value=cur}
+  {const n=(st.wallets||[]).length,cur=$('adjWallet').value,opts=[...Array(n).keys()].map(w=>`<option value="${w}">${esc(wLabel(w))}</option>`).join('');if($('adjWallet').dataset.sig!==opts){$('adjWallet').innerHTML=opts;$('adjWallet').dataset.sig=opts;if(cur!==''&&Number(cur)<n)$('adjWallet').value=cur}}
+  if(!b){$('adjPeople').innerHTML='';$('adjBody').innerHTML='<p class="empty">先在第 ① 步导入请款单。</p>';return}
+  const sig=b.emps.length+'|'+b.date;if($('adjPeople').dataset.sig!==sig){$('adjPeople').innerHTML=b.emps.map(e=>`<option value="${esc(e.code+' '+e.name)}"></option>`).join('');$('adjPeople').dataset.sig=sig}
+  const adj=b.adj||[];if(!adj.length){$('adjBody').innerHTML='<p class="fhint" style="margin:0">目前没有调整。</p>';return}
+  const hold=adj.filter(a=>a.type==='hold'),add=adj.filter(a=>a.type==='add'),sum=l=>{let php=0,rmb=0,u=0,uok=true;l.forEach(a=>{const m=adjAmt(a),x=adjUsdt(a,b);php+=m.php;rmb+=m.rmb;if(x==null)uok=false;else u+=x});return {n:l.length,php,rmb:r2(rmb),u:uok?r2(u):null}};
+  const txt=x=>`<b>${x.n}</b> 人，PHP <b>${fmt(x.php)}</b>，RMB <b>${fmt2(x.rmb)}</b>，USDT <b>${x.u==null?'待填打款汇率':fmt2(x.u)}</b>`;
+  const grp=[...new Set(hold.map(a=>a.group))].map(g=>`<span>${esc(g)}：${txt(sum(hold.filter(a=>a.group===g)))}</span>`).join('');
+  const byW=[...new Set(hold.map(a=>a.wallet))].sort((p,q)=>p-q).map(w=>{const x=sum(hold.filter(a=>a.wallet===w));return `<span>${esc(wLabel(w))} 多出 USDT <b>${x.u==null?'待填汇率':fmt2(x.u)}</b></span>`}).join('');
+  const cells=batchCells([b],'pay'),warns=[...new Set(add.map(a=>a.wallet))].map(w=>{const bal=usdtBalOf(w),need=(cells[w]||{usdt:0}).usdt;return bal!=null&&payRateOf(b)>0&&need>bal+1e-9?`${esc(wLabel(w))} 余额不够：需要 ${fmt2(need)} USDT，目前 ${fmt2(bal)}，还差 ${fmt2(need-bal)}`:''}).filter(Boolean);
+  const dis=b.ucDone?'disabled':'';
+  $('adjBody').innerHTML=`${warns.length?`<div class="notice">${warns.join('<br>')}</div>`:''}<div class="adjsum">${hold.length?`<span><b>暂缓合计</b>：${txt(sum(hold))}</span>${grp}${byW}`:''}${add.length?`<span><b>补发合计</b>：${txt(sum(add))}</span>`:''}</div>
+  <div class="tablewrap"><table class="ctable adjtbl"><thead><tr><th>类型</th><th>时间</th><th>工号</th><th>姓名</th><th>单位</th><th>PHP</th><th>RMB</th><th>USDT</th><th>钱包</th><th>归入</th><th>原因</th><th></th></tr></thead><tbody>${adj.map(a=>{const m=adjAmt(a),u=adjUsdt(a,b);return `<tr><td><span class="adjtype ${a.type==='add'?'add':''}">${a.type==='add'?'补发':'暂缓'}</span></td><td>${esc(fmtAgo(a.at))}${a.by?`<small class="wh">${esc(a.by)}</small>`:''}</td><td>${esc(a.e.code)}</td><td>${esc(a.e.name)}</td><td>${esc([a.e.g,a.e.b,a.e.d].filter(Boolean).join(' / '))}</td><td class="num">${fmt(m.php)}</td><td class="num">${fmt2(m.rmb)}</td><td class="num">${u==null?'—':fmt2(u)}</td><td>${a.type==='add'?`<select class="adjin" data-adjw="${esc(a.id)}" ${dis} aria-label="${esc(a.e.name)} 由哪个钱包打">${[...Array((st.wallets||[]).length).keys()].map(w=>`<option value="${w}" ${w===a.wallet?'selected':''}>${esc(wLabel(w))}</option>`).join('')}</select>`:esc(wLabel(a.wallet))}</td><td>${esc(a.group||'—')}</td><td style="white-space:normal;min-width:140px">${esc(a.reason)}</td><td><button class="x" data-adjundo="${esc(a.id)}" ${dis}>撤销</button></td></tr>`}).join('')}</tbody></table></div>
+  <div class="row" style="margin-top:10px"><button class="btn primary" id="adjExport">导出暂缓变更单</button><span class="fhint" style="margin:0">导回作业一，暂缓表就会更新。也记得回 OA 补改。</span></div>`}
+function adjMsg(t,err){$('adjMsg').textContent=t;$('adjMsg').classList.toggle('err',!!err)}
+function adjNew(type,e,extra){return {id:`${Date.now()}-${Math.random().toString(36).slice(2,8)}`,at:Date.now(),by:adjWho(),type,e,...extra}}
+function adjHold(){const b=adjBatch();if(!b||b.ucDone)return;const key=$('adjPerson').value.trim(),reason=$('adjReason').value.trim();const code=key.split(/\s+/)[0];
+  const hit=b.emps.filter(e=>e.code===code||(e.name&&e.name===key)||(e.code+' '+e.name)===key);
+  if(!key)return adjMsg('请先选要暂缓的员工。',true);if(!hit.length)return adjMsg(`这批名单里找不到「${key}」。`,true);if(hit.length>1)return adjMsg(`有 ${hit.length} 个同名的人，请改用工号。`,true);if(!reason)return adjMsg('请填暂缓原因。',true);
+  const e=hit[0],sm=serialMap(),seq=sm.get(e)||'',a=adjNew('hold',e,{group:$('adjGroup').value,reason,wallet:e.w,seq});(b.adj=b.adj||[]).push(a);b.emps.splice(b.emps.indexOf(e),1);adjSave(b);
+  const m=adjAmt(a),u=adjUsdt(a,b);auditEvt('设定','中途暂缓员工',`工号 ${e.code} · 归入 ${a.group} · 钱包 ${e.w+1} · PHP ${fmt(m.php)} · RMB ${fmt2(m.rmb)}${u==null?'':` · USDT ${fmt2(u)}`} · 原因：${reason}`,'high');
+  $('adjPerson').value='';$('adjReason').value='';$('adjInfo').textContent='';adjMsg(`已暂缓 ${e.name}（${a.group}），记得回 OA 补改。`);render()}
+function adjAddRows(rows,fname){const b=adjBatch();if(!b||b.ucDone)return;const reason=$('adjAddReason').value.trim();if(!reason)return adjMsg('请先填补发原因，再选文件。',true);
+  const {emps}=parseBatchRows(rows);if(!emps.length)return adjMsg('名单里没有金额大于 0 的员工。',true);
+  const noCode=emps.filter(e=>!e.code);if(noCode.length)return adjMsg(`有 ${noCode.length} 人没有工号。`,true);
+  const codes=emps.map(e=>e.code),dupIn=codes.filter((c,i)=>codes.indexOf(c)!==i);if(dupIn.length)return adjMsg(`名单里工号重复：${[...new Set(dupIn)].slice(0,5).join('、')}。`,true);
+  const bad=emps.filter(e=>addrCheck(e.addr||''));if(bad.length)return adjMsg(`这些人的钱包地址有问题：${bad.slice(0,5).map(e=>e.code).join('、')}。`,true);
+  const noRate=emps.filter(e=>!(e.rateF>0));if(noRate.length)return adjMsg(`这些人没有汇率：${noRate.slice(0,5).map(e=>e.code).join('、')}。`,true);
+  const inB=emps.filter(e=>b.emps.some(x=>x.code===e.code));if(inB.length)return adjMsg(`这些人已经在这批名单里，不能重复发：${inB.slice(0,5).map(e=>e.code).join('、')}。`,true);
+  const held=emps.filter(e=>(b.adj||[]).some(a=>a.type==='hold'&&a.e.code===e.code));if(held.length)return adjMsg(`这些人刚被暂缓，要发请按记录里的「撤销」：${held.slice(0,5).map(e=>e.code).join('、')}。`,true);
+  const paid=new Set((loadPaid().months[ym(b.date)]||[]).map(x=>x[0]));const dup=emps.filter(e=>paid.has(e.code));if(dup.length&&!$('adjAllowDup').checked)return adjMsg(`这些人本月已在其他批次：${dup.slice(0,5).map(e=>e.code).join('、')}${dup.length>5?' 等':''}。确认要加入，请勾选确认后再导入一次。`,true);
+  const w=Number($('adjWallet').value)||0,base=Math.max(0,...b.emps.map(e=>e.ord||0))+1;
+  emps.forEach((e,i)=>{e.ord=base+i;e.w=w;b.emps.push(e);const a=adjNew('add',e,{group:'',reason,wallet:w,file:fname});(b.adj=b.adj||[]).push(a);const m=adjAmt(a),u=adjUsdt(a,b);auditEvt('设定','中途补发员工',`工号 ${e.code} · 钱包 ${w+1} · PHP ${fmt(m.php)} · RMB ${fmt2(m.rmb)}${u==null?'':` · USDT ${fmt2(u)}`} · 原因：${reason}${dup.includes(e)?' · 本月已在其他批次':''}`,'high')});
+  adjSave(b);$('adjAddReason').value='';$('adjAllowDup').checked=false;adjMsg(`已加入 ${emps.length} 人，由 ${wLabel(w)} 打。`);render()}
+function adjUndo(id){const b=adjBatch();if(!b||b.ucDone)return;const i=(b.adj||[]).findIndex(a=>a.id===id);if(i<0)return;const a=b.adj[i];
+  if(a.type==='hold')b.emps.push(a.e);else{const k=b.emps.findIndex(e=>e.code===a.e.code);if(k>=0)b.emps.splice(k,1)}
+  b.adj.splice(i,1);adjSave(b);auditEvt('设定',a.type==='hold'?'撤销中途暂缓':'撤销中途补发',`工号 ${a.e.code} · 原因：${a.reason}`,'high');adjMsg('已撤销。');render()}
+const ADJ_HEAD=['类型','调整时间','操作人','薪资年月','序号','工号','姓名','事业群','事业处','部门','实发工资PHP','兑人民币RMB','USDT','PHP→RMB 汇率','打款汇率','钱包','归入','原因','钱包地址','打款日'];
+function adjRowsAoa(b){const sm=serialMap(),d=new Date();return (b.adj||[]).map(a=>{const m=adjAmt(a),u=adjUsdt(a,b);return [a.type==='add'?'补发':'暂缓',new Date(a.at).toLocaleString('zh-CN',{hour12:false}),a.by||'',a.e.month||'',String(a.seq||sm.get(b.emps.find(e=>e.code===a.e.code)||a.e)||''),a.e.code,a.e.name,a.e.g||'',a.e.b||'',a.e.d||'',m.php,m.rmb,u==null?'':u,a.e.rateF||'',payRateOf(b)||'',wLabel(a.wallet),a.group||'',a.reason,a.e.addr||'',b.date]})}
+async function adjExport(btn){const b=adjBatch();if(!b||!(b.adj||[]).length)return;const lab=btn.textContent,done=t=>{btn.textContent=t;setTimeout(()=>btn.textContent=lab,3000)};if(!DL||typeof XLSX==='undefined')return done('不能下载');
+  try{const ws=XLSX.utils.aoa_to_sheet([ADJ_HEAD,...adjRowsAoa(b)]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'暂缓变更单');await __DS(DL,{filename:`暂缓变更单_打款日${b.date}.xlsx`,data:new Uint8Array(XLSX.write(wb,{type:'array',bookType:'xlsx'}))});done('已导出')}catch(err){done(err&&err.code==='declined'?'已取消':'导出失败')}}
+/* 作业一：导入变更单，把中途暂缓的人移到暂缓表，补发的人从暂缓表拿掉 */
+function midImport(rows,fname){if(!st.baseData)throw new Error('请先导入本月月度薪资表。');const keys=rows.length?Object.keys(rows[0]):[];for(const k of ['类型','工号','归入','实发工资PHP'])if(!keys.includes(k))throw new Error(`这份不是暂缓变更单（缺「${k}」栏）。`);
+  let moved=0,already=0,missing=[],paid=0,other=0;const t=(r,k)=>String(r[k]??'').trim();
+  rows.forEach(r=>{const type=t(r,'类型'),code=t(r,'工号'),mon=normMonth(t(r,'薪资年月'));if(mon&&st.serialMonth&&mon!==st.serialMonth){other++;return}
+    if(type==='补发'){const i=st.held.findIndex(h=>h.code===code);if(i>=0){st.held.splice(i,1);paid++}return}
+    if(type!=='暂缓')return;const group=t(r,'归入'),gi=st.holdCfg.groups.indexOf(group);
+    const base=st.baseData.findIndex(x=>x.code===code),inHold=st.held.find(h=>h.code===code);
+    if(gi>=0)st.holdCfg.emp[code]=gi;
+    if(inHold){already++;return}if(base<0){missing.push(code);return}const x=st.baseData[base];st.baseData.splice(base,1);
+    st.held.push({code,name:x.name||t(r,'姓名'),pos:x.pos||'',rem:[x.rem,`中途暂缓：${t(r,'原因')}`].filter(Boolean).join('；'),rmb:x.rmb,rateF:x.rateF,g:t(r,'事业群'),b:t(r,'事业处'),d:t(r,'部门'),addr:x.addr||'',amount:x.amount,way:'暂缓（中途）',raw:String(x.amount),ok:true,month:x.month||'',bp:x.bp||''});moved++});
+  saveHoldCfg();regroup();auditEvt('导入','导入暂缓变更单',`${fname} · 移入暂缓 ${moved} 人 · 从暂缓拿掉 ${paid} 人`,moved||paid?'high':'');
+  return `已更新：${moved} 人移到暂缓表，${paid} 人从暂缓表拿掉${already?`，${already} 人原本就在暂缓表`:''}${missing.length?`。找不到：${missing.slice(0,5).join('、')}${missing.length>5?' 等':''}`:''}${other?`，${other} 笔不是这个月的，已略过`:''}。`}
+function readWbRows(f,cb){const r=new FileReader();r.onload=()=>{try{const wb=XLSX.read(new Uint8Array(r.result),{type:'array'});cb(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''}))}catch(err){cb(null,err)}};r.readAsArrayBuffer(f)}
+function parseBatchRows(rows){
   const keys=rows.length?Object.keys(rows[0]):[],norm=v=>String(v).replace(/[\s()（）\[\]【】_\-:：/]/g,'').toLowerCase(),find=c=>{for(const x of c){const ex=keys.find(k=>norm(k)===norm(x));if(ex)return ex}for(const x of c){const k=keys.find(k=>norm(k).includes(norm(x)));if(k)return k}};
   const kA=find(['实发工资PHP','实发工资','应发']),kE=find(['工号']),kN=find(['姓名']),kG=find(['事业群']),kB=find(['事业处']),kD=find(['部门','事业部']),kAd=find(['充值地址','钱包地址','收款地址']),kDt=find(['发放日期','打款日期']),kM=find(['薪资年月','年月','Salary period']),kSeq=keys.find(k=>norm(k)==='序号'),kF=find(['第一次打款','第一次发薪','首次打款','首次发薪']);
   /* 必要栏位缺一不可：少了就导入失败 */
@@ -1826,6 +1922,8 @@ function importBatch(f,rows){
   const emps=[];let date='';
   rows.forEach((r,ri)=>{const a=toNum(r[kPhp]);if(!isFinite(a)||a<=0)return;if(!date&&kDt)date=normDate(r[kDt]);
     emps.push({ord:ri,seqRaw:kSeq?String(r[kSeq]??'').trim().replace(/\.0+$/,''):'',seq:kSeq?(toNum(r[kSeq])||ri+1):ri+1,a,code:t(r,kE),name:t(r,kN),g:t(r,kG),b:t(r,kB),d:t(r,kD),addr:t(r,kAd),month:normMonth(t(r,kM)),w:0,rmbF:toNum(r[kRmb]),rateF:toNum(r[kR]),first:kF?isYes(t(r,kF)):undefined})});
+  return {rows,emps,date,kR,kF,kSeq}}
+function importBatch(f,rows0){const parsed=parseBatchRows(rows0),{rows,emps,kR,kF,kSeq}=parsed;let date=parsed.date;
   st.batchHasFirst=!!kF;st.batchHasSeq=!!kSeq;
   if(!emps.length)throw new Error('名单里没有金额大于 0 的员工。');
   st.rateCol=kR;{const rv=rows.map(r=>toNum(r[kR])).find(v=>v>0);if(rv){st.phpRate=rv;st.rate=String(rv)}
@@ -1836,7 +1934,7 @@ function importBatch(f,rows){
   const had=st.batches.length>0;
   const b={date,file:f,emps,rate:'',trxW:null,reqDate:'',reqRate:''};
   {const ts=loadTS()[date];if(ts){b.trxSplit=ts.split||null;b.trxPick=ts.pick||null}}
-  chainOkSet('bal',null);chainOkSet('first',null);b.cleared=true;st.wbRestored=false;st.payImported=false;st.payFile='';st.payAt=0;st.batches=[b];st.ucOpen={};st.autoMsg='';allocBatch(b);
+  adjSave(b);chainOkSet('bal',null);chainOkSet('first',null);b.cleared=true;st.wbRestored=false;st.payImported=false;st.payFile='';st.payAt=0;st.batches=[b];st.ucOpen={};st.autoMsg='';allocBatch(b);
   return {b,replaced:had};
 }
 function normDate(v){const t=String(v??'').trim();if(!t)return'';let m=t.match(/^(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);if(m)return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
@@ -2067,6 +2165,9 @@ document.addEventListener('click',e=>{
   if(e.target.id==='chainBal'){chainCheckWallets(e.target);return}
   if(e.target.id==='chainFirst'){chainCheckFirsts(e.target);return}
   if(e.target.id==='wAuto'){if(!(st.batches||[]).length){$('batchMsg').textContent='请先导入当天核准名单。';return}{const lb=st.batches[st.batches.length-1];if(step2Missing().length||!trxWOk(lb)||!trxSplitOk(lb))return}st.orderDirty=false;st.batches.forEach(b=>{b.cleared=false;b.capMsg='';b.reqSnap=null});busy(()=>{allocAllBatches();const b=st.batches[st.batches.length-1],c=batchCells([b]),d=new Date();saveReqResult(b);st.autoMsg=`已自动排 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}：${c.map((o,w)=>`${wLabel(w)}：${o.heads} 人`).join('、')}`},'正在自动排…');return}
+  if(e.target.id==='adjHold'){adjHold();return}
+  if(e.target.id==='adjExport'){adjExport(e.target);return}
+  if(e.target.dataset&&e.target.dataset.adjundo){adjUndo(e.target.dataset.adjundo);return}
   if(e.target.id==='wClear'){(st.batches||[]).forEach(b=>{b.cleared=true;b.reqSnap=null;b.capMsg=''});st.ucOpen={};st.autoMsg='已清空排的结果（名单还在），按「自动排」重新排。';render();return}
   if(e.target.id==='wsAdd'){st.wallets.push({name:`钱包 ${st.wallets.length+1}`,addr:'',payer:''});saveWallets();busy(allocAllBatches);return}
   const wsd=e.target.closest('[data-wsdel]');if(wsd){wsd.blur();st.wallets.splice(Number(wsd.dataset.wsdel),1);saveWallets();busy(allocAllBatches);return}
@@ -2166,6 +2267,8 @@ document.addEventListener('change',e=>{
   if(t.dataset.breq!==undefined){const b=st.batches[Number(t.dataset.breq)];if(b)b.reqDate=t.value||'';render();return}
   if(t.dataset.tsplit!==undefined){const [bi,w]=t.dataset.tsplit.split('~').map(Number),b=st.batches[bi];if(b){if(b.trxPick)return;const uc=trxUserCounts(b);b.trxSplit={};uc.forEach(x=>b.trxSplit[x.w]=x.n);b.trxSplit[w]=Math.max(0,parseInt(t.value,10)||0);saveTS(b)}t.blur&&0;render();return}
   if(t.dataset.cfgtrx!==undefined){const w=Number(t.dataset.cfgtrx),a=new Set(st.wcfg.trxWs||[]);t.checked?a.add(w):a.delete(w);st.wcfg.trxWs=[...a];saveWcfg();render();return}
+  if(t.id==='adjPerson'){const b=adjBatch();if(!b)return;const code=t.value.trim().split(/\s+/)[0],hit=b.emps.find(x=>x.code===code||x.name===t.value.trim());if(hit){$('adjGroup').value=holdGroupOf(hit.g);const m=adjAmt({e:hit}),u=bUsdt(hit,b);$('adjInfo').textContent=`${hit.code} ${hit.name}，${[hit.g,hit.b,hit.d].filter(Boolean).join(' / ')}，${wLabel(hit.w)}，PHP ${fmt(m.php)}${u==null?'':`，USDT ${fmt2(u)}`}`}else $('adjInfo').textContent='';return}
+  if(t.dataset.adjw!==undefined){const b=adjBatch();if(!b||b.ucDone)return;const a=(b.adj||[]).find(x=>x.id===t.dataset.adjw);if(a){const from=a.wallet,to=Number(t.value);a.wallet=to;a.e.w=to;const e=b.emps.find(x=>x.code===a.e.code);if(e)e.w=to;adjSave(b);auditEvt('设定','更改补发钱包',`工号 ${a.e.code}：钱包 ${from+1} → 钱包 ${to+1}`,'high');render()}return}
   if(t.dataset.wrule!==undefined){const a=new Set(wRules());t.checked?a.add(t.dataset.wrule):a.delete(t.dataset.wrule);if(!a.size){t.checked=true;st.notice={text:'至少要勾一个规则。'};return}st.wcfg.urules=WRULE_ALL.filter(x=>a.has(x));saveWcfg();st.orderDirty=true;render();return}
   if(t.dataset.cfgusdt!==undefined){const w=Number(t.dataset.cfgusdt),a=new Set(usdtWs());t.checked?a.add(w):a.delete(w);if(!a.size){t.checked=true;return}st.wcfg.usdtWs=[...a];st.wcfg.maxW=0;saveWcfg();if((st.batches||[]).some(b=>!b.cleared))busy(allocAllBatches);else render();return}
   if(t.dataset.trx!==undefined){st.trx[t.dataset.trx]=t.value;saveTrx();render();return}
@@ -2384,15 +2487,19 @@ function ucAllName(cur){const ds=(st.batches||[]).map(b=>b.date).sort();return `
 $('ucAll00').addEventListener('click',e=>ucSave(ucAllRows('00'),'00',ucAllName('00'),e.currentTarget));
 $('ucAll01').addEventListener('click',e=>ucSave(ucAllRows('01'),'01',ucAllName('01'),e.currentTarget));
 
+$('adjFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const inp=e.target;if(!$('adjAddReason').value.trim()){adjMsg('请先填补发原因，再选文件。',true);inp.value='';return}readWbRows(f,(rows,err)=>{inp.value='';if(err)return adjMsg('读取失败：'+err.message,true);try{adjAddRows(rows,f.name)}catch(er){adjMsg(er.message,true)}})});
+$('midFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const inp=e.target;readWbRows(f,(rows,err)=>{inp.value='';$('midBox').classList.remove('ok','bad');try{if(err)throw err;$('midSub').textContent=midImport(rows,f.name);$('midBox').classList.add('ok')}catch(er){$('midSub').textContent='导入失败：'+er.message;$('midBox').classList.add('bad')}})});
+/* 已有调整记录时重新导入会清掉：先提醒一次 */
+function adjGuard(inp,cb){const b=(st.batches||[])[(st.batches||[]).length-1];if(b&&b.adj&&b.adj.length&&!st.adjOver){st.adjOver=true;adjMsg('这批已有调整记录。重新导入前请先导出变更单；确定要导入，请再选一次文件。',true);cb(`这批已有 ${b.adj.length} 笔调整。确定要重新导入，请再选一次文件。`);inp.value='';return false}st.adjOver=false;return true}
 $('progFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;
   if(typeof XLSX==='undefined'){$('progMsg').textContent='Excel 读取程序没有载入，请重新整理页面再试。';return}
   const r=new FileReader();r.onload=()=>{try{const wb=XLSX.read(new Uint8Array(r.result),{type:'array'}),v=readProg(wb);
       if(!v){st.payErr='这份档案不是作业二导出的请款单（请选「下载 Excel」存的请款单）';render();return}
-      st.payErr='';restoreProg(v);v.batch.cleared=false;st.payFile=f.name;st.payAt=v.savedAt;render()}
+      st.payErr='';restoreProg(v);v.batch.cleared=false;st.payFile=f.name;st.payAt=v.savedAt;{const n=adjRestore(v.batch);adjMsg(n?`已带回这天的 ${n} 笔调整。`:'')}render()}
     catch(err){st.payErr=err.message;render()}e.target.value=''};
   r.readAsArrayBuffer(f)});
 $('batchFile').addEventListener('change',e=>{
-  const f=e.target.files[0];if(!f)return;
+  const f=e.target.files[0];if(!f)return;if(!adjGuard(e.target,t=>{$('batchMsg').textContent=t}))return;
   if(typeof XLSX==='undefined'){$('batchMsg').textContent='Excel 读取程序没有载入，请重新整理页面再试。';return}
   const r=new FileReader();
   r.onload=async()=>{try{const wb=XLSX.read(new Uint8Array(r.result),{type:'array'}),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
@@ -2624,7 +2731,7 @@ function applyPerm(){document.querySelectorAll('nav.jobs [data-job]').forEach(b=
 function renderBar(){bar.hidden=false;const sc=hasScope(me);
   bar.innerHTML=`<span class="dm-tag">DEMO</span><span class="dm-who"><b>${esc(me.name)}</b><small>${esc(me.role)}${sc?` · 只看 ${esc(scopeText(me))}`:''}</small></span><span class="dm-sp"></span>${me.back!=='none'?'<button class="dm-btn" id="dmOpenA">后台</button>':''}<button class="dm-btn" id="dmOut">登出</button>`;
   $('dmOut').onclick=logout;if($('dmOpenA'))$('dmOpenA').onclick=()=>openAdmin();}
-function enter(){$('dmLogin').hidden=true;document.body.classList.remove('dm-out');applyPerm();renderBar();if(!me.jobs.length)openAdmin();else $('dmAdmin').hidden=true}
+function enter(){window.__payUser=me.name;$('dmLogin').hidden=true;document.body.classList.remove('dm-out');applyPerm();renderBar();if(!me.jobs.length)openAdmin();else $('dmAdmin').hidden=true}
 
 /* ---------- 记录：导入 ---------- */
 const IMP={file:['导入本月月度薪资表','curBox'],prevFile1:['导入上个月打款名单','prevBox'],batchFile:['导入当天核准名单','batBox'],progFile:['导入请款单','progBox']};
@@ -2646,7 +2753,7 @@ function finishImport(){const p=pend;if(!p)return;pend=null;const r=parsed;parse
 document.addEventListener('change',e=>{const t=e.target;if(t.type==='file'&&IMP[t.id]&&t.files&&t.files[0]&&me){patchXlsx();const f=t.files[0];parsed=null;pend={id:t.id,name:f.name,hash:sha(f),tm:setTimeout(finishImport,3000)}}},true);
 
 /* ---------- 记录：导出 ---------- */
-function exportAct(n){return /UC打款/.test(n)?['下载 UC 打款文件','high']:/请款单/.test(n)?['导出请款单','']:/打款单/.test(n)?['导出打款单','']:/送审/.test(n)?['导出发薪日送审总名单','']:['导出文件','']}
+function exportAct(n){return /UC打款/.test(n)?['下载 UC 打款文件','high']:/变更单/.test(n)?['导出暂缓变更单','high']:/请款单/.test(n)?['导出请款单','']:/打款单/.test(n)?['导出打款单','']:/送审/.test(n)?['导出发薪日送审总名单','']:['导出文件','']}
 window.__DS=function(DL,o){const p=DL.save(o),data=o.data;Promise.resolve(p).then(()=>'ok',()=>'no').then(async s=>{const h=await sha(data),[a,r]=exportAct(o.filename||'');if(!me)return;log('导出',s==='ok'?a:a+'（未保存）',`${o.filename||''}${h?' · 指纹 '+h:''}`,s==='ok'?r:'');if(s==='ok'&&h){db.logs[0].hash=h;save()}});return p};
 
 /* ---------- 记录：按钮操作 ---------- */
@@ -2676,6 +2783,7 @@ document.addEventListener('change',e=>{if(!me)return;const t=e.target,D=t.datase
   else if(D.newck!==undefined){act='手动更改第一次打款判定';det=`工号 ${D.newck}：${t.checked?'是':'否'}`;risk='high'}
   if(act)log('设定',act,det,risk);t.__dmB=undefined},true);
 
+addEventListener('payroll:audit',e=>{if(!me)return;const d=e.detail||{};log(d.cat,d.act,d.det,d.risk)});
 /* ---------- 后台 ---------- */
 let aTab='home',F={u:'',c:'',risk:false,q:''};
 function openAdmin(){if(!me||me.back==='none')return;$('dmAdmin').hidden=false;renderAdmin();log('权限','进入后台','')}
