@@ -565,7 +565,7 @@ nav.jobs .job.dm-lock small::after{content:"（没有权限）";color:var(--dang
     <div class="impgrid">
       <div class="prevbox" id="batBox"><span class="previcon" id="batIcon">1</span><div class="prevtxt"><span class="imptag">当天</span><b id="batNote"></b><small id="batchMsg">每天核准后，从 OA 导出当天的名单再导入；名单的「第一次打款」栏写「是」的人会打 30 TRX。打款日在作业三导入作业二导出的请款单就能接着打款。</small></div><label class="btn prevbtn" for="batchFile" id="batBtn">导入当天核准名单（Excel）</label><input type="file" id="batchFile" accept=".xlsx,.xls,.csv" hidden></div>
     </div>
-    <div id="newList" hidden></div><span id="prevNote" hidden></span>
+    <div class="notice" id="batWarn" style="margin-top:10px" role="alert" hidden></div><div id="newList" hidden></div><span id="prevNote" hidden></span>
 
   </section>
   <section class="step wstep ph-req">
@@ -1468,7 +1468,7 @@ function renderWallet(){
         $('cfgSplit').innerHTML=`<div class="tshead">第一次打款共 <b>${f}</b> 人，各钱包打几人：${b.trxPick?'<span class="rtag trxtag">已逐人指定</span>':''}</div>${uc.map(x=>`<label class="tsrow"><span class="wtag" style="--wc:${wc(x.w)}"></span><span class="tsname">${esc(wLabel(x.w))}</span><input type="number" min="0" step="1" class="fin sm" data-tsplit="${bi}~${x.w}" value="${x.n}" ${b.trxPick?'readonly title="已逐人指定，要改请按「逐人指定」"':''}> 人<small class="muted" data-tsamt="${x.w}">${per?`＝ ${fmt(x.n*per)} TRX`:''}</small></label>`).join('')}
         <div class="tsfoot"><span id="tsSum" data-tot="${f}" class="${ok?'okc':'neg'}">合计 ${sum}／${f} 人${ok?' ✓':''}</span><button class="btn sm" data-tsreset="${bi}">平均分</button><button class="btn sm" data-tspick="${bi}">逐人指定…</button></div>`}}}
    $('ruleCap').textContent=Number(st.wcap)>0?` ${fmt(st.wcap)} USDT `:'（没设）';
-   chainMarks();renderAdj();
+   chainMarks();renderAdj();renderBatWarn();
    {const o=wRules();$('wOrderChips').innerHTML=WRULE_ALL.map(k=>`<label class="chip ${o.includes(k)?'on':''}"><input type="checkbox" data-wrule="${k}" ${o.includes(k)?'checked':''}>${WRULE_NAME[k]}</label>`).join('')+(st.orderDirty?'<span class="neg" style="font-size:13px;font-weight:600">规则改了，按「自动排」才生效</span>':'');
     $('wAutoHint').textContent=(o.includes('serial')?'自动排：每个钱包拿一段连续的序号，再照顾其他勾选的规则。':'自动排：没勾序号连续，同一个钱包的序号可能跳号，对帐时要对照各钱包的名单。')+'每个钱包上限永远最优先（打款时）。'}
    const uw=usdtWs();$('cfgUsdt').innerHTML=st.wallets.map((x,w)=>`<label class="chip"><input type="checkbox" data-cfgusdt="${w}" ${uw.includes(w)?'checked':''}>${esc(wLabel(w))}</label>`).join('')}
@@ -1855,6 +1855,13 @@ function adjLock(){(st.batches||[]).forEach(b=>{if(!b.ucDone){b.ucDone=true;adjS
 const adjUsdt=(a,b)=>{const u=bUsdt(a.e,b);return u==null?null:u};
 const adjAmt=a=>({php:a.e.a,rmb:a.e.rmbF>0?a.e.rmbF:(a.e.rateF>0?round2(a.e.a/a.e.rateF):0)});
 function adjWho(){return window.__payUser||''}
+/* 作业二防呆：名单有多种汇率、钱包地址空白或格式不对，导入后提醒（不挡） */
+function batchWarnings(b){const out=[],list=(b&&b.emps)||[];if(!list.length)return out;
+  const m=new Map();list.forEach(e=>{const r=Number(e.rateF)||0;if(r>0){if(!m.has(r))m.set(r,[]);m.get(r).push(e)}});
+  if(m.size>1){const rs=[...m.entries()].sort((x,y)=>y[1].length-x[1].length),main=rs[0][0],others=rs.slice(1);out.push(`名单有 ${m.size} 种汇率：${rs.map(([r,l])=>`${r}（${l.length} 人）`).join('、')}。公司汇率应该一致，请回 OA 确认。和多数人不同的：${others.flatMap(x=>x[1]).slice(0,5).map(e=>e.code||e.name).join('、')}${others.flatMap(x=>x[1]).length>5?' 等':''}。`)}
+  const bad=list.filter(e=>addrCheck(e.addr||'')),blank=bad.filter(e=>!(e.addr||'').trim()),wrong=bad.filter(e=>(e.addr||'').trim());const names=l=>l.slice(0,5).map(e=>e.code||e.name).join('、')+(l.length>5?' 等':'');
+  if(blank.length)out.push(`有 ${blank.length} 人钱包地址是空白：${names(blank)}。`);if(wrong.length)out.push(`有 ${wrong.length} 人钱包地址格式不对：${names(wrong)}。`);return out}
+function renderBatWarn(){const bs=st.batches||[],w=batchWarnings(bs[bs.length-1]),x=$('batWarn');if(!x)return;x.hidden=!w.length;x.innerHTML=w.length?`<b>请确认：</b><br>${w.map(esc).join('<br>')}`:''}
 function renderAdj(){const b=adjBatch();if(!$('adjBody'))return;
   {const has=!!(b&&(b.adj||[]).length),open=has||(!!st.adjOpen&&!(b&&b.ucDone));$('adjPanel').hidden=!open;$('adjClosed').hidden=open;$('adjCloseRow').hidden=has;const t=$('adjToggle');t.disabled=!b||!!b.ucDone;t.textContent=b&&b.ucDone?'UC 文件已下载，不能再调整':'有人今天先不发';t.title=b?'':'先在第 ① 步导入请款单'}
   const lock=!b||b.ucDone;$('adjLockNote').hidden=!(b&&b.ucDone);
