@@ -7,6 +7,9 @@ src = src.replace('DL.save(', '__DS(DL,')
 old = 'a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000)'
 assert old in src
 src = src.replace(old, 'a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(u)},2000)')
+# Demo 和正式工具在同一个网域，浏览器资料要分开存，否则会互相影响
+assert src.count('payroll-allocator-') >= 10
+src = src.replace('payroll-allocator-', 'payroll-demo-allocator-')
 src = src.replace('<title>发薪分配工具</title>', '<title>发薪分配工具 Demo</title>')
 css = (here / 'layer.css').read_text(encoding='utf-8')
 js = (here / 'layer.js').read_text(encoding='utf-8')

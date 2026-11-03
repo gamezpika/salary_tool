@@ -768,7 +768,7 @@ function copyRich(html,text){
 window.__copyRich=copyRich;
 const W=4, SEP=' › ';
 /* 暂缓分组：在「暂缓表」分页设定，每个事业群归到哪一组；预设 SSC暂缓（SSC）、HQ暂缓（其他） */
-const HKEY='payroll-allocator-holdgroups-v1';
+const HKEY='payroll-demo-allocator-holdgroups-v1';
 function loadHoldCfg(){try{const v=JSON.parse(localStorage.getItem(HKEY)||'null');if(v&&Array.isArray(v.groups)&&v.groups.length&&v.map){v.emp=v.emp||{};v.skip=v.skip||{};return v}}catch(_){}return {groups:['SSC暂缓','HQ暂缓'],map:{SSC:0},emp:{},skip:{}}}
 function saveHoldCfg(){try{localStorage.setItem(HKEY,JSON.stringify(st.holdCfg))}catch(_){}}
 function holdGroupOf(g){const c=st.holdCfg,i=c.map[g];return c.groups[i!==undefined&&c.groups[i]!==undefined?i:c.groups.length-1]}
@@ -818,7 +818,7 @@ function visibleUnits(){const o=[];const v=id=>{const n=N(id);if(st.open.has(id)
 /* ---------- 条件 ---------- */
 const RTEXT={first:'优先发',last:'最后发'};
 /* 条件存在这台电脑的浏览器里（只有部门名称和条件，不含薪资资料） */
-const RKEY='payroll-allocator-rules-v1';
+const RKEY='payroll-demo-allocator-rules-v1';
 function saveRules(){try{localStorage.setItem(RKEY,JSON.stringify(st.rules.map(r=>({id:r.id,type:r.type,day:r.day,with:r.with}))))}catch(_){}}
 function loadRules(){try{const v=JSON.parse(localStorage.getItem(RKEY)||'[]');return Array.isArray(v)?v.filter(r=>r&&typeof r.id==='string'&&['last','day','maxdays','alone','together'].includes(r.type)&&(r.type!=='together'||typeof r.with==='string')):[]}catch(_){return[]}}
 const ruleText=r=>r.type==='day'?`指定第 ${r.day} 天发`:r.type==='maxdays'?`最多分连续 ${r.day} 天发`:r.type==='alone'?'独自一天发':r.type==='together'?`和 ${(r.with||'').split(SEP).join(' / ')} 同一天发`:RTEXT[r.type];
@@ -1200,7 +1200,7 @@ const shortAddr=a=>a&&a.length>14?a.slice(0,6)+'…'+a.slice(-4):(a||'');
 function addrChanged(e){if(!st.prev||!e||!e.code||!e.addr)return false;const pa=st.prev.get(e.code);return !!pa&&pa!==e.addr}
 const addrNote=e=>addrChanged(e)?`地址跟上月不同（上月 ${shortAddr(st.prev.get(e.code))} → 本月 ${shortAddr(e.addr)}）`:'';
 /* 每个月导入后，自动把「这个月要发的名单」（工号 + 钱包地址）记在这台电脑的浏览器里，下个月导入时自动拿来比对 */
-const PKEY='payroll-allocator-paid-v1';
+const PKEY='payroll-demo-allocator-paid-v1';
 function loadPaid(){try{const v=JSON.parse(localStorage.getItem(PKEY)||'null');return v&&v.months?v:{months:{}}}catch(_){return {months:{}}}}
 function curMonth(){const ms=[...new Set([...(st.baseData||[]).map(r=>r.month),...(st.held||[]).map(h=>h.month)].filter(x=>/^\d{6}$/.test(x)))].sort();return ms[ms.length-1]||''}
 function savePaid(){const m=curMonth();if(!m)return;
@@ -1317,7 +1317,7 @@ function allocTry(units,seed,K,t0,capA,relax){t0=t0||Date.now();capA=capA>0?capA
 }
 /* 条件对象：target 是「事业群」或「事业群|事业处」 */
 function wruleHits(r,key){const [g,b]=key.split('|');return r.target==='*'||r.target===g||r.target===key}
-const WRKEY='payroll-allocator-wrules-v1',WCKEY='payroll-allocator-wcfg-v1';
+const WRKEY='payroll-demo-allocator-wrules-v1',WCKEY='payroll-demo-allocator-wcfg-v1';
 function loadWcfg(){try{const v=JSON.parse(localStorage.getItem(WCKEY)||'null');if(v){const mx=Number(v.maxW)||0;return {trxWs:Array.isArray(v.trxWs)?v.trxWs:[],usdtWs:Array.isArray(v.usdtWs)?v.usdtWs:(mx>0?[...Array(mx).keys()]:[]),maxW:0}}}catch(_){}
   /* 从旧的条件转过来：固定打 TRX 的钱包 */
   try{const old=JSON.parse(localStorage.getItem(WRKEY)||'[]');const r=(old||[]).find(r=>r&&r.type==='trxw');if(r)return {trxWs:Array.isArray(r.ws)?r.ws:(r.w!=null?[r.w]:[]),maxW:0}}catch(_){}
@@ -1325,7 +1325,7 @@ function loadWcfg(){try{const v=JSON.parse(localStorage.getItem(WCKEY)||'null');
 /* 本次由哪些钱包打 USDT：没设定＝全部钱包 */
 function usdtWs(){const n=(st.wallets||[]).length||W,a=((st.wcfg&&st.wcfg.usdtWs)||[]).filter(w=>w<n);return a.length?a.slice().sort((x,y)=>x-y):[...Array(n).keys()]}
 /* 作业二资料自动保存在这台电脑（请款和打款不同天，关机后隔天打开要能接着做） */
-const WBKEY='payroll-allocator-wbatches-v1';let lastSaved='';
+const WBKEY='payroll-demo-allocator-wbatches-v1';let lastSaved='';
 function saveBatches(){try{const data=JSON.stringify({at:Date.now(),batches:st.batches||[],autoMsg:st.autoMsg||''});const core=JSON.stringify(st.batches||[]);if(core===lastSaved)return;lastSaved=core;localStorage.setItem(WBKEY,data);st.wbSavedAt=Date.now()}catch(_){}}
 function loadBatches(){try{const v=JSON.parse(localStorage.getItem(WBKEY)||'null');if(v&&Array.isArray(v.batches)){lastSaved=JSON.stringify(v.batches);st.wbSavedAt=v.at;st.autoMsg=v.autoMsg||'';st.wbRestored=v.batches.length>0;return v.batches}}catch(_){}return []}
 function saveWcfg(){try{localStorage.setItem(WCKEY,JSON.stringify(st.wcfg))}catch(_){}}
@@ -1532,14 +1532,14 @@ function walletHTML(key){
 }
 /* ---------- TRX：矿工费 + 第一次补助 ---------- */
 /* 每个钱包：USDT 笔数 × 打 U 矿工费；指定打 TRX 的钱包另外加上：第一次打款人数 × 补助，以及每笔 TRX 的矿工费（旧地址 0.268／新地址 1.1） */
-const TPKEY='payroll-allocator-trxparams-v2',ASKEY='payroll-allocator-addrstate-v1';
+const TPKEY='payroll-demo-allocator-trxparams-v2',ASKEY='payroll-demo-allocator-addrstate-v1';
 function loadTrx(){const d={perNew:'30',feeU:'0.346',feeOld:'0.268',feeNew:'1.1'};try{return Object.assign(d,JSON.parse(localStorage.getItem(TPKEY)||'{}'))}catch(_){return d}}
 function saveTrx(){try{localStorage.setItem(TPKEY,JSON.stringify(st.trx))}catch(_){}}
 function loadAddrState(){try{return JSON.parse(localStorage.getItem(ASKEY)||'{}')||{}}catch(_){return{}}}
 function saveAddrState(){try{localStorage.setItem(ASKEY,JSON.stringify(st.addrState))}catch(_){}}
 const trxWallet=()=>{const i=(st.wallets||[]).findIndex(x=>x.trxPay);return i>=0?i:0};
 /* 每一天只由一个钱包打 TRX（第一次补助 + 打 TRX 的矿工费）；在每天的表格上方选，没选的沿用上次选的钱包 */
-const TWKEY='payroll-allocator-lasttrxw-v1';
+const TWKEY='payroll-demo-allocator-lasttrxw-v1';
 const lastTrxW=()=>{try{const v=Number(localStorage.getItem(TWKEY));return isFinite(v)?v:0}catch(_){return 0}};
 /* 每天由哪个钱包打 TRX：那天自己选过的 > 条件「固定由哪个钱包打 TRX」> 上次选的 */
 /* 条件「固定由哪个钱包打 TRX」：勾一个就每天都是它；勾好几个就按日期轮流（第 1 天第一个、第 2 天第二个…） */
@@ -1555,11 +1555,11 @@ function trxUserCounts(b){const ws=trxWsOf(),tot=b.emps.filter(isNewEmp).length,
 /* 分配用：照填的人数；合计不对时，多的从后面扣、少的给最后一个钱包 */
 /* TRX 各钱包人数合计要等于第一次打款人数，才可以自动排 */
 /* 第一次打款各钱包人数、逐人指定：照打款日记在这台电脑，作业三隔天导入同一份名单时还在 */
-const TSKEY='payroll-allocator-trxsplit-v1';
+const TSKEY='payroll-demo-allocator-trxsplit-v1';
 function loadTS(){try{return JSON.parse(localStorage.getItem(TSKEY)||'{}')||{}}catch(_){return{}}}
 function saveTS(b){try{const v=loadTS();v[b.date]={split:b.trxSplit||null,pick:b.trxPick||null};const ks=Object.keys(v).sort();while(ks.length>15)delete v[ks.shift()];localStorage.setItem(TSKEY,JSON.stringify(v))}catch(_){}}
 /* 请款时的结果（每个钱包几人、多少 PHP），作业三比对用 */
-const RRKEY='payroll-allocator-reqresult-v1';
+const RRKEY='payroll-demo-allocator-reqresult-v1';
 function saveReqResult(b){try{const v=JSON.parse(localStorage.getItem(RRKEY)||'{}')||{};v[b.date]={at:Date.now(),file:b.file,cells:batchCells([b]).map(o=>({h:o.heads,p:Math.round(o.php)}))};const ks=Object.keys(v).sort();while(ks.length>15)delete v[ks.shift()];localStorage.setItem(RRKEY,JSON.stringify(v))}catch(_){}}
 function reqCompare(b){let r=null;try{r=(JSON.parse(localStorage.getItem(RRKEY)||'{}')||{})[b.date]}catch(_){}
   if(!r)return `<p class="notice" style="margin:0 0 10px">这台电脑没有 ${esc(b.date)} 打款的请款纪录，无法比对是否跟请款时一样。</p>`;
@@ -1567,7 +1567,7 @@ function reqCompare(b){let r=null;try{r=(JSON.parse(localStorage.getItem(RRKEY)|
   const same=JSON.stringify(cmp)===JSON.stringify(r.cells);
   return same?`<p class="notice ok" style="margin:0 0 10px">✓ 钱包分配跟请款时一样（${fmtAgo(r.at)} 请款）</p>`:`<p class="notice" style="margin:0 0 10px">钱包分配跟请款时不一样（${fmtAgo(r.at)} 请款）：可能是名单或分钱包的条件改过。请款时：${r.cells.map((c,w)=>`${esc(wLabel(w))}：${c.h} 人`).join('、')}；现在：${cmp.map((c,w)=>`${esc(wLabel(w))}：${c.h} 人`).join('、')}</p>`}
 /* 加密保存请款结果（打款日接着做）：PBKDF2 + AES-GCM，密码不会存下来；7 天后自动删除 */
-const ENCKEY='payroll-allocator-enc-v1',ENC_DAYS=7;
+const ENCKEY='payroll-demo-allocator-enc-v1',ENC_DAYS=7;
 const b64=u=>btoa(String.fromCharCode(...new Uint8Array(u))),ub64=t=>Uint8Array.from(atob(t),c=>c.charCodeAt(0));
 async function encKey(pw,salt){const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);
   return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:150000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}
@@ -1609,7 +1609,7 @@ function trxBreak(sel,K){K=Math.max(K||1,Math.max(...trxWsOf())+1);const p=st.tr
 /* 链上查询（TronGrid 公开服务）：账号存在 = 已启用；顺便取 TRX、USDT 余额 */
 const USDT_CONTRACT='TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 /* 链上查询来源：TronGrid（预设，不用 Key）或 TronScan（要 API Key）；设定只存在这台电脑的浏览器 */
-const CHKEY='payroll-allocator-chain-v1';
+const CHKEY='payroll-demo-allocator-chain-v1';
 function loadChain(){let v={key:''};try{v=Object.assign(v,JSON.parse(localStorage.getItem(CHKEY)||'{}'))}catch(_){}v.src='tronscan';return v}
 function saveChain(){try{localStorage.setItem(CHKEY,JSON.stringify(st.chain))}catch(_){}}
 async function chainAccount(addr){
@@ -1646,7 +1646,7 @@ const fmtAgo=t=>{if(!t)return'';const d=new Date(t);return `${d.getMonth()+1}/${
 let DL=null;try{if(window.claude&&window.claude.use)window.claude.use('downloads').then(d=>{DL=d;render()}).catch(()=>{});else if(typeof Blob!=='undefined'&&'download' in document.createElement('a'))DL={save:async({filename,data})=>{const u=URL.createObjectURL(new Blob([data],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));const a=document.createElement('a');a.href=u;a.download=filename;document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(u)},2000)}}}catch(_){}
 const UC_HEAD=['序号','收款账户','币种（USDT_TRC20 填 00，TRX 填 01，同一个文件只允许一个币种）','金额','备注'];
 /* 序号 = 一个员工一个号：薪资年月 + 流水号（例如 202609001）。用工号记住，同一个月里这位员工的号码固定不变，删除或重新导入某天名单也不会改；新出现的员工接着往下编 */
-const SKEY='payroll-allocator-serials-v1';
+const SKEY='payroll-demo-allocator-serials-v1';
 function loadSerials(){try{const v=JSON.parse(localStorage.getItem(SKEY)||'null');return v&&typeof v==='object'?v:{}}catch(_){return{}}}
 function assignSerials(month,codes){if(!/^\d{6}$/.test(month||''))return 0;const store=loadSerials(),s=store[month]={codes:{},next:1};/* 每次导入月度薪资表都从 0001 重新编号 */let added=0;
   codes.forEach(c=>{if(c&&!s.codes[c]){s.codes[c]=s.next++;added++}});
@@ -2124,7 +2124,7 @@ document.addEventListener('change',e=>{
   if(t.dataset.breqrate!==undefined){const b=st.batches[Number(t.dataset.breqrate)];if(b)b.reqRate=Number(t.value)>0?Number(t.value):'';render();return}
   if(t.dataset.brate!==undefined){const b=st.batches[Number(t.dataset.brate)];if(b){b.rate=Number(t.value)>0?Number(t.value):'';b.capMsg='';
     /* 打款时才检查上限：用打款汇率算，有钱包超过就照上限重排 */
-    const cap=Number(st.wcap)||0;if(!b.cleared&&cap>0&&b.rate){const over=batchCells([b]).some(o=>o.usdt>cap+0.005);if(over){if(!b.reqSnap)b.reqSnap=b.emps.map(e=>e.w);allocBatch(b);b.capMsg=`用打款汇率 ${b.rate} 算有钱包超过 ${fmt(cap)} USDT 上限，已照上限重新分配（跟请款时的分配不同）`}}}if(Number(t.value)>0){st.lastPayRate=Number(t.value);try{localStorage.setItem('payroll-allocator-lastpayrate',String(st.lastPayRate))}catch(_){}}render();return}
+    const cap=Number(st.wcap)||0;if(!b.cleared&&cap>0&&b.rate){const over=batchCells([b]).some(o=>o.usdt>cap+0.005);if(over){if(!b.reqSnap)b.reqSnap=b.emps.map(e=>e.w);allocBatch(b);b.capMsg=`用打款汇率 ${b.rate} 算有钱包超过 ${fmt(cap)} USDT 上限，已照上限重新分配（跟请款时的分配不同）`}}}if(Number(t.value)>0){st.lastPayRate=Number(t.value);try{localStorage.setItem('payroll-demo-allocator-lastpayrate',String(st.lastPayRate))}catch(_){}}render();return}
   if(t.id==='wcap'){st.wcap=Math.max(0,Number(t.value)||0);try{localStorage.setItem(CAPKEY,String(st.wcap))}catch(_){}
     (st.batches||[]).forEach(b=>{if(b.cleared||!b.rate||!st.wcap)return;if(batchCells([b]).some(o=>o.usdt>st.wcap+0.005)){if(!b.reqSnap)b.reqSnap=b.emps.map(e=>e.w);allocBatch(b);b.capMsg=`上限改成 ${fmt(st.wcap)} USDT，有钱包超过，已照上限重新分配（跟请款时的分配不同）`}});render();return}
   if(t.dataset.sumkey!==undefined){st.sumLabels[t.dataset.sumkey]=t.value;render();return}
@@ -2147,9 +2147,9 @@ const MODES={
   avg:{name:'每天平均',desc:'目标是「剩下的金额 ÷ 剩下的天数」，让每天金额差不多。'},
   heads:{name:'每天人数平均',desc:'目标是「剩下的人数 ÷ 剩下的天数」，让每天人数差不多。'}
 };
-const MKEY='payroll-allocator-pickmode-v1', CKEY='payroll-allocator-capdefault-v1', WKEY='payroll-allocator-wallets-v1';
+const MKEY='payroll-demo-allocator-pickmode-v1', CKEY='payroll-demo-allocator-capdefault-v1', WKEY='payroll-demo-allocator-wallets-v1';
 function loadWallets(){try{const v=JSON.parse(localStorage.getItem(WKEY)||'null');if(Array.isArray(v)&&v.length>=4){v.forEach(x=>{if(!(x.payer||'').trim()&&x.name)x.payer=x.name;if(x.bal&&x.bal.src!=='chain')x.bal=null});return v}}catch(_){}return [0,1,2,3].map(i=>({name:`钱包 ${i+1}`,addr:'',payer:`钱包 ${i+1}`}))}
-const CAPKEY='payroll-allocator-wcap-v1';
+const CAPKEY='payroll-demo-allocator-wcap-v1';
 function loadWcap(){try{const v=localStorage.getItem(CAPKEY);return v===null?110000:Number(v)||0}catch(_){return 110000}}
 function saveWallets(){try{localStorage.setItem(WKEY,JSON.stringify(st.wallets))}catch(_){}}
 /* TRON 地址基本检查：T 开头、34 码、只用 Base58 字元（不含 0 O I l） */
@@ -2507,7 +2507,7 @@ $('expCopy').addEventListener('click',()=>copyExport($('expCopy'),'复制，贴�
 $('expClose').addEventListener('click',()=>{$('expModal').hidden=true});
 $('expModal').addEventListener('click',e=>{if(e.target.id==='expModal')$('expModal').hidden=true});
 
-st.pickMode='fit';st.defaultCap=loadCap();st.wallets=loadWallets();st.wrules=[];st.wcfg=loadWcfg();st.wcap=loadWcap();try{localStorage.removeItem('payroll-allocator-wbatches-v1');localStorage.removeItem('payroll-allocator-enc-v1')}catch(_){}try{st.lastPayRate=Number(localStorage.getItem('payroll-allocator-lastpayrate'))||0}catch(_){st.lastPayRate=0}
+st.pickMode='fit';st.defaultCap=loadCap();st.wallets=loadWallets();st.wrules=[];st.wcfg=loadWcfg();st.wcap=loadWcap();try{localStorage.removeItem('payroll-demo-allocator-wbatches-v1');localStorage.removeItem('payroll-demo-allocator-enc-v1')}catch(_){}try{st.lastPayRate=Number(localStorage.getItem('payroll-demo-allocator-lastpayrate'))||0}catch(_){st.lastPayRate=0}
 render();
 })();
 </script>
