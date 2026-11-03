@@ -57,7 +57,7 @@ function applyPerm(){document.querySelectorAll('nav.jobs [data-job]').forEach(b=
 function renderBar(){bar.hidden=false;const sc=hasScope(me);
   bar.innerHTML=`<span class="dm-tag">DEMO</span><span class="dm-who"><b>${esc(me.name)}</b><small>${esc(me.role)}${sc?` · 只看 ${esc(scopeText(me))}`:''}</small></span><span class="dm-sp"></span>${me.back!=='none'?'<button class="dm-btn" id="dmOpenA">后台</button>':''}<button class="dm-btn" id="dmOut">登出</button>`;
   $('dmOut').onclick=logout;if($('dmOpenA'))$('dmOpenA').onclick=()=>openAdmin();}
-function enter(){$('dmLogin').hidden=true;document.body.classList.remove('dm-out');applyPerm();renderBar();if(!me.jobs.length)openAdmin();else $('dmAdmin').hidden=true}
+function enter(){window.__payUser=me.name;$('dmLogin').hidden=true;document.body.classList.remove('dm-out');applyPerm();renderBar();if(!me.jobs.length)openAdmin();else $('dmAdmin').hidden=true}
 
 /* ---------- 记录：导入 ---------- */
 const IMP={file:['导入本月月度薪资表','curBox'],prevFile1:['导入上个月打款名单','prevBox'],batchFile:['导入当天核准名单','batBox'],progFile:['导入请款单','progBox']};
@@ -79,7 +79,7 @@ function finishImport(){const p=pend;if(!p)return;pend=null;const r=parsed;parse
 document.addEventListener('change',e=>{const t=e.target;if(t.type==='file'&&IMP[t.id]&&t.files&&t.files[0]&&me){patchXlsx();const f=t.files[0];parsed=null;pend={id:t.id,name:f.name,hash:sha(f),tm:setTimeout(finishImport,3000)}}},true);
 
 /* ---------- 记录：导出 ---------- */
-function exportAct(n){return /UC打款/.test(n)?['下载 UC 打款文件','high']:/请款单/.test(n)?['导出请款单','']:/打款单/.test(n)?['导出打款单','']:/送审/.test(n)?['导出发薪日送审总名单','']:['导出文件','']}
+function exportAct(n){return /UC打款/.test(n)?['下载 UC 打款文件','high']:/变更单/.test(n)?['导出暂缓变更单','high']:/请款单/.test(n)?['导出请款单','']:/打款单/.test(n)?['导出打款单','']:/送审/.test(n)?['导出发薪日送审总名单','']:['导出文件','']}
 window.__DS=function(DL,o){const p=DL.save(o),data=o.data;Promise.resolve(p).then(()=>'ok',()=>'no').then(async s=>{const h=await sha(data),[a,r]=exportAct(o.filename||'');if(!me)return;log('导出',s==='ok'?a:a+'（未保存）',`${o.filename||''}${h?' · 指纹 '+h:''}`,s==='ok'?r:'');if(s==='ok'&&h){db.logs[0].hash=h;save()}});return p};
 
 /* ---------- 记录：按钮操作 ---------- */
@@ -109,6 +109,7 @@ document.addEventListener('change',e=>{if(!me)return;const t=e.target,D=t.datase
   else if(D.newck!==undefined){act='手动更改第一次打款判定';det=`工号 ${D.newck}：${t.checked?'是':'否'}`;risk='high'}
   if(act)log('设定',act,det,risk);t.__dmB=undefined},true);
 
+addEventListener('payroll:audit',e=>{if(!me)return;const d=e.detail||{};log(d.cat,d.act,d.det,d.risk)});
 /* ---------- 后台 ---------- */
 let aTab='home',F={u:'',c:'',risk:false,q:''};
 function openAdmin(){if(!me||me.back==='none')return;$('dmAdmin').hidden=false;renderAdmin();log('权限','进入后台','')}
