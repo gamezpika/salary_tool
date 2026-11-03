@@ -249,7 +249,7 @@
       const a = S.audit, v = S.verify;
       body = `<div class="dm-filter"><select class="dm-in" id="dmFu" aria-label="人员"><option value="">全部人员</option>${a.people.map(p => `<option value="${esc(p.acc)}" ${F.u === p.acc ? 'selected' : ''}>${esc(p.name)}（${esc(p.acc)}）</option>`).join('')}</select><select class="dm-in" id="dmFc" aria-label="类别"><option value="">全部类别</option>${a.cats.map(c => `<option ${F.c === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select><input class="dm-in" id="dmFq" placeholder="搜寻操作、文件名、指纹" value="${esc(F.q)}" aria-label="搜寻"><label><input type="checkbox" id="dmFr" ${F.risk ? 'checked' : ''}>只看需要留意的</label><span style="flex:1"></span><span class="dm-note">${a.total} 笔${a.total > a.rows.length ? `，显示最新 ${a.rows.length} 笔` : ''}</span><button class="dm-btn" id="dmCopyLog">复制，贴到 Excel</button></div>
       <div class="dm-tw"><table class="dm-t" style="min-width:780px">${LH}<tbody>${a.rows.map(logRow).join('') || '<tr><td colspan="5">没有符合条件的记录。</td></tr>'}</tbody></table></div>
-      <p class="dm-note">${v?.ok ? `<span class="dm-ok">记录完整性检查通过（${v.checked} 笔）</span>。` : `<span class="dm-bad">记录完整性检查没通过：第 ${esc(v?.badId)} 笔之后的记录可能被改过，请通知 IT。</span> `}记录只能新增，不能修改或删除。内容不含员工姓名。一般只有文件名、人数、总额和文件指纹；中途暂缓和补发会记工号和金额。</p>`;
+      <p class="dm-note">${v?.ok ? `<span class="dm-ok">记录完整性检查通过（${v.checked} 笔）</span>。` : `<span class="dm-bad">记录完整性检查没通过：第 ${esc(v?.badId)} 笔之后的记录可能被改过，请通知 IT。</span> `}记录只能新增，不能修改或删除。内容不含员工姓名。一般只有文件名、人数、总额和文件指纹；中途暂缓会记工号和金额。</p>`;
     }
     if (aTab === 'users' && S.users) {
       const dis = ro ? 'disabled' : '';
