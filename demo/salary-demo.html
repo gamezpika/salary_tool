@@ -632,7 +632,7 @@ nav.jobs .job.dm-lock small::after{content:"（没有权限）";color:var(--dang
         <div class="fhint" id="adjInfo"></div>
       </div>
       <div class="subsec"><h3>今天要加发的人（补发）</h3>
-        <p class="fhint" style="margin:0 0 8px">这些人不在今天的名单里，要把他们的资料放进 Excel 上传。</p>
+        <p class="fhint" style="margin:0 0 8px">这些人不在今天的名单里，要把他们的资料放进 Excel 上传。金额一律用这批的汇率计算。</p>
         <ol class="adjsteps">
           <li><button class="btn sm" id="adjTpl">下载空白范本</button> 打开后一个人填一行。第二页有每一栏的说明。也可以直接用 OA 导出、只留这几个人的核准名单。</li>
           <li><label class="adjf inline">由哪个钱包打<select class="adjin" id="adjWallet"></select></label></li>
@@ -1886,7 +1886,7 @@ function renderAdj(){const b=adjBatch();if(!$('adjBody'))return;
 function adjHistory(cur){let v={};try{v=JSON.parse(localStorage.getItem(ADJKEY)||'{}')||{}}catch(_){}const ds=Object.keys(v).filter(d=>d!==cur&&(v[d].adj||[]).length).sort().reverse();if(!ds.length)return'';
   const line=d=>{const l=v[d].adj,h=l.filter(a=>a.type==='hold'),p=l.filter(a=>a.type==='add'),s=x=>x.reduce((t,a)=>t+a.e.a,0);return `<tr><td>${esc(d)}</td><td>${h.length}</td><td class="num">${fmt(s(h))}</td><td>${p.length}</td><td class="num">${fmt(s(p))}</td></tr>`};
   return `<details class="fold-list" style="margin-top:12px"><summary>其他打款日的记录（${ds.length} 天）</summary><div class="tablewrap" style="margin-top:6px"><table class="ctable" style="min-width:480px"><thead><tr><th>打款日</th><th>暂缓人数</th><th>暂缓 PHP</th><th>补发人数</th><th>补发 PHP</th></tr></thead><tbody>${ds.map(line).join('')}</tbody></table></div><p class="fhint">要看明细，请在第 ① 步导入那天的请款单。</p></details>`}
-const ADJ_TPL=[['序号','可留空，系统会自动编'],['工号','必填'],['姓名','必填'],['事业群','必填'],['事业处','可留空'],['部门','必填'],['实发工资PHP','必填，大于 0 的数字'],['实发工资RMB','可留空，系统用 PHP ÷ 汇率计算'],['PHP→RMB 汇率','必填，例如 8.12'],['第一次打款','第一次发薪的人填「是」，其他留空'],['钱包地址','必填，T 开头、34 码'],['薪资年月','例如 202611']];
+const ADJ_TPL=[['序号','可留空，系统会自动编'],['工号','必填'],['姓名','必填'],['事业群','必填'],['事业处','可留空'],['部门','必填'],['实发工资PHP','必填，大于 0 的数字'],['第一次打款','第一次发薪的人填「是」，其他留空（这一栏要保留）'],['钱包地址','必填，T 开头、34 码'],['薪资年月','例如 202611']];
 async function adjTemplate(btn){const lab=btn.textContent,done=t=>{btn.textContent=t;setTimeout(()=>btn.textContent=lab,3000)};if(!DL||typeof XLSX==='undefined')return done('不能下载');try{const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet([ADJ_TPL.map(x=>x[0])]);ws['!cols']=ADJ_TPL.map(x=>({wch:Math.max(12,x[0].length*2)}));XLSX.utils.book_append_sheet(wb,ws,'补发名单');const d=XLSX.utils.aoa_to_sheet([['栏位','怎么填'],...ADJ_TPL]);d['!cols']=[{wch:16},{wch:40}];XLSX.utils.book_append_sheet(wb,d,'说明');await __DS(DL,{filename:'补发名单范本.xlsx',data:new Uint8Array(XLSX.write(wb,{type:'array',bookType:'xlsx'}))});done('已下载')}catch(err){done(err&&err.code==='declined'?'已取消':'下载失败')}}
 function adjMsg(t,err){$('adjMsg').textContent=t;$('adjMsg').classList.toggle('err',!!err)}
 function adjNew(type,e,extra){return {id:`${Date.now()}-${Math.random().toString(36).slice(2,8)}`,at:Date.now(),by:adjWho(),type,e,...extra}}
@@ -1898,12 +1898,13 @@ function adjHold(){const b=adjBatch();if(!b||b.ucDone)return;const key=$('adjPer
   $('adjPerson').value='';$('adjReason').value='';$('adjInfo').textContent='';adjMsg(`已暂缓 ${e.name}（${a.group}），记得回 OA 补改。`);render()}
 function adjAddRows(rows,fname){const b=adjBatch();if(!b||b.ucDone)return;const reason=$('adjAddReason').value.trim();if(!reason)return adjMsg('请先填补发原因，再上传 Excel。',true);
   if(!rows.length)return adjMsg('Excel 里没有资料：请在范本的第一页填上要补发的人。',true);
-  const {emps}=parseBatchRows(rows);if(!emps.length)return adjMsg('Excel 里没有资料：请确认有填人，而且实发工资PHP 大于 0。',true);
+  const rate=Number(st.phpRate)||0;if(!(rate>0))return adjMsg('这批还没有 PHP→RMB 汇率，请先导入请款单。',true);
+  const {emps}=parseBatchRows(rows,{supplement:true});if(!emps.length)return adjMsg('Excel 里没有资料：请确认有填人，而且实发工资PHP 大于 0。',true);
   const noCode=emps.filter(e=>!e.code);if(noCode.length)return adjMsg(`有 ${noCode.length} 人没有工号。`,true);
   const codes=emps.map(e=>e.code),dupIn=codes.filter((c,i)=>codes.indexOf(c)!==i);if(dupIn.length)return adjMsg(`名单里工号重复：${[...new Set(dupIn)].slice(0,5).join('、')}。`,true);
   const bad=emps.filter(e=>addrCheck(e.addr||''));if(bad.length)return adjMsg(`这些人的钱包地址有问题：${bad.slice(0,5).map(e=>e.code).join('、')}。`,true);
-  const noRate=emps.filter(e=>!(e.rateF>0));if(noRate.length)return adjMsg(`这些人没有汇率：${noRate.slice(0,5).map(e=>e.code).join('、')}。`,true);
-  {const base=Number(st.phpRate)||0,diff=emps.filter(e=>base>0&&Math.abs(e.rateF-base)>1e-9);if(diff.length)return adjMsg(`这些人的汇率和这批（${base}）不同，USDT 会算错，请确认：${diff.slice(0,5).map(e=>`${e.code}（${e.rateF}）`).join('、')}。`,true)}
+  /* 补发一律用这批（当月）的汇率，不看 Excel 里的汇率 */
+  emps.forEach(e=>{e.rateF=rate;e.rmbF=round2(e.a/rate)});
   const inB=emps.filter(e=>b.emps.some(x=>x.code===e.code));if(inB.length)return adjMsg(`这些人已经在这批名单里，不能重复发：${inB.slice(0,5).map(e=>e.code).join('、')}。`,true);
   const held=emps.filter(e=>(b.adj||[]).some(a=>a.type==='hold'&&a.e.code===e.code));if(held.length)return adjMsg(`这些人刚被暂缓，要发请按记录里的「撤销」：${held.slice(0,5).map(e=>e.code).join('、')}。`,true);
   const paid=new Set((loadPaid().months[ym(b.date)]||[]).map(x=>x[0]));const dup=emps.filter(e=>paid.has(e.code));if(dup.length&&!$('adjAllowDup').checked){$('adjDupRow').hidden=false;return adjMsg(`这些人本月已在其他批次：${dup.slice(0,5).map(e=>e.code).join('、')}${dup.length>5?' 等':''}。确定要再发，请勾选下面的确认，再上传一次。`,true)}
@@ -1918,7 +1919,7 @@ function adjRowsAoa(b){const sm=serialMap(),d=new Date();return (b.adj||[]).map(
 async function adjExport(btn){const b=adjBatch();if(!b||!(b.adj||[]).length)return;const lab=btn.textContent,done=t=>{btn.textContent=t;setTimeout(()=>btn.textContent=lab,3000)};if(!DL||typeof XLSX==='undefined')return done('不能下载');
   try{const ws=XLSX.utils.aoa_to_sheet([ADJ_HEAD,...adjRowsAoa(b)]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'作业三暂缓表');await __DS(DL,{filename:`作业三暂缓表_打款日${b.date}.xlsx`,data:new Uint8Array(XLSX.write(wb,{type:'array',bookType:'xlsx'}))});done('已导出')}catch(err){done(err&&err.code==='declined'?'已取消':'导出失败')}}
 function readWbRows(f,cb){const r=new FileReader();r.onload=()=>{try{const wb=XLSX.read(new Uint8Array(r.result),{type:'array'});cb(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''}))}catch(err){cb(null,err)}};r.readAsArrayBuffer(f)}
-function parseBatchRows(rows){
+function parseBatchRows(rows,opt){opt=opt||{};
   const keys=rows.length?Object.keys(rows[0]):[],norm=v=>String(v).replace(/[\s()（）\[\]【】_\-:：/]/g,'').toLowerCase(),find=c=>{for(const x of c){const ex=keys.find(k=>norm(k)===norm(x));if(ex)return ex}for(const x of c){const k=keys.find(k=>norm(k).includes(norm(x)));if(k)return k}};
   const kA=find(['实发工资PHP','实发工资','应发']),kE=find(['工号']),kN=find(['姓名']),kG=find(['事业群']),kB=find(['事业处']),kD=find(['部门','事业部']),kAd=find(['充值地址','钱包地址','收款地址']),kDt=find(['发放日期','打款日期']),kM=find(['薪资年月','年月','Salary period']),kSeq=keys.find(k=>norm(k)==='序号'),kF=find(['第一次打款','第一次发薪','首次打款','首次发薪']);
   /* 必要栏位缺一不可：少了就导入失败 */
@@ -1926,12 +1927,12 @@ function parseBatchRows(rows){
   const kRmb=find(['实发工资RMB','兑人民币RMB','实发工资人民币','人民币实发工资','RMB实发工资','人民币金额']);
   /* PHP → RMB 汇率一律来自作业一的「汇率Peso」：送审名单里叫「PHP→RMB 汇率」；名单若保留原本的「汇率Peso」也认得 */
   const kR=keys.find(k=>norm(k)===norm('PHP→RMB 汇率'))||keys.find(k=>norm(k)===norm('汇率Peso'));
-  const need=[['序号',kSeq],['工号',kE],['姓名',kN],['事业群',kG],['部门',kD],['实发工资PHP',kPhp],['实发工资RMB（兑人民币RMB）',kRmb],['PHP→RMB 汇率（作业一的汇率Peso）',kR],['第一次打款',kF],['钱包地址',kAd]];
+  const need=opt.supplement?[['工号',kE],['姓名',kN],['事业群',kG],['部门',kD],['实发工资PHP',kPhp],['第一次打款',kF],['钱包地址',kAd]]:[['序号',kSeq],['工号',kE],['姓名',kN],['事业群',kG],['部门',kD],['实发工资PHP',kPhp],['实发工资RMB（兑人民币RMB）',kRmb],['PHP→RMB 汇率（作业一的汇率Peso）',kR],['第一次打款',kF],['钱包地址',kAd]];
   const miss=need.filter(x=>!x[1]).map(x=>`「${x[0]}」`);
-  if(miss.length)throw new Error(`名单缺少 ${miss.join('、')} 栏位，请用作业一导出的送审名单（核准后保留这些栏位）。`);
+  if(miss.length)throw new Error(opt.supplement?`名单缺少 ${miss.join('、')} 栏位，请用「下载空白范本」的格式。`:`名单缺少 ${miss.join('、')} 栏位，请用作业一导出的送审名单（核准后保留这些栏位）。`);
   /* 送审名单里「发薪」是 0 的（现金、暂缓、其他）不打 USDT，只取 1 的；要先过滤，这些人汇率空白不该挡住导入 */
   const kPay=keys.find(k=>norm(k)==='发薪');if(kPay)rows=rows.filter(r=>String(r[kPay]??'').trim()==='1');
-  {const bad=rows.filter(r=>toNum(r[kPhp])>0&&!(toNum(r[kR])>0)).map(r=>String(r[kE]??'').trim()).filter(Boolean);
+  if(!opt.supplement){const bad=rows.filter(r=>toNum(r[kPhp])>0&&!(toNum(r[kR])>0)).map(r=>String(r[kE]??'').trim()).filter(Boolean);
    if(bad.length)throw new Error(`「${kR}」有 ${bad.length} 人是空的或 0（${bad.slice(0,5).join('、')}${bad.length>5?' 等':''}），请回作业一确认「汇率Peso」后重新导出。`)}
   const t=(r,k)=>k?String(r[k]??'').trim():'';
   const emps=[];let date='';
