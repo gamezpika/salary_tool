@@ -51,7 +51,6 @@ nav.jobs .job.dm-lock small::after{content:"（没有权限）";color:var(--dang
 .dm-pill.high{background:var(--dangerbg);border-color:var(--danger);color:var(--danger);font-weight:600}
 .dm-pill.warn{background:var(--sel);border-color:var(--line);color:var(--ink);font-weight:600}
 .dm-pill.ok{color:var(--ok);border-color:var(--ok)}
-.dm-seed{color:var(--muted);font-size:11.5px;margin-left:6px}
 .dm-filter{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .dm-filter label{display:inline-flex;align-items:center;gap:5px;font-size:13.5px}
 .dm-note{margin:0;color:var(--muted);font-size:13px;line-height:1.6}
