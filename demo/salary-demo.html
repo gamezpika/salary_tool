@@ -1762,7 +1762,7 @@ function importBatch(f,rows){
   const kRmb=find(['实发工资RMB','兑人民币RMB','实发工资人民币','人民币实发工资','RMB实发工资','人民币金额']);
   /* PHP → RMB 汇率一律来自作业一的「汇率Peso」：送审名单里叫「PHP→RMB 汇率」；名单若保留原本的「汇率Peso」也认得 */
   const kR=keys.find(k=>norm(k)===norm('PHP→RMB 汇率'))||keys.find(k=>norm(k)===norm('汇率Peso'));
-  const need=[['序号',kSeq],['工号',kE],['姓名',kN],['事业群',kG],['部门',kD],['实发工资PHP',kPhp],['实发工资RMB（兑人民币RMB）',kRmb],['PHP→RMB 汇率（作业一的汇率Peso）',kR],['第一次打款',kF],['钱包地址（充值地址、钱包地址或收款地址）',kAd]];
+  const need=[['序号',kSeq],['工号',kE],['姓名',kN],['事业群',kG],['部门',kD],['实发工资PHP',kPhp],['实发工资RMB（兑人民币RMB）',kRmb],['PHP→RMB 汇率（作业一的汇率Peso）',kR],['第一次打款',kF],['钱包地址',kAd]];
   const miss=need.filter(x=>!x[1]).map(x=>`「${x[0]}」`);
   if(miss.length)throw new Error(`名单缺少 ${miss.join('、')} 栏位，请用作业一导出的送审名单（核准后保留这些栏位）。`);
   /* 送审名单里「发薪」是 0 的（现金、暂缓、其他）不打 USDT，只取 1 的；要先过滤，这些人汇率空白不该挡住导入 */
