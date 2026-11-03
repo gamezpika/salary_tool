@@ -546,7 +546,6 @@ nav.jobs .job.dm-lock small::after{content:"（没有权限）";color:var(--dang
     <h2><span class="n">1</span>导入资料</h2>
     <div class="impgrid">
       <div class="prevbox" id="curBox"><span class="previcon" id="curIcon" aria-hidden="true">!</span><div class="prevtxt"><span class="imptag">本月</span><b id="curNote"></b><small id="curSub">OA 的「菲律宾USDT薪资发放名单」。档案只在你的浏览器里读取，不会上传。</small></div><label class="btn prevbtn" for="file" id="curBtn">导入本月月度薪资表（Excel）</label><input type="file" id="file" accept=".xlsx,.xls,.csv" hidden></div>
-      <div class="prevbox" id="midBox"><span class="previcon" id="midIcon" aria-hidden="true">↺</span><div class="prevtxt"><span class="imptag">选用</span><b id="midNote">导入暂缓变更单</b><small id="midSub">作业三导出的变更单：中途暂缓的人移到暂缓表，补发的人从暂缓表拿掉。要先导入本月月度薪资表。</small></div><label class="btn prevbtn" for="midFile">导入暂缓变更单（Excel）</label><input type="file" id="midFile" accept=".xlsx,.xls,.csv" hidden></div>
       <div class="prevbox" id="prevBox"><span class="previcon" id="prevIcon" aria-hidden="true">!</span><div class="prevtxt"><span class="imptag">上个月</span><b id="prevNote1"></b><small id="prevSub1">用来比对第一次发薪（只要有「工号」栏）。过渡阶段：正式版会直接从资料库判断。</small></div><label class="btn prevbtn" for="prevFile1">导入上个月打款名单（Excel）</label><input type="file" id="prevFile1" accept=".xlsx,.xls,.csv" hidden></div>
     </div>
     <div class="msg" id="importMsg"></div>
@@ -614,9 +613,9 @@ nav.jobs .job.dm-lock small::after{content:"（没有权限）";color:var(--dang
   </section>
   <section class="step wstep ph-pay" id="adjSec">
     <h2><span class="n">2</span>名单调整</h2>
-    <p class="msg" style="margin-top:0">有人临时不发或要补发，在下载 UC 文件前调整。其他人的钱包和序号不变。调整后记得回 OA 补改。</p>
+    <p class="msg" style="margin-top:0">有人临时不发或要补发，在下载 UC 文件前调整。其他人的钱包和序号不变。这里的暂缓是独立的一份，不影响作业一的暂缓表。调整后记得回 OA 补改。</p>
     <p class="neg" id="adjLockNote" style="margin:0 0 8px;font-weight:600;font-size:13.5px" hidden>UC 文件已经下载，不能再调整。</p>
-    <div class="subsec"><h3>员工暂缓</h3>
+    <div class="subsec"><h3>作业三暂缓</h3>
       <div class="adjrow"><input class="adjin" id="adjPerson" list="adjPeople" placeholder="工号或姓名" aria-label="要暂缓的员工" autocomplete="off"><datalist id="adjPeople"></datalist><select class="adjin" id="adjGroup" aria-label="归入哪个暂缓分组"></select><input class="adjin grow" id="adjReason" placeholder="原因（必填）" aria-label="暂缓原因"><button class="btn" id="adjHold">暂缓这个人</button></div>
       <div class="fhint" id="adjInfo"></div>
     </div>
@@ -1851,9 +1850,9 @@ function renderAdj(){const b=adjBatch();if(!$('adjBody'))return;
   ['adjPerson','adjGroup','adjReason','adjHold','adjWallet','adjAddReason','adjAllowDup'].forEach(i=>{$(i).disabled=lock});$('adjFile').disabled=lock;$('adjFileBtn').style.opacity=lock?.45:1;$('adjFileBtn').style.pointerEvents=lock?'none':'';
   if(!$('adjGroup').options.length||$('adjGroup').dataset.sig!==st.holdCfg.groups.join('|')){const cur=$('adjGroup').value;$('adjGroup').innerHTML=st.holdCfg.groups.map(g=>`<option>${esc(g)}</option>`).join('');$('adjGroup').dataset.sig=st.holdCfg.groups.join('|');if(st.holdCfg.groups.includes(cur))$('adjGroup').value=cur}
   {const n=(st.wallets||[]).length,cur=$('adjWallet').value,opts=[...Array(n).keys()].map(w=>`<option value="${w}">${esc(wLabel(w))}</option>`).join('');if($('adjWallet').dataset.sig!==opts){$('adjWallet').innerHTML=opts;$('adjWallet').dataset.sig=opts;if(cur!==''&&Number(cur)<n)$('adjWallet').value=cur}}
-  if(!b){$('adjPeople').innerHTML='';$('adjBody').innerHTML='<p class="empty">先在第 ① 步导入请款单。</p>';return}
+  if(!b){$('adjPeople').innerHTML='';$('adjBody').innerHTML='<p class="empty">先在第 ① 步导入请款单。</p>'+adjHistory('');return}
   const sig=b.emps.length+'|'+b.date;if($('adjPeople').dataset.sig!==sig){$('adjPeople').innerHTML=b.emps.map(e=>`<option value="${esc(e.code+' '+e.name)}"></option>`).join('');$('adjPeople').dataset.sig=sig}
-  const adj=b.adj||[];if(!adj.length){$('adjBody').innerHTML='<p class="fhint" style="margin:0">目前没有调整。</p>';return}
+  const adj=b.adj||[];if(!adj.length){$('adjBody').innerHTML='<p class="fhint" style="margin:0">这个打款日目前没有调整。</p>'+adjHistory(b.date);return}
   const hold=adj.filter(a=>a.type==='hold'),add=adj.filter(a=>a.type==='add'),sum=l=>{let php=0,rmb=0,u=0,uok=true;l.forEach(a=>{const m=adjAmt(a),x=adjUsdt(a,b);php+=m.php;rmb+=m.rmb;if(x==null)uok=false;else u+=x});return {n:l.length,php,rmb:r2(rmb),u:uok?r2(u):null}};
   const txt=x=>`<b>${x.n}</b> 人，PHP <b>${fmt(x.php)}</b>，RMB <b>${fmt2(x.rmb)}</b>，USDT <b>${x.u==null?'待填打款汇率':fmt2(x.u)}</b>`;
   const grp=[...new Set(hold.map(a=>a.group))].map(g=>`<span>${esc(g)}：${txt(sum(hold.filter(a=>a.group===g)))}</span>`).join('');
@@ -1862,7 +1861,11 @@ function renderAdj(){const b=adjBatch();if(!$('adjBody'))return;
   const dis=b.ucDone?'disabled':'';
   $('adjBody').innerHTML=`${warns.length?`<div class="notice">${warns.join('<br>')}</div>`:''}<div class="adjsum">${hold.length?`<span><b>暂缓合计</b>：${txt(sum(hold))}</span>${grp}${byW}`:''}${add.length?`<span><b>补发合计</b>：${txt(sum(add))}</span>`:''}</div>
   <div class="tablewrap"><table class="ctable adjtbl"><thead><tr><th>类型</th><th>时间</th><th>工号</th><th>姓名</th><th>单位</th><th>PHP</th><th>RMB</th><th>USDT</th><th>钱包</th><th>归入</th><th>原因</th><th></th></tr></thead><tbody>${adj.map(a=>{const m=adjAmt(a),u=adjUsdt(a,b);return `<tr><td><span class="adjtype ${a.type==='add'?'add':''}">${a.type==='add'?'补发':'暂缓'}</span></td><td>${esc(fmtAgo(a.at))}${a.by?`<small class="wh">${esc(a.by)}</small>`:''}</td><td>${esc(a.e.code)}</td><td>${esc(a.e.name)}</td><td>${esc([a.e.g,a.e.b,a.e.d].filter(Boolean).join(' / '))}</td><td class="num">${fmt(m.php)}</td><td class="num">${fmt2(m.rmb)}</td><td class="num">${u==null?'—':fmt2(u)}</td><td>${a.type==='add'?`<select class="adjin" data-adjw="${esc(a.id)}" ${dis} aria-label="${esc(a.e.name)} 由哪个钱包打">${[...Array((st.wallets||[]).length).keys()].map(w=>`<option value="${w}" ${w===a.wallet?'selected':''}>${esc(wLabel(w))}</option>`).join('')}</select>`:esc(wLabel(a.wallet))}</td><td>${esc(a.group||'—')}</td><td style="white-space:normal;min-width:140px">${esc(a.reason)}</td><td><button class="x" data-adjundo="${esc(a.id)}" ${dis}>撤销</button></td></tr>`}).join('')}</tbody></table></div>
-  <div class="row" style="margin-top:10px"><button class="btn primary" id="adjExport">导出暂缓变更单</button><span class="fhint" style="margin:0">导回作业一，暂缓表就会更新。也记得回 OA 补改。</span></div>`}
+  <div class="row" style="margin-top:10px"><button class="btn primary" id="adjExport">导出作业三暂缓表</button><span class="fhint" style="margin:0">这份是独立的记录，不影响作业一。也记得回 OA 补改。</span></div>${adjHistory(b.date)}`}
+/* 其他打款日的记录：只存在这台电脑；要看明细，导入那天的请款单 */
+function adjHistory(cur){let v={};try{v=JSON.parse(localStorage.getItem(ADJKEY)||'{}')||{}}catch(_){}const ds=Object.keys(v).filter(d=>d!==cur&&(v[d].adj||[]).length).sort().reverse();if(!ds.length)return'';
+  const line=d=>{const l=v[d].adj,h=l.filter(a=>a.type==='hold'),p=l.filter(a=>a.type==='add'),s=x=>x.reduce((t,a)=>t+a.e.a,0);return `<tr><td>${esc(d)}</td><td>${h.length}</td><td class="num">${fmt(s(h))}</td><td>${p.length}</td><td class="num">${fmt(s(p))}</td></tr>`};
+  return `<details class="fold-list" style="margin-top:12px"><summary>其他打款日的记录（${ds.length} 天）</summary><div class="tablewrap" style="margin-top:6px"><table class="ctable" style="min-width:480px"><thead><tr><th>打款日</th><th>暂缓人数</th><th>暂缓 PHP</th><th>补发人数</th><th>补发 PHP</th></tr></thead><tbody>${ds.map(line).join('')}</tbody></table></div><p class="fhint">要看明细，请在第 ① 步导入那天的请款单。</p></details>`}
 function adjMsg(t,err){$('adjMsg').textContent=t;$('adjMsg').classList.toggle('err',!!err)}
 function adjNew(type,e,extra){return {id:`${Date.now()}-${Math.random().toString(36).slice(2,8)}`,at:Date.now(),by:adjWho(),type,e,...extra}}
 function adjHold(){const b=adjBatch();if(!b||b.ucDone)return;const key=$('adjPerson').value.trim(),reason=$('adjReason').value.trim();const code=key.split(/\s+/)[0];
@@ -1889,19 +1892,7 @@ function adjUndo(id){const b=adjBatch();if(!b||b.ucDone)return;const i=(b.adj||[
 const ADJ_HEAD=['类型','调整时间','操作人','薪资年月','序号','工号','姓名','事业群','事业处','部门','实发工资PHP','兑人民币RMB','USDT','PHP→RMB 汇率','打款汇率','钱包','归入','原因','钱包地址','打款日'];
 function adjRowsAoa(b){const sm=serialMap(),d=new Date();return (b.adj||[]).map(a=>{const m=adjAmt(a),u=adjUsdt(a,b);return [a.type==='add'?'补发':'暂缓',new Date(a.at).toLocaleString('zh-CN',{hour12:false}),a.by||'',a.e.month||'',String(a.seq||sm.get(b.emps.find(e=>e.code===a.e.code)||a.e)||''),a.e.code,a.e.name,a.e.g||'',a.e.b||'',a.e.d||'',m.php,m.rmb,u==null?'':u,a.e.rateF||'',payRateOf(b)||'',wLabel(a.wallet),a.group||'',a.reason,a.e.addr||'',b.date]})}
 async function adjExport(btn){const b=adjBatch();if(!b||!(b.adj||[]).length)return;const lab=btn.textContent,done=t=>{btn.textContent=t;setTimeout(()=>btn.textContent=lab,3000)};if(!DL||typeof XLSX==='undefined')return done('不能下载');
-  try{const ws=XLSX.utils.aoa_to_sheet([ADJ_HEAD,...adjRowsAoa(b)]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'暂缓变更单');await __DS(DL,{filename:`暂缓变更单_打款日${b.date}.xlsx`,data:new Uint8Array(XLSX.write(wb,{type:'array',bookType:'xlsx'}))});done('已导出')}catch(err){done(err&&err.code==='declined'?'已取消':'导出失败')}}
-/* 作业一：导入变更单，把中途暂缓的人移到暂缓表，补发的人从暂缓表拿掉 */
-function midImport(rows,fname){if(!st.baseData)throw new Error('请先导入本月月度薪资表。');const keys=rows.length?Object.keys(rows[0]):[];for(const k of ['类型','工号','归入','实发工资PHP'])if(!keys.includes(k))throw new Error(`这份不是暂缓变更单（缺「${k}」栏）。`);
-  let moved=0,already=0,missing=[],paid=0,other=0;const t=(r,k)=>String(r[k]??'').trim();
-  rows.forEach(r=>{const type=t(r,'类型'),code=t(r,'工号'),mon=normMonth(t(r,'薪资年月'));if(mon&&st.serialMonth&&mon!==st.serialMonth){other++;return}
-    if(type==='补发'){const i=st.held.findIndex(h=>h.code===code);if(i>=0){st.held.splice(i,1);paid++}return}
-    if(type!=='暂缓')return;const group=t(r,'归入'),gi=st.holdCfg.groups.indexOf(group);
-    const base=st.baseData.findIndex(x=>x.code===code),inHold=st.held.find(h=>h.code===code);
-    if(gi>=0)st.holdCfg.emp[code]=gi;
-    if(inHold){already++;return}if(base<0){missing.push(code);return}const x=st.baseData[base];st.baseData.splice(base,1);
-    st.held.push({code,name:x.name||t(r,'姓名'),pos:x.pos||'',rem:[x.rem,`中途暂缓：${t(r,'原因')}`].filter(Boolean).join('；'),rmb:x.rmb,rateF:x.rateF,g:t(r,'事业群'),b:t(r,'事业处'),d:t(r,'部门'),addr:x.addr||'',amount:x.amount,way:'暂缓（中途）',raw:String(x.amount),ok:true,month:x.month||'',bp:x.bp||''});moved++});
-  saveHoldCfg();regroup();auditEvt('导入','导入暂缓变更单',`${fname} · 移入暂缓 ${moved} 人 · 从暂缓拿掉 ${paid} 人`,moved||paid?'high':'');
-  return `已更新：${moved} 人移到暂缓表，${paid} 人从暂缓表拿掉${already?`，${already} 人原本就在暂缓表`:''}${missing.length?`。找不到：${missing.slice(0,5).join('、')}${missing.length>5?' 等':''}`:''}${other?`，${other} 笔不是这个月的，已略过`:''}。`}
+  try{const ws=XLSX.utils.aoa_to_sheet([ADJ_HEAD,...adjRowsAoa(b)]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'作业三暂缓表');await __DS(DL,{filename:`作业三暂缓表_打款日${b.date}.xlsx`,data:new Uint8Array(XLSX.write(wb,{type:'array',bookType:'xlsx'}))});done('已导出')}catch(err){done(err&&err.code==='declined'?'已取消':'导出失败')}}
 function readWbRows(f,cb){const r=new FileReader();r.onload=()=>{try{const wb=XLSX.read(new Uint8Array(r.result),{type:'array'});cb(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''}))}catch(err){cb(null,err)}};r.readAsArrayBuffer(f)}
 function parseBatchRows(rows){
   const keys=rows.length?Object.keys(rows[0]):[],norm=v=>String(v).replace(/[\s()（）\[\]【】_\-:：/]/g,'').toLowerCase(),find=c=>{for(const x of c){const ex=keys.find(k=>norm(k)===norm(x));if(ex)return ex}for(const x of c){const k=keys.find(k=>norm(k).includes(norm(x)));if(k)return k}};
@@ -2488,9 +2479,8 @@ $('ucAll00').addEventListener('click',e=>ucSave(ucAllRows('00'),'00',ucAllName('
 $('ucAll01').addEventListener('click',e=>ucSave(ucAllRows('01'),'01',ucAllName('01'),e.currentTarget));
 
 $('adjFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const inp=e.target;if(!$('adjAddReason').value.trim()){adjMsg('请先填补发原因，再选文件。',true);inp.value='';return}readWbRows(f,(rows,err)=>{inp.value='';if(err)return adjMsg('读取失败：'+err.message,true);try{adjAddRows(rows,f.name)}catch(er){adjMsg(er.message,true)}})});
-$('midFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const inp=e.target;readWbRows(f,(rows,err)=>{inp.value='';$('midBox').classList.remove('ok','bad');try{if(err)throw err;$('midSub').textContent=midImport(rows,f.name);$('midBox').classList.add('ok')}catch(er){$('midSub').textContent='导入失败：'+er.message;$('midBox').classList.add('bad')}})});
 /* 已有调整记录时重新导入会清掉：先提醒一次 */
-function adjGuard(inp,cb){const b=(st.batches||[])[(st.batches||[]).length-1];if(b&&b.adj&&b.adj.length&&!st.adjOver){st.adjOver=true;adjMsg('这批已有调整记录。重新导入前请先导出变更单；确定要导入，请再选一次文件。',true);cb(`这批已有 ${b.adj.length} 笔调整。确定要重新导入，请再选一次文件。`);inp.value='';return false}st.adjOver=false;return true}
+function adjGuard(inp,cb){const b=(st.batches||[])[(st.batches||[]).length-1];if(b&&b.adj&&b.adj.length&&!st.adjOver){st.adjOver=true;adjMsg('这批已有调整记录。重新导入前请先导出作业三暂缓表；确定要导入，请再选一次文件。',true);cb(`这批已有 ${b.adj.length} 笔调整。确定要重新导入，请再选一次文件。`);inp.value='';return false}st.adjOver=false;return true}
 $('progFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;
   if(typeof XLSX==='undefined'){$('progMsg').textContent='Excel 读取程序没有载入，请重新整理页面再试。';return}
   const r=new FileReader();r.onload=()=>{try{const wb=XLSX.read(new Uint8Array(r.result),{type:'array'}),v=readProg(wb);
@@ -2753,7 +2743,7 @@ function finishImport(){const p=pend;if(!p)return;pend=null;const r=parsed;parse
 document.addEventListener('change',e=>{const t=e.target;if(t.type==='file'&&IMP[t.id]&&t.files&&t.files[0]&&me){patchXlsx();const f=t.files[0];parsed=null;pend={id:t.id,name:f.name,hash:sha(f),tm:setTimeout(finishImport,3000)}}},true);
 
 /* ---------- 记录：导出 ---------- */
-function exportAct(n){return /UC打款/.test(n)?['下载 UC 打款文件','high']:/变更单/.test(n)?['导出暂缓变更单','high']:/请款单/.test(n)?['导出请款单','']:/打款单/.test(n)?['导出打款单','']:/送审/.test(n)?['导出发薪日送审总名单','']:['导出文件','']}
+function exportAct(n){return /UC打款/.test(n)?['下载 UC 打款文件','high']:/作业三暂缓表/.test(n)?['导出作业三暂缓表','high']:/请款单/.test(n)?['导出请款单','']:/打款单/.test(n)?['导出打款单','']:/送审/.test(n)?['导出发薪日送审总名单','']:['导出文件','']}
 window.__DS=function(DL,o){const p=DL.save(o),data=o.data;Promise.resolve(p).then(()=>'ok',()=>'no').then(async s=>{const h=await sha(data),[a,r]=exportAct(o.filename||'');if(!me)return;log('导出',s==='ok'?a:a+'（未保存）',`${o.filename||''}${h?' · 指纹 '+h:''}`,s==='ok'?r:'');if(s==='ok'&&h){db.logs[0].hash=h;save()}});return p};
 
 /* ---------- 记录：按钮操作 ---------- */

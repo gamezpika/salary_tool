@@ -181,7 +181,7 @@
 
   /* ---------- 记录：导出 ---------- */
   addEventListener('payroll:audit', e => { const d = e.detail || {}; log(d.cat, d.act, d.det, d.risk); });
-  const exportAct = n => (/UC打款/.test(n) ? ['下载 UC 打款文件', 'high'] : /变更单/.test(n) ? ['导出暂缓变更单', 'high'] : /请款单/.test(n) ? ['导出请款单', ''] : /打款单/.test(n) ? ['导出打款单', ''] : /送审/.test(n) ? ['导出发薪日送审总名单', ''] : ['导出文件', '']);
+  const exportAct = n => (/UC打款/.test(n) ? ['下载 UC 打款文件', 'high'] : /作业三暂缓表/.test(n) ? ['导出作业三暂缓表', 'high'] : /请款单/.test(n) ? ['导出请款单', ''] : /打款单/.test(n) ? ['导出打款单', ''] : /送审/.test(n) ? ['导出发薪日送审总名单', ''] : ['导出文件', '']);
   window.__DS = function (DL, o) {
     const p = DL.save(o), data = o.data;
     Promise.resolve(p).then(() => 'ok', () => 'no').then(async s => { const h = await sha(data), [a, r] = exportAct(o.filename || ''); log('导出', s === 'ok' ? a : a + '（未保存）', `${o.filename || ''}${h ? ' · 指纹 ' + h.slice(0, 12) : ''}`, s === 'ok' ? r : '', s === 'ok' ? h : ''); });
