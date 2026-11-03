@@ -1,0 +1,21 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TRUST_PROXY: "true"
+    # 只开给本机，由前面的 Nginx 提供 HTTPS；不要直接对外开放
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - salary-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+volumes:
+  salary-data:

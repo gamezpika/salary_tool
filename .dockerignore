@@ -1,0 +1,5 @@
+.git
+server/data
+.env
+*.db
+demo
