@@ -375,6 +375,9 @@ small.wh.neg{color:var(--danger);font-weight:600}
 .rc{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 4px;border:1px solid var(--line);border-radius:14px;background:var(--panel);font-size:13px}
 .rc b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--w2);color:#fff;font-size:11px}
 .rc #ruleCap{color:var(--muted)}
+.wsin.reqmiss{border:2px solid var(--danger);background:var(--dangerbg)}
+.btn.chkdone{position:relative}
+.btn.chkdone::after{content:'✓';position:absolute;top:-9px;right:-9px;width:20px;height:20px;display:grid;place-items:center;border-radius:50%;background:var(--ok);color:var(--panel);font-size:13px;font-weight:700;line-height:1}
 .rulechips .muted{color:var(--muted)}
 #cfgTrxWarn.muted{color:var(--muted);font-weight:400}
 #cfgTrxWarn.neg{font-weight:600}
@@ -506,7 +509,7 @@ tfoot tr.quota td{font-weight:400;color:var(--muted);font-size:13px}
     </div>
     <div class="toolbar" style="margin:0 0 14px"><button class="btn primary" id="wAuto">自动排</button><button class="btn" id="wClear">全部清空</button><span class="automsg" id="wAutoMsg" hidden></span><span class="hint" style="margin:0;text-align:left;flex-basis:100%"><span id="wAutoHint"></span>全部清空：清掉排的结果（名单保留，可以再按自动排）。</span></div>
     <div id="walletDays"></div>
-    <div class="row" id="reqExportBar" style="margin-top:12px" hidden><button class="btn primary" id="reqExportBtn">导出请款单（照请款信格式）</button></div>
+    <div class="row" id="reqExportBar" style="margin-top:12px" hidden><button class="btn primary" id="reqExportBtn">导出请款单（照请款信格式）</button><span class="neg" id="reqNeedDate" style="font-size:13.5px;font-weight:600" hidden>请先填上方的请款日，才能导出</span></div>
   </section>
   <div class="phase pay ph-pay"><b>打款作业</b><span>打款日当天：填打款汇率 → 下载 UC 打款文件打给员工（矿工费由链上自动扣）</span></div>
   <section class="step wstep ph-pay">
@@ -1322,7 +1325,8 @@ document.addEventListener('input',e=>{if(e.target.closest&&e.target.closest('.fs
     const w=e.target.dataset.tsplit.split('~')[1],a=document.querySelector(`[data-tsamt="${w}"]`);if(a&&per)a.textContent=`＝ ${fmt((parseInt(e.target.value,10)||0)*per)} TRX`}});
 /* 请款日：预设是打款日的前一个工作日（遇到周末往前推），可以手动改 */
 function prevWorkday(d){const t=new Date((d||'')+'T00:00:00');if(isNaN(t))return '';do{t.setDate(t.getDate()-1)}while(t.getDay()===0||t.getDay()===6);return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`}
-const reqDate=b=>b.reqDate||prevWorkday(b.date);
+const reqDate=b=>b.reqDate||'';
+const reqShow=b=>reqDate(b)||'未填';
 function updateBalChk(){const bs=st.batches||[];
   /* 余额检查：只看最新导入的那一天（当天要发的） */
   st.chkDay=bs.length-1;
@@ -1348,6 +1352,7 @@ function renderWallet(){
         $('cfgSplit').innerHTML=`<div class="tshead">第一次打款共 <b>${f}</b> 人，各钱包打几人：${b.trxPick?'<span class="rtag trxtag">已逐人指定</span>':''}</div>${uc.map(x=>`<label class="tsrow"><span class="wtag" style="--wc:${wc(x.w)}"></span><span class="tsname">${esc(wLabel(x.w))}</span><input type="number" min="0" step="1" class="fin sm" data-tsplit="${bi}~${x.w}" value="${x.n}" ${b.trxPick?'readonly title="已逐人指定，要改请按「逐人指定」"':''}> 人<small class="muted" data-tsamt="${x.w}">${per?`＝ ${fmt(x.n*per)} TRX`:''}</small></label>`).join('')}
         <div class="tsfoot"><span id="tsSum" data-tot="${f}" class="${ok?'okc':'neg'}">合计 ${sum}／${f} 人${ok?' ✓':''}</span><button class="btn sm" data-tsreset="${bi}">平均分</button><button class="btn sm" data-tspick="${bi}">逐人指定…</button></div>`}}}
    $('ruleCap').textContent=Number(st.wcap)>0?` ${fmt(st.wcap)} USDT `:'（没设）';
+   chainMarks();
    {const o=wRules();$('wOrderChips').innerHTML=WRULE_ALL.map(k=>`<label class="chip ${o.includes(k)?'on':''}"><input type="checkbox" data-wrule="${k}" ${o.includes(k)?'checked':''}>${WRULE_NAME[k]}</label>`).join('')+(st.orderDirty?'<span class="neg" style="font-size:13px;font-weight:600">规则改了，按「自动排」才生效</span>':'');
     $('wAutoHint').textContent=(o.includes('serial')?'自动排：每个钱包拿一段连续的序号，再照顾其他勾选的规则。':'自动排：没勾序号连续，同一个钱包的序号可能跳号，对帐时要对照各钱包的名单。')+'每个钱包上限永远最优先（打款时）。'}
    const uw=usdtWs();$('cfgUsdt').innerHTML=st.wallets.map((x,w)=>`<label class="chip"><input type="checkbox" data-cfgusdt="${w}" ${uw.includes(w)?'checked':''}>${esc(wLabel(w))}</label>`).join('')}
@@ -1364,7 +1369,7 @@ function renderWallet(){
   /* 第 ④ 步：打款汇率 */
   if(!$('payRates').contains(document.activeElement))$('payRates').innerHTML=(st.batches||[]).map((b,i)=>`<div class="frow"><label>打款 RMB → USDT</label><input type="number" step="0.0001" min="0" data-brate="${i}" value="${b.rate||''}" placeholder="打款日汇率" class="fin"><span class="fst"></span><span class="funit">打款日 ${esc(b.date)}</span></div>`).join('')||'<div class="frow"><label>打款 RMB → USDT</label><span class="funit" style="grid-column:2 / 5">导入当天核准名单后，这里会出现打款汇率格</span></div>';
   /* 第 ② 步：每天的 RMB→USDT 汇率（导入几天就有几格） */
-  if(!$('dayRates').contains(document.activeElement))$('dayRates').innerHTML=(st.batches||[]).map((b,i)=>`<div class="frow"><label>请款 RMB → USDT</label><input type="number" step="0.0001" min="0" data-breqrate="${i}" value="${b.reqRate||''}" placeholder="请款日汇率" class="fin"><span class="fst"></span><span class="funit">请款日 ${esc(reqDate(b))}（${esc(b.date)} 打款用）</span></div>`).join('')||'<div class="frow"><label>RMB → USDT</label><span class="funit" style="grid-column:2 / 5">导入当天核准名单后，这里会出现那天的汇率格</span></div>';
+  if(!$('dayRates').contains(document.activeElement))$('dayRates').innerHTML=(st.batches||[]).map((b,i)=>`<div class="frow"><label>请款 RMB → USDT</label><input type="number" step="0.0001" min="0" data-breqrate="${i}" value="${b.reqRate||''}" placeholder="请款日汇率" class="fin"><span class="fst"></span><span class="funit">请款日 ${esc(reqShow(b))}（${esc(b.date)} 打款用）</span></div>`).join('')||'<div class="frow"><label>RMB → USDT</label><span class="funit" style="grid-column:2 / 5">导入当天核准名单后，这里会出现那天的汇率格</span></div>';
   $('phpRateNote').textContent='';{const v=Number(st.phpRate)>0;{const rl=(st.rateList||[]).flatMap(x=>x.rates.map(r=>({m:x.m,r}))),multi=new Set(rl.map(x=>x.r)).size>1;$('phpRateView').textContent=v?(multi?rl.map(x=>`${x.r}`+(x.m?`（${x.m}）`:'')).join('、'):String(st.phpRate)):'0';$('phpRateView').title=multi?'名单里有不同薪资年月，各用各自的汇率Peso':'';$('phpRateFrom').textContent='来自作业一的「汇率Peso」'}$('phpRateView').classList.toggle('neg',!v);$('phpRateSt').className='fst '+(v?'ok':'bad');$('phpRateSt').textContent=v?'✓':'✗'}
   document.querySelectorAll('[data-trx]').forEach(i=>{if(document.activeElement!==i)i.value=st.trx[i.dataset.trx]||''});
   /* 第一次打款 */
@@ -1373,7 +1378,7 @@ function renderWallet(){
     $('prevNote').innerHTML=`已比对：跟 ${esc(st.prevName)} 比对工号，第一次发薪 ${allE.filter(({e})=>isNewEmp(e)).length} 人${chgN?`；换地址 <button class="who inl" data-bchg="-1~-1">${chgN} 人</button>（不另外打 TRX）`:''}`;
     $('newList').innerHTML=cand.length?`<details class="fold-list"${st.newListOpen?' open':''}><summary>第一次打款名单（${cand.filter(({e})=>isNewEmp(e)).length} 人${cand.some(({e})=>!isNewEmp(e))?`，另有 ${cand.filter(({e})=>!isNewEmp(e)).length} 人已取消`:''}）</summary><div class="tablewrap" style="margin-top:8px"><table class="ctable" style="min-width:640px"><thead><tr><th>第一次打款</th><th>工号</th><th>姓名</th><th>事业群</th><th>事业处／部门</th><th>原因</th><th>排在</th><th>收款地址状态</th></tr></thead><tbody>${cand.map(({e,b})=>`<tr><td class="first">${isNewEmp(e)?'是':''}</td><td>${esc(e.code)}</td><td>${esc(e.name)}</td><td>${esc(e.g)}</td><td>${esc([e.b,e.d].filter(Boolean).join(' / '))}</td><td>${esc(newReason(e)||'人工加入')}</td><td>${esc(b.date)} · ${esc(wName(e.w))}</td><td>${e.addr?`<select class="wsin" data-astat="${esc(e.addr)}"><option value="" ${!addrStatus(e.addr)?'selected':''}>还没查（当新地址）</option><option value="new" ${addrStatus(e.addr)==='new'?'selected':''}>新地址（1.1）</option><option value="old" ${addrStatus(e.addr)==='old'?'selected':''}>已启用（0.268）</option></select>`:'<span class="bad">没有地址</span>'}</td></tr>`).join('')}</tbody></table></div><p class="hint" style="text-align:left">要补勾其他人：点钱包人数，在名单里勾「第一次打款」。</p></details>`:'';
   }else{$('newList').innerHTML='';$('prevNote').innerHTML='还没有比对资料，标不出第一次发薪的人（会影响 30 TRX 补助和矿工费）'}
-  {const bs=st.batches||[],lb=bs[bs.length-1],ok=!!lb;{const lb2=(st.batches||[])[(st.batches||[]).length-1],has=!!lb2&&!lb2.cleared;$('progBox').classList.toggle('ok',has);$('progIcon').textContent=has?'✓':'1';$('progNote').textContent=has?(st.payFile?`已导入请款单：${st.payFile}`:'作业二刚分配好的结果（同一次开启）'):'导入作业二导出的请款单';$('progBtn').textContent=has?'重新导入请款单':'导入请款单（Excel）';$('progMsg').textContent=has?`请款日 ${reqDate(lb2)}，打款日 ${lb2.date}，${lb2.emps.length} 人${st.payAt?`（请款单 ${fmtAgo(st.payAt)} 导出）`:''}。接着填打款汇率就可以打款。`:'请款单是分配确认后的结果，导入后会带回那天每个人分到哪个钱包、TRX 分配。';$('reqCmp').innerHTML='';paintErr('progBox','progIcon','progNote','progMsg',st.payErr,'',has?`${st.payFile||'作业二的结果'}（打款日 ${lb2.date}，${lb2.emps.length} 人）`:'')}
+  {const bs=st.batches||[],lb=bs[bs.length-1],ok=!!lb;{const lb2=(st.batches||[])[(st.batches||[]).length-1],has=!!lb2&&!lb2.cleared;$('progBox').classList.toggle('ok',has);$('progIcon').textContent=has?'✓':'1';$('progNote').textContent=has?(st.payFile?`已导入请款单：${st.payFile}`:'作业二刚分配好的结果（同一次开启）'):'导入作业二导出的请款单';$('progBtn').textContent=has?'重新导入请款单':'导入请款单（Excel）';$('progMsg').textContent=has?`请款日 ${reqShow(lb2)}，打款日 ${lb2.date}，${lb2.emps.length} 人${st.payAt?`（请款单 ${fmtAgo(st.payAt)} 导出）`:''}。接着填打款汇率就可以打款。`:'请款单是分配确认后的结果，导入后会带回那天每个人分到哪个钱包、TRX 分配。';$('reqCmp').innerHTML='';paintErr('progBox','progIcon','progNote','progMsg',st.payErr,'',has?`${st.payFile||'作业二的结果'}（打款日 ${lb2.date}，${lb2.emps.length} 人）`:'')}
    $('batNote').textContent=ok?`已导入：${lb.file}（打款日 ${lb.date}，${lb.emps.length} 人，第一次打款 ${lb.emps.filter(isNewEmp).length} 人）`:'导入当天的核准名单';
 
    {const warn=[];if(ok&&!lb.emps.some(e=>e.first!==undefined))warn.push('名单里没有「第一次打款」栏，标不出第一次打款的人（30 TRX 补助会是 0）');if(ok&&!lb.emps.some(e=>e.seqRaw))warn.push('名单里没有「序号」栏，序号是工具依名单顺序自己编的，可能跟作业一的送审名单不同');if(warn.length)$('batchMsg').innerHTML=`<span class="neg">${warn.map(esc).join('；')}。请用作业一导出的送审名单（核准后保留这两栏）。</span>`}$('batBox').classList.toggle('ok',ok);$('batIcon').textContent=ok?'✓':'1';$('batBtn').textContent=ok?'重新导入（清空重算）':'导入当天核准名单（Excel）';
@@ -1401,7 +1406,7 @@ function renderWallet(){
   (st.batches||[]).forEach((b,i)=>{const rated=Number(b.rate)>0;
     /* 第 ③ 步显示请款当时的预估分配；打款时如果因为上限重排，第 ⑤ 步才用新的分配 */
     const curW=b.reqSnap?b.emps.map(e=>e.w):null;if(curW)b.emps.forEach((e,k)=>e.w=b.reqSnap[k]);
-    if(b.cleared){const ph=(t,sub)=>`<div class="wday"><div class="wdhead"><b>${t}</b><span class="hint" style="margin:0">${sub}${esc(b.file)}，${b.emps.length} 人</span></div><p class="empty" style="margin:12px">还没分配钱包，请按上方「<b>自动排</b>」。</p></div>`;h+=ph(`请款日 ${esc(reqDate(b))}`,`（<b>${esc(b.date)}</b> 打款用）`);uh+=ph(`打款日 ${esc(b.date)}`,`（${esc(reqDate(b))} 已请款）`);return}
+    if(b.cleared){const ph=(t,sub)=>`<div class="wday"><div class="wdhead"><b>${t}</b><span class="hint" style="margin:0">${sub}${esc(b.file)}，${b.emps.length} 人</span></div><p class="empty" style="margin:12px">还没分配钱包，请按上方「<b>自动排</b>」。</p></div>`;h+=ph(`请款日 ${esc(reqDate(b))}`,`（<b>${esc(b.date)}</b> 打款用）`);uh+=ph(`打款日 ${esc(b.date)}`,`（${reqDate(b)?`${esc(reqDate(b))} 已请款`:"请款日未填"}）`);return}
     const wv=wruleViol(b);
 
     /* 余额检查：整理成一张小表（钱包 × TRX／USDT），只列不够或还没输入余额的 */
@@ -1411,15 +1416,15 @@ function renderWallet(){
       if(tB===null||uB===null||tS>1e-9||uS>0.005)chk.push({w,tN,tB,tS,uN,uB,uS})}
     const cell=(need,bal,short,f,ok)=>bal===null?`<td class="num"><span class="hint" style="margin:0">没有余额</span></td>`:short===null?`<td class="num"><span class="hint" style="margin:0">待填汇率</span></td>`:short>0?`<td class="num"><b class="neg">还差 ${f(short)}</b><small class="wh">需要 ${f(need)}／目前 ${f(bal)}</small></td>`:`<td class="num"><span class="okc">✓ 够</span></td>`;
     const chkHTML=chk.length?`<div class="balchk"><div class="balhead">${esc(b.date)} 余额检查（只列不够或还没输入余额的钱包）</div><table class="ctable balt"><thead><tr><th>钱包</th><th>TRX</th><th>USDT</th></tr></thead><tbody>${chk.map(c=>`<tr><td><span class="wtag" style="--wc:${wc(c.w)}"></span>${esc(wLabel(c.w))}</td>${cell(c.tN,c.tB,c.tS,fmt3)}${cell(c.uN,c.uB,c.uS,fmt2)}</tr>`).join('')}</tbody></table>${chk.some(c=>c.tB===null||c.uB===null)?'<p class="hint" style="text-align:left;margin:4px 0 0">没有余额的钱包，请在上方「出款钱包」输入目前余额，或按「查询链上余额」。</p>':''}</div>`:'';
-    h+=`${wv.length?`<div class="notice">${esc(b.date)}：${wv.map(esc).join('；')}</div>`:''}<div class="wday"><div class="wdhead"><b>请款日</b><input type="date" class="wsin" style="width:auto" data-breq="${i}" value="${esc(reqDate(b))}" aria-label="请款日"><span class="hint" style="margin:0">（<b>${esc(b.date)}</b> 打款用）${esc(b.file)}，${b.emps.length} 人</span><span class="hint" style="margin:0">TRX 由 <b>${esc(trxWsOf().map(wLabel).join('、'))}</b> 打${trxWsOf().length>1?`（${trxCounts(b).map(x=>`${esc(wLabel(x.w))}：${x.n} 人`).join('、')}）`:''}</span>
+    h+=`${wv.length?`<div class="notice">${esc(b.date)}：${wv.map(esc).join('；')}</div>`:''}<div class="wday"><div class="wdhead"><b>请款日</b><input type="date" class="wsin${reqDate(b)?'':' reqmiss'}" style="width:auto" data-breq="${i}" value="${esc(reqDate(b))}" required aria-required="true" aria-label="请款日（必填）">${reqDate(b)?'':'<b class="neg" style="font-size:13px">必填</b>'}<span class="hint" style="margin:0">（<b>${esc(b.date)}</b> 打款用）${esc(b.file)}，${b.emps.length} 人</span><span class="hint" style="margin:0">TRX 由 <b>${esc(trxWsOf().map(wLabel).join('、'))}</b> 打${trxWsOf().length>1?`（${trxCounts(b).map(x=>`${esc(wLabel(x.w))}：${x.n} 人`).join('、')}）`:''}</span>
       </div><div class="tablewrap">${rowsFor(batchCells([b]),i,true,[b])}</div>${feeDetail(b,i)}</div>`;
     if(curW)b.emps.forEach((e,k)=>e.w=curW[k]);
-    uh+=`<div class="wday"><div class="wdhead"><b>打款日 ${esc(b.date)}</b><span class="hint" style="margin:0">（${esc(reqDate(b))} 已请款）${esc(b.file)}，${b.emps.length} 人</span><span class="hint" style="margin:0">打款汇率 ${Number(b.rate)?`<b>${esc(String(b.rate))}</b>`:'<b class="neg">未填（上面第 ① 步）</b>'}</span></div>${payTable2(b,i)}${ucBlock(b,i)}</div>`});
+    uh+=`<div class="wday"><div class="wdhead"><b>打款日 ${esc(b.date)}</b><span class="hint" style="margin:0">（${reqDate(b)?`${esc(reqDate(b))} 已请款`:"请款日未填"}）${esc(b.file)}，${b.emps.length} 人</span><span class="hint" style="margin:0">打款汇率 ${Number(b.rate)?`<b>${esc(String(b.rate))}</b>`:'<b class="neg">未填（上面第 ① 步）</b>'}</span></div>${payTable2(b,i)}${ucBlock(b,i)}</div>`});
   if(!(st.batches||[]).length)h='<p class="empty">还没有导入任何一天的核准名单。每天核准后，从 OA 导出当天的名单，按上方「导入当天核准名单」。</p>';
   else if(st.batches.length>1)h+=`<div class="wday month"><div class="wdhead"><b>整个月</b>${st.batches.every(b=>Number(b.rate)>0)?'':'<span class="hint" style="margin:0">有日子还没填汇率，USDT 只加总已填的</span>'}<span class="wdbtns"><button class="btn sm" data-bcopy="-1">复制整个月请款单</button></span></div><div class="tablewrap">${rowsFor(batchCells(st.batches),-1,true,st.batches)}</div></div>`;
   $('walletDays').innerHTML=h;
   {const bs=st.batches||[],i=bs.length-1,ok=i>=0&&!bs[i].cleared&&payRateOf(bs[i])>0;$('payExportBtn').disabled=!ok;$('payExportBtn').title=ok?'':'先在第 ① 步填打款汇率';if(i>=0)$('payExportBtn').dataset.bpay=String(i)}
-  {const bs=st.batches||[],i=bs.length-1,ok=i>=0&&!bs[i].cleared;$('reqExportBar').hidden=!ok;if(ok)$('reqExportBtn').dataset.bxls=String(i)}
+  {const bs=st.batches||[],i=bs.length-1,ok=i>=0&&!bs[i].cleared;$('reqExportBar').hidden=!ok;if(ok){const has=!!reqDate(bs[i]);$('reqExportBtn').dataset.bxls=String(i);$('reqExportBtn').disabled=!has;$('reqExportBtn').title=has?'':'请先填请款日';$('reqNeedDate').hidden=has}}
 
   {const bs=st.batches||[];{const lb=bs[bs.length-1],hasT=trxWOk(lb),ok=trxSplitOk(lb),miss=step2Missing();$('wAuto').disabled=!bs.length||!ok||!hasT||miss.length>0;$('wAuto').title=miss.length?`第 ② 步还没填：${miss.join('、')}`:!hasT?'请先在「固定由哪个钱包打 TRX」勾选钱包':ok?'':'第一次打款的 TRX 人数合计不对，请先修正';{const W2=$('cfgTrxWarn'),none=!trxRuleWs();if(lb&&!needTrxW(lb)&&none){W2.hidden=false;W2.className='muted';W2.textContent='这天没有第一次打款的人，可以不选'}else{W2.hidden=hasT;W2.className='neg';W2.textContent='这天有第一次打款的人，请至少勾一个，才能按「自动排」'}}$('step2Warn').hidden=!miss.length;$('step2Warn').textContent=miss.length?`还没填：${miss.join('、')}（是 0 不能往下自动排）`:''}$('wClear').disabled=!bs.some(b=>!b.cleared);$('wAutoMsg').textContent=st.autoMsg||'';$('wAutoMsg').hidden=!st.autoMsg}
   $('ucDays').innerHTML=uh||'<p class="empty">还没有导入任何一天的核准名单。</p>';
@@ -1455,7 +1460,7 @@ function restoreProg(v){st.batches=[v.batch];st.ucOpen={};
   if(Array.isArray(v.wallets)&&v.wallets.length){v.wallets.forEach((x,w)=>{st.wallets[w]=Object.assign(st.wallets[w]||{bal:null},x)});saveWallets()}
   if(v.addrState){st.addrState=Object.assign(st.addrState||{},v.addrState);saveAddrState()}}
 async function exportReqXlsx(key,btn,kind){const lab=btn.textContent,done=t=>{btn.textContent=t;setTimeout(()=>btn.textContent=lab,3000)};
-  const sel=batchSel(key),b=sel[0],cells=batchCells(sel),rateA=Number(st.phpRate)||0,hasU=sel.every(x=>payRateOf(x)>0)&&rateA>0;
+  const sel=batchSel(key),b=sel[0];if(kind!=='pay'&&b&&!reqDate(b)){done('请先填请款日');return}const cells=batchCells(sel),rateA=Number(st.phpRate)||0,hasU=sel.every(x=>payRateOf(x)>0)&&rateA>0;
   const head=['打款人员','人数','总比索PHP','兑人民币RMB','USDT数量'],rows=cells.map((o,w)=>[wLabel(w),o.heads,Math.round(o.php),rateA>0?r2(o.rmb):'',hasU?r2(o.usdt):'']);
   const tot=['小计',cells.reduce((a,o)=>a+o.heads,0),Math.round(cells.reduce((a,o)=>a+o.php,0)),rateA>0?r2(cells.reduce((a,o)=>a+o.rmb,0)):'',hasU?r2(cells.reduce((a,o)=>a+o.usdt,0)):''];
   const aoa=[head,...rows,tot],fname=kind==='pay'?`打款单_打款日${b.date}.xlsx`:`请款单_请款日${reqDate(b)}_打款日${b.date}.xlsx`;
@@ -1583,16 +1588,27 @@ async function chainAccount(addr){
   throw new Error('请填 TronScan API Key')}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const chainErrMsg=()=>{const e=st.chainErr||'';return /Failed to fetch|NetworkError|Load failed|CSP|blocked/i.test(e)?'连不到外部网站（claude.ai 上不允许，请用 GitHub 版本；或公司网路挡住）':e||'未知错误'};
+const CHOKKEY='payroll-allocator-chainok-v1';
+function chainOkGet(){try{return JSON.parse(localStorage.getItem(CHOKKEY)||'{}')||{}}catch(_){return{}}}
+function chainOkSet(k,v){try{const o=chainOkGet();if(v)o[k]=v;else delete o[k];localStorage.setItem(CHOKKEY,JSON.stringify(o))}catch(_){}}
+/* 绿勾：全部查成功才算；余额当天有效，钱包或名单改了就消失 */
+const todayStr=()=>{const d=new Date();return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`};
+const chainSigBal=()=>[todayStr(),...(st.wallets||[]).map(x=>x.addr||'')].join('|');
+const chainFirstAll=()=>(st.batches||[]).flatMap(b=>b.emps.filter(isNewEmp).map(e=>e.addr||''));
+const chainSigFirst=()=>[...new Set(chainFirstAll())].sort().join('|');
+function chainMarks(){const o=chainOkGet(),bs=st.batches||[];$('chainBal').classList.toggle('chkdone',!!o.bal&&o.bal===chainSigBal()&&(st.wallets||[]).some(x=>x.addr&&!addrCheck(x.addr)));$('chainFirst').classList.toggle('chkdone',bs.length>0&&o.first!==undefined&&o.first===`${bs[bs.length-1].date}#${chainSigFirst()}`)}
 async function chainCheckFirsts(btn){const list=[...new Set((st.batches||[]).flatMap(b=>b.emps.filter(isNewEmp).map(e=>e.addr)).filter(a=>a&&!addrCheck(a)))];
-  if(!list.length){btn.textContent='没有要查的地址';setTimeout(()=>btn.textContent='上链查询地址',2500);return}
+  const markFirst=ok=>{const bs=st.batches||[];chainOkSet('first',ok&&bs.length?`${bs[bs.length-1].date}#${chainSigFirst()}`:null);chainMarks()};
+  const badN=chainFirstAll().filter(a=>!a||addrCheck(a)).length;
+  if(!list.length){markFirst(!!(st.batches||[]).length&&!badN);btn.textContent=badN?`${badN} 人的地址有问题，没办法查`:'没有要查的地址';setTimeout(()=>btn.textContent='上链查询第一次发薪员工的地址',3000);return}
   let ok=0,fail=0;for(let i=0;i<list.length;i++){btn.textContent=`查询中 ${i+1}/${list.length}…`;
     try{const r=await chainAccount(list[i]);st.addrState[list[i]]={s:r.exists?'old':'new',at:Date.now()};ok++}catch(err){fail++;st.chainErr=err.message;if(fail>=2&&!ok)break}
     await sleep(250)}
-  saveAddrState();render();btn.textContent=fail&&!ok?`查询失败：${chainErrMsg()}`:`已查 ${ok} 笔${fail?`，${fail} 笔失败`:''}`;setTimeout(()=>btn.textContent='上链查询第一次发薪员工的地址',6000)}
+  saveAddrState();markFirst(!fail&&!badN);render();btn.textContent=fail&&!ok?`查询失败：${chainErrMsg()}`:`已查 ${ok} 笔${fail?`，${fail} 笔失败`:''}${badN?`，${badN} 人的地址有问题`:''}`;setTimeout(()=>btn.textContent='上链查询第一次发薪员工的地址',6000)}
 async function chainCheckWallets(btn){let ok=0,fail=0;
   for(let w=0;w<st.wallets.length;w++){const x=st.wallets[w];if(!x.addr||addrCheck(x.addr))continue;btn.textContent=`查询中 ${w+1}/${st.wallets.length}…`;
     try{const r=await chainAccount(x.addr);x.bal={trx:r.trx,usdt:r.usdt,at:Date.now(),src:'chain'};ok++}catch(err){fail++;st.chainErr=err.message}await sleep(250)}
-  saveWallets();render();btn.textContent=fail&&!ok?`查询失败：${chainErrMsg()}`:`已更新 ${ok} 个钱包${fail?`，${fail} 个失败`:''}`;setTimeout(()=>btn.textContent='查询链上余额',6000)}
+  saveWallets();chainOkSet('bal',!fail&&ok>0?chainSigBal():null);render();btn.textContent=fail&&!ok?`查询失败：${chainErrMsg()}`:`已更新 ${ok} 个钱包${fail?`，${fail} 个失败`:''}`;setTimeout(()=>btn.textContent='查询链上余额',6000)}
 const balOf=w=>{const b=(st.wallets[w]||{}).bal;return b&&b.src==='chain'&&b.trx!==''&&b.trx!=null?Number(b.trx):null};
 const usdtBalOf=w=>{const b=(st.wallets[w]||{}).bal;return b&&b.src==='chain'&&b.usdt!==''&&b.usdt!=null?Number(b.usdt):null};
 const fmtAgo=t=>{if(!t)return'';const d=new Date(t);return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`};
@@ -1739,7 +1755,7 @@ function importBatch(f,rows){
   const had=st.batches.length>0;
   const b={date,file:f,emps,rate:'',trxW:null,reqDate:'',reqRate:''};
   {const ts=loadTS()[date];if(ts){b.trxSplit=ts.split||null;b.trxPick=ts.pick||null}}
-  b.cleared=true;st.wbRestored=false;st.payImported=false;st.payFile='';st.payAt=0;st.batches=[b];st.ucOpen={};st.autoMsg='';allocBatch(b);
+  chainOkSet('bal',null);chainOkSet('first',null);b.cleared=true;st.wbRestored=false;st.payImported=false;st.payFile='';st.payAt=0;st.batches=[b];st.ucOpen={};st.autoMsg='';allocBatch(b);
   return {b,replaced:had};
 }
 function normDate(v){const t=String(v??'').trim();if(!t)return'';let m=t.match(/^(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);if(m)return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
@@ -1987,7 +2003,7 @@ document.addEventListener('click',e=>{
   if(e.target.id==='pickApply'){const b=st.batches[st.pickBi];if(b){b.trxPick={};document.querySelectorAll('[data-pick]:checked').forEach(r=>b.trxPick[r.dataset.pick]=Number(r.value));b.trxSplit=null;saveTS(b)}$('pickModal').hidden=true;render();return}
   if(e.target.id==='pickCancel'||e.target.id==='pickClose'||e.target.id==='pickModal'){$('pickModal').hidden=true;return}
   const tsr=e.target.closest('[data-tsreset]');if(tsr){const b=st.batches[Number(tsr.dataset.tsreset)];if(b){b.trxSplit=null;b.trxPick=null;saveTS(b)}tsr.blur();render();return}
-  const bx=e.target.closest('[data-bxls]');if(bx){const k=Number(bx.dataset.bxls),b=st.batches[k];st.reqKey=k;st.reqKind='req';$('reqTitle').textContent='导出预览（请款单）';$('reqSub').textContent=`请款日 ${reqDate(b)}，打款日 ${b.date}。按「复制」后，到 Excel 点选 A1 再贴上，会保留框线、底色和粗体。按「下载 Excel」会存成档案（第 2 页是分配明细），打款日在作业三导入这份档案就能接着打款。`;$('reqPreview').innerHTML=walletHTML(k).html;$('reqModal').hidden=false;$('reqDl').focus();return}
+  const bx=e.target.closest('[data-bxls]');if(bx){const k=Number(bx.dataset.bxls),b=st.batches[k];if(!reqDate(b))return;st.reqKey=k;st.reqKind='req';$('reqTitle').textContent='导出预览（请款单）';$('reqSub').textContent=`请款日 ${reqDate(b)}，打款日 ${b.date}。按「复制」后，到 Excel 点选 A1 再贴上，会保留框线、底色和粗体。按「下载 Excel」会存成档案（第 2 页是分配明细），打款日在作业三导入这份档案就能接着打款。`;$('reqPreview').innerHTML=walletHTML(k).html;$('reqModal').hidden=false;$('reqDl').focus();return}
   if(e.target.id==='reqCopy'){const btn=e.target,{html,text}=walletHTML(st.reqKey);(async()=>{try{await copyRich(window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write?html:null,text);btn.textContent='已复制，到 Excel 选 A1 贴上即可'}catch(_){btn.textContent='浏览器不允许复制，请用下载'}setTimeout(()=>btn.textContent='复制，贴到 Excel',3500)})();return}
   if(e.target.id==='reqDl'){exportReqXlsx(st.reqKey,e.target,st.reqKind);return}
   if(e.target.id==='reqClose'||e.target.id==='reqModal'){$('reqModal').hidden=true;return}
