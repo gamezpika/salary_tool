@@ -375,9 +375,14 @@ small.wh.neg{color:var(--danger);font-weight:600}
 .rc{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 4px;border:1px solid var(--line);border-radius:14px;background:var(--panel);font-size:13px}
 .rc b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--w2);color:#fff;font-size:11px}
 .rc #ruleCap{color:var(--muted)}
-.adjrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px}
+.adjrow{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:6px}
+.adjf{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--muted);min-width:0}
+.adjf.grow{flex:1;min-width:200px}.adjf.grow .adjin{width:100%}
+.adjf.inline{flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:14px}.adjf.inline.grow{max-width:560px}
+.adjsteps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px;font-size:14px}
+.adjsteps .btn.sm{padding:3px 10px;font-size:13px}
 .adjin{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 8px;font:inherit;font-size:14px;color:inherit;min-width:0}
-#adjPerson{width:220px}.adjin.grow{flex:1;min-width:180px}
+#adjPerson{width:220px}
 .adjsum{display:flex;flex-wrap:wrap;gap:8px 18px;margin:8px 0;font-size:14px}
 .adjsum b{font-variant-numeric:tabular-nums}
 .adjtbl{min-width:1040px!important}
@@ -532,20 +537,34 @@ tfoot tr.quota td{font-weight:400;color:var(--muted);font-size:13px}
     <div id="payDiff"></div>
   </section>
   <section class="step wstep ph-pay" id="adjSec">
-    <h2><span class="n">2</span>名单调整</h2>
-    <p class="msg" style="margin-top:0">有人临时不发或要补发，在下载 UC 文件前调整。其他人的钱包和序号不变。这里的暂缓是独立的一份，不影响作业一的暂缓表。调整后记得回 OA 补改。</p>
-    <p class="neg" id="adjLockNote" style="margin:0 0 8px;font-weight:600;font-size:13.5px" hidden>UC 文件已经下载，不能再调整。</p>
-    <div class="subsec"><h3>作业三暂缓</h3>
-      <div class="adjrow"><input class="adjin" id="adjPerson" list="adjPeople" placeholder="工号或姓名" aria-label="要暂缓的员工" autocomplete="off"><datalist id="adjPeople"></datalist><select class="adjin" id="adjGroup" aria-label="归入哪个暂缓分组"></select><input class="adjin grow" id="adjReason" placeholder="原因（必填）" aria-label="暂缓原因"><button class="btn" id="adjHold">暂缓这个人</button></div>
-      <div class="fhint" id="adjInfo"></div>
+    <h2><span class="n">2</span>名单调整（有变动才需要）</h2>
+    <p class="msg" style="margin-top:0">打款当天有人不发，或要多发给名单外的人，才需要这一步。没有变动就直接到第 ③ 步。</p>
+    <div class="row" id="adjClosed"><button class="btn" id="adjToggle">有人要暂缓或补发</button></div>
+    <div id="adjPanel" hidden>
+      <p class="neg" id="adjLockNote" style="margin:0 0 8px;font-weight:600;font-size:13.5px" hidden>UC 文件已经下载，不能再调整。</p>
+      <div class="subsec"><h3>今天先不发的人（暂缓）</h3>
+        <div class="adjrow">
+          <label class="adjf">选员工<input class="adjin" id="adjPerson" list="adjPeople" placeholder="输入工号或姓名" autocomplete="off"></label><datalist id="adjPeople"></datalist>
+          <label class="adjf">归入哪一组<select class="adjin" id="adjGroup"></select></label>
+          <label class="adjf grow">原因（必填）<input class="adjin" id="adjReason" placeholder="例如：资料待确认"></label>
+          <button class="btn" id="adjHold">暂缓这个人</button>
+        </div>
+        <div class="fhint" id="adjInfo"></div>
+      </div>
+      <div class="subsec"><h3>今天要加发的人（补发）</h3>
+        <p class="fhint" style="margin:0 0 8px">这些人不在今天的名单里，要把他们的资料放进 Excel 上传。</p>
+        <ol class="adjsteps">
+          <li><button class="btn sm" id="adjTpl">下载空白范本</button> 打开后一个人填一行。第二页有每一栏的说明。也可以直接用 OA 导出、只留这几个人的核准名单。</li>
+          <li><label class="adjf inline">由哪个钱包打<select class="adjin" id="adjWallet"></select></label></li>
+          <li><label class="adjf inline grow">原因（必填）<input class="adjin" id="adjAddReason" placeholder="例如：主管核准补发"></label></li>
+          <li><label class="btn" for="adjFile" id="adjFileBtn">选择填好的 Excel 并上传</label><input type="file" id="adjFile" accept=".xlsx,.xls,.csv" hidden></li>
+        </ol>
+        <label class="fhint" id="adjDupRow" style="display:flex;gap:6px;align-items:center" hidden><input type="checkbox" id="adjAllowDup">我确认这些人本月已在其他批次，仍要再发一次。勾选后请重新上传。</label>
+      </div>
+      <p class="msg" id="adjMsg" role="status"></p>
+      <div id="adjBody"></div>
+      <div class="row" id="adjCloseRow" style="margin-top:8px"><button class="btn" id="adjClose">收起</button></div>
     </div>
-    <div class="subsec"><h3>补发</h3>
-      <div class="adjrow"><select class="adjin" id="adjWallet" aria-label="由哪个钱包打"></select><input class="adjin grow" id="adjAddReason" placeholder="原因（必填）" aria-label="补发原因"><label class="btn" for="adjFile" id="adjFileBtn">导入补发名单（Excel）</label><input type="file" id="adjFile" accept=".xlsx,.xls,.csv" hidden></div>
-      <label class="fhint" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="adjAllowDup">我确认：名单里有人本月已在其他批次，仍要加入</label>
-      <div class="fhint">名单栏位和作业二相同，要有序号、工号、姓名、事业群、部门、实发工资PHP、实发工资RMB、PHP→RMB 汇率、第一次打款、钱包地址。</div>
-    </div>
-    <p class="msg" id="adjMsg" role="status"></p>
-    <div id="adjBody"></div>
   </section>
   <section class="step wstep ph-pay">
     <h2><span class="n">3</span>打款单与 UC 打款文件</h2>
@@ -1766,8 +1785,9 @@ const adjUsdt=(a,b)=>{const u=bUsdt(a.e,b);return u==null?null:u};
 const adjAmt=a=>({php:a.e.a,rmb:a.e.rmbF>0?a.e.rmbF:(a.e.rateF>0?round2(a.e.a/a.e.rateF):0)});
 function adjWho(){return window.__payUser||''}
 function renderAdj(){const b=adjBatch();if(!$('adjBody'))return;
+  {const has=!!(b&&(b.adj||[]).length),open=has||(!!st.adjOpen&&!(b&&b.ucDone));$('adjPanel').hidden=!open;$('adjClosed').hidden=open;$('adjCloseRow').hidden=has;const t=$('adjToggle');t.disabled=!b||!!b.ucDone;t.textContent=b&&b.ucDone?'UC 文件已下载，不能再调整':'有人要暂缓或补发';t.title=b?'':'先在第 ① 步导入请款单'}
   const lock=!b||b.ucDone;$('adjLockNote').hidden=!(b&&b.ucDone);
-  ['adjPerson','adjGroup','adjReason','adjHold','adjWallet','adjAddReason','adjAllowDup'].forEach(i=>{$(i).disabled=lock});$('adjFile').disabled=lock;$('adjFileBtn').style.opacity=lock?.45:1;$('adjFileBtn').style.pointerEvents=lock?'none':'';
+  ['adjPerson','adjGroup','adjReason','adjHold','adjWallet','adjAddReason','adjAllowDup','adjTpl'].forEach(i=>{$(i).disabled=lock});$('adjFile').disabled=lock;$('adjFileBtn').style.opacity=lock?.45:1;$('adjFileBtn').style.pointerEvents=lock?'none':'';
   if(!$('adjGroup').options.length||$('adjGroup').dataset.sig!==st.holdCfg.groups.join('|')){const cur=$('adjGroup').value;$('adjGroup').innerHTML=st.holdCfg.groups.map(g=>`<option>${esc(g)}</option>`).join('');$('adjGroup').dataset.sig=st.holdCfg.groups.join('|');if(st.holdCfg.groups.includes(cur))$('adjGroup').value=cur}
   {const n=(st.wallets||[]).length,cur=$('adjWallet').value,opts=[...Array(n).keys()].map(w=>`<option value="${w}">${esc(wLabel(w))}</option>`).join('');if($('adjWallet').dataset.sig!==opts){$('adjWallet').innerHTML=opts;$('adjWallet').dataset.sig=opts;if(cur!==''&&Number(cur)<n)$('adjWallet').value=cur}}
   if(!b){$('adjPeople').innerHTML='';$('adjBody').innerHTML='<p class="empty">先在第 ① 步导入请款单。</p>'+adjHistory('');return}
@@ -1786,6 +1806,8 @@ function renderAdj(){const b=adjBatch();if(!$('adjBody'))return;
 function adjHistory(cur){let v={};try{v=JSON.parse(localStorage.getItem(ADJKEY)||'{}')||{}}catch(_){}const ds=Object.keys(v).filter(d=>d!==cur&&(v[d].adj||[]).length).sort().reverse();if(!ds.length)return'';
   const line=d=>{const l=v[d].adj,h=l.filter(a=>a.type==='hold'),p=l.filter(a=>a.type==='add'),s=x=>x.reduce((t,a)=>t+a.e.a,0);return `<tr><td>${esc(d)}</td><td>${h.length}</td><td class="num">${fmt(s(h))}</td><td>${p.length}</td><td class="num">${fmt(s(p))}</td></tr>`};
   return `<details class="fold-list" style="margin-top:12px"><summary>其他打款日的记录（${ds.length} 天）</summary><div class="tablewrap" style="margin-top:6px"><table class="ctable" style="min-width:480px"><thead><tr><th>打款日</th><th>暂缓人数</th><th>暂缓 PHP</th><th>补发人数</th><th>补发 PHP</th></tr></thead><tbody>${ds.map(line).join('')}</tbody></table></div><p class="fhint">要看明细，请在第 ① 步导入那天的请款单。</p></details>`}
+const ADJ_TPL=[['序号','可留空，系统会自动编'],['工号','必填'],['姓名','必填'],['事业群','必填'],['事业处','可留空'],['部门','必填'],['实发工资PHP','必填，大于 0 的数字'],['实发工资RMB','可留空，系统用 PHP ÷ 汇率计算'],['PHP→RMB 汇率','必填，例如 8.12'],['第一次打款','第一次发薪的人填「是」，其他留空'],['钱包地址','必填，T 开头、34 码'],['薪资年月','例如 202611']];
+async function adjTemplate(btn){const lab=btn.textContent,done=t=>{btn.textContent=t;setTimeout(()=>btn.textContent=lab,3000)};if(!DL||typeof XLSX==='undefined')return done('不能下载');try{const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet([ADJ_TPL.map(x=>x[0])]);ws['!cols']=ADJ_TPL.map(x=>({wch:Math.max(12,x[0].length*2)}));XLSX.utils.book_append_sheet(wb,ws,'补发名单');const d=XLSX.utils.aoa_to_sheet([['栏位','怎么填'],...ADJ_TPL]);d['!cols']=[{wch:16},{wch:40}];XLSX.utils.book_append_sheet(wb,d,'说明');await DL.save({filename:'补发名单范本.xlsx',data:new Uint8Array(XLSX.write(wb,{type:'array',bookType:'xlsx'}))});done('已下载')}catch(err){done(err&&err.code==='declined'?'已取消':'下载失败')}}
 function adjMsg(t,err){$('adjMsg').textContent=t;$('adjMsg').classList.toggle('err',!!err)}
 function adjNew(type,e,extra){return {id:`${Date.now()}-${Math.random().toString(36).slice(2,8)}`,at:Date.now(),by:adjWho(),type,e,...extra}}
 function adjHold(){const b=adjBatch();if(!b||b.ucDone)return;const key=$('adjPerson').value.trim(),reason=$('adjReason').value.trim();const code=key.split(/\s+/)[0];
@@ -1794,18 +1816,20 @@ function adjHold(){const b=adjBatch();if(!b||b.ucDone)return;const key=$('adjPer
   const e=hit[0],sm=serialMap(),seq=sm.get(e)||'',a=adjNew('hold',e,{group:$('adjGroup').value,reason,wallet:e.w,seq});(b.adj=b.adj||[]).push(a);b.emps.splice(b.emps.indexOf(e),1);adjSave(b);
   const m=adjAmt(a),u=adjUsdt(a,b);auditEvt('设定','中途暂缓员工',`工号 ${e.code} · 归入 ${a.group} · 钱包 ${e.w+1} · PHP ${fmt(m.php)} · RMB ${fmt2(m.rmb)}${u==null?'':` · USDT ${fmt2(u)}`} · 原因：${reason}`,'high');
   $('adjPerson').value='';$('adjReason').value='';$('adjInfo').textContent='';adjMsg(`已暂缓 ${e.name}（${a.group}），记得回 OA 补改。`);render()}
-function adjAddRows(rows,fname){const b=adjBatch();if(!b||b.ucDone)return;const reason=$('adjAddReason').value.trim();if(!reason)return adjMsg('请先填补发原因，再选文件。',true);
-  const {emps}=parseBatchRows(rows);if(!emps.length)return adjMsg('名单里没有金额大于 0 的员工。',true);
+function adjAddRows(rows,fname){const b=adjBatch();if(!b||b.ucDone)return;const reason=$('adjAddReason').value.trim();if(!reason)return adjMsg('请先填补发原因，再上传 Excel。',true);
+  if(!rows.length)return adjMsg('Excel 里没有资料：请在范本的第一页填上要补发的人。',true);
+  const {emps}=parseBatchRows(rows);if(!emps.length)return adjMsg('Excel 里没有资料：请确认有填人，而且实发工资PHP 大于 0。',true);
   const noCode=emps.filter(e=>!e.code);if(noCode.length)return adjMsg(`有 ${noCode.length} 人没有工号。`,true);
   const codes=emps.map(e=>e.code),dupIn=codes.filter((c,i)=>codes.indexOf(c)!==i);if(dupIn.length)return adjMsg(`名单里工号重复：${[...new Set(dupIn)].slice(0,5).join('、')}。`,true);
   const bad=emps.filter(e=>addrCheck(e.addr||''));if(bad.length)return adjMsg(`这些人的钱包地址有问题：${bad.slice(0,5).map(e=>e.code).join('、')}。`,true);
   const noRate=emps.filter(e=>!(e.rateF>0));if(noRate.length)return adjMsg(`这些人没有汇率：${noRate.slice(0,5).map(e=>e.code).join('、')}。`,true);
+  {const base=Number(st.phpRate)||0,diff=emps.filter(e=>base>0&&Math.abs(e.rateF-base)>1e-9);if(diff.length)return adjMsg(`这些人的汇率和这批（${base}）不同，USDT 会算错，请确认：${diff.slice(0,5).map(e=>`${e.code}（${e.rateF}）`).join('、')}。`,true)}
   const inB=emps.filter(e=>b.emps.some(x=>x.code===e.code));if(inB.length)return adjMsg(`这些人已经在这批名单里，不能重复发：${inB.slice(0,5).map(e=>e.code).join('、')}。`,true);
   const held=emps.filter(e=>(b.adj||[]).some(a=>a.type==='hold'&&a.e.code===e.code));if(held.length)return adjMsg(`这些人刚被暂缓，要发请按记录里的「撤销」：${held.slice(0,5).map(e=>e.code).join('、')}。`,true);
-  const paid=new Set((loadPaid().months[ym(b.date)]||[]).map(x=>x[0]));const dup=emps.filter(e=>paid.has(e.code));if(dup.length&&!$('adjAllowDup').checked)return adjMsg(`这些人本月已在其他批次：${dup.slice(0,5).map(e=>e.code).join('、')}${dup.length>5?' 等':''}。确认要加入，请勾选确认后再导入一次。`,true);
+  const paid=new Set((loadPaid().months[ym(b.date)]||[]).map(x=>x[0]));const dup=emps.filter(e=>paid.has(e.code));if(dup.length&&!$('adjAllowDup').checked){$('adjDupRow').hidden=false;return adjMsg(`这些人本月已在其他批次：${dup.slice(0,5).map(e=>e.code).join('、')}${dup.length>5?' 等':''}。确定要再发，请勾选下面的确认，再上传一次。`,true)}
   const w=Number($('adjWallet').value)||0,base=Math.max(0,...b.emps.map(e=>e.ord||0))+1;
   emps.forEach((e,i)=>{e.ord=base+i;e.w=w;b.emps.push(e);const a=adjNew('add',e,{group:'',reason,wallet:w,file:fname});(b.adj=b.adj||[]).push(a);const m=adjAmt(a),u=adjUsdt(a,b);auditEvt('设定','中途补发员工',`工号 ${e.code} · 钱包 ${w+1} · PHP ${fmt(m.php)} · RMB ${fmt2(m.rmb)}${u==null?'':` · USDT ${fmt2(u)}`} · 原因：${reason}${dup.includes(e)?' · 本月已在其他批次':''}`,'high')});
-  adjSave(b);$('adjAddReason').value='';$('adjAllowDup').checked=false;adjMsg(`已加入 ${emps.length} 人，由 ${wLabel(w)} 打。`);render()}
+  adjSave(b);$('adjAddReason').value='';$('adjAllowDup').checked=false;$('adjDupRow').hidden=true;adjMsg(`已加入 ${emps.length} 人，由 ${wLabel(w)} 打。`);render()}
 function adjUndo(id){const b=adjBatch();if(!b||b.ucDone)return;const i=(b.adj||[]).findIndex(a=>a.id===id);if(i<0)return;const a=b.adj[i];
   if(a.type==='hold')b.emps.push(a.e);else{const k=b.emps.findIndex(e=>e.code===a.e.code);if(k>=0)b.emps.splice(k,1)}
   b.adj.splice(i,1);adjSave(b);auditEvt('设定',a.type==='hold'?'撤销中途暂缓':'撤销中途补发',`工号 ${a.e.code} · 原因：${a.reason}`,'high');adjMsg('已撤销。');render()}
@@ -2076,6 +2100,9 @@ document.addEventListener('click',e=>{
   if(e.target.id==='chainBal'){chainCheckWallets(e.target);return}
   if(e.target.id==='chainFirst'){chainCheckFirsts(e.target);return}
   if(e.target.id==='wAuto'){if(!(st.batches||[]).length){$('batchMsg').textContent='请先导入当天核准名单。';return}{const lb=st.batches[st.batches.length-1];if(step2Missing().length||!trxWOk(lb)||!trxSplitOk(lb))return}st.orderDirty=false;st.batches.forEach(b=>{b.cleared=false;b.capMsg='';b.reqSnap=null});busy(()=>{allocAllBatches();const b=st.batches[st.batches.length-1],c=batchCells([b]),d=new Date();saveReqResult(b);st.autoMsg=`已自动排 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}：${c.map((o,w)=>`${wLabel(w)}：${o.heads} 人`).join('、')}`},'正在自动排…');return}
+  if(e.target.id==='adjToggle'){st.adjOpen=true;render();return}
+  if(e.target.id==='adjClose'){st.adjOpen=false;render();return}
+  if(e.target.id==='adjTpl'){adjTemplate(e.target);return}
   if(e.target.id==='adjHold'){adjHold();return}
   if(e.target.id==='adjExport'){adjExport(e.target);return}
   if(e.target.dataset&&e.target.dataset.adjundo){adjUndo(e.target.dataset.adjundo);return}
@@ -2398,7 +2425,7 @@ function ucAllName(cur){const ds=(st.batches||[]).map(b=>b.date).sort();return `
 $('ucAll00').addEventListener('click',e=>ucSave(ucAllRows('00'),'00',ucAllName('00'),e.currentTarget));
 $('ucAll01').addEventListener('click',e=>ucSave(ucAllRows('01'),'01',ucAllName('01'),e.currentTarget));
 
-$('adjFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const inp=e.target;if(!$('adjAddReason').value.trim()){adjMsg('请先填补发原因，再选文件。',true);inp.value='';return}readWbRows(f,(rows,err)=>{inp.value='';if(err)return adjMsg('读取失败：'+err.message,true);try{adjAddRows(rows,f.name)}catch(er){adjMsg(er.message,true)}})});
+$('adjFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const inp=e.target;if(!$('adjAddReason').value.trim()){adjMsg('请先填补发原因，再上传 Excel。',true);inp.value='';return}readWbRows(f,(rows,err)=>{inp.value='';if(err)return adjMsg('读取失败：'+err.message,true);try{adjAddRows(rows,f.name)}catch(er){adjMsg(er.message,true)}})});
 /* 已有调整记录时重新导入会清掉：先提醒一次 */
 function adjGuard(inp,cb){const b=(st.batches||[])[(st.batches||[]).length-1];if(b&&b.adj&&b.adj.length&&!st.adjOver){st.adjOver=true;adjMsg('这批已有调整记录。重新导入前请先导出作业三暂缓表；确定要导入，请再选一次文件。',true);cb(`这批已有 ${b.adj.length} 笔调整。确定要重新导入，请再选一次文件。`);inp.value='';return false}st.adjOver=false;return true}
 $('progFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;
