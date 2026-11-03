@@ -1685,11 +1685,11 @@ function importBatch(f,rows){
   const need=[['序号',kSeq],['工号',kE],['姓名',kN],['事业群',kG],['部门',kD],['实发工资PHP',kPhp],['实发工资RMB（兑人民币RMB）',kRmb],['PHP→RMB 汇率（作业一的汇率Peso）',kR],['第一次打款',kF]];
   const miss=need.filter(x=>!x[1]).map(x=>`「${x[0]}」`);
   if(miss.length)throw new Error(`名单缺少 ${miss.join('、')} 栏位，请用作业一导出的送审名单（核准后保留这些栏位）。`);
+  /* 送审名单里「发薪」是 0 的（现金、暂缓、其他）不打 USDT，只取 1 的；要先过滤，这些人汇率空白不该挡住导入 */
+  const kPay=keys.find(k=>norm(k)==='发薪');if(kPay)rows=rows.filter(r=>String(r[kPay]??'').trim()==='1');
   {const bad=rows.filter(r=>toNum(r[kPhp])>0&&!(toNum(r[kR])>0)).map(r=>String(r[kE]??'').trim()).filter(Boolean);
    if(bad.length)throw new Error(`「${kR}」有 ${bad.length} 人是空的或 0（${bad.slice(0,5).join('、')}${bad.length>5?' 等':''}），请回作业一确认「汇率Peso」后重新导出。`)}
   const t=(r,k)=>k?String(r[k]??'').trim():'';
-  /* 送审名单里「发薪」是 0 的（现金、暂缓、其他）不打 USDT，只取 1 的 */
-  const kPay=keys.find(k=>norm(k)==='发薪');if(kPay)rows=rows.filter(r=>String(r[kPay]??'').trim()==='1');
   const emps=[];let date='';
   rows.forEach((r,ri)=>{const a=toNum(r[kPhp]);if(!isFinite(a)||a<=0)return;if(!date&&kDt)date=normDate(r[kDt]);
     emps.push({ord:ri,seqRaw:kSeq?String(r[kSeq]??'').trim().replace(/\.0+$/,''):'',seq:kSeq?(toNum(r[kSeq])||ri+1):ri+1,a,code:t(r,kE),name:t(r,kN),g:t(r,kG),b:t(r,kB),d:t(r,kD),addr:t(r,kAd),month:normMonth(t(r,kM)),w:0,rmbF:toNum(r[kRmb]),rateF:toNum(r[kR]),first:kF?isYes(t(r,kF)):undefined})});
