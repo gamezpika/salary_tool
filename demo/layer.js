@@ -87,7 +87,7 @@ const CLICK={autoAll:['操作','作业一 自动排'],reset:['操作','作业一
 document.addEventListener('click',e=>{if(!me)return;const jb=e.target.closest&&e.target.closest('nav.jobs [data-job]');
   if(jb){const j=Number(jb.dataset.job);if(!me.jobs.includes(j)){e.preventDefault();e.stopImmediatePropagation();log('权限','尝试进入没有权限的作业',JOBN[j],'warn');toast(`你的账号没有「${JOBN[j]}」的权限。`);return}setTimeout(renderBar,0);return}
   const b=e.target.closest&&e.target.closest('button');if(b&&CLICK[b.id]&&!b.disabled)log(CLICK[b.id][0],CLICK[b.id][1],'')},true);
-document.addEventListener('click',e=>{if(!me||!e.target.closest)return;const b=e.target.closest('[data-worder],#wOrderReset');if(!b||b.disabled)return;setTimeout(()=>log('设定','更改 USDT 分配顺序',[...document.querySelectorAll('#wOrderChips .rc')].map(x=>x.textContent.replace(/[↑↓\d]/g,'')).join(' → ')),0)});
+document.addEventListener('change',e=>{if(!me||e.target.dataset?.wrule===undefined)return;setTimeout(()=>log('设定','更改 USDT 分配规则',[...document.querySelectorAll('#wOrderChips input:checked')].map(x=>x.parentElement.textContent).join('、')),0)});
 
 /* ---------- 记录：设定变更（改动前 → 改动后） ---------- */
 document.addEventListener('focusin',e=>{const t=e.target;if(t&&t.matches&&t.matches('input,select'))t.__dmB=t.tagName==='SELECT'?(t.options[t.selectedIndex]||{}).text:t.value},true);

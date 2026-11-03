@@ -187,15 +187,15 @@ test('设定：白名单、作业权限、版本冲突、改钱包地址进记�
   assert.ok(WALLETS in (await pay.get('/api/settings')).json.values);
 });
 
-test('USDT 分配顺序存到服务器共用，并写进记录', async () => {
+test('USDT 分配规则存到服务器共用，并写进记录', async () => {
   const key = 'payroll-allocator-wcfg-v1', c = await login('req1', created.req1.pw);
-  const v = order => JSON.stringify({ trxWs: [0], maxW: 0, order });
-  const r1 = await c.put(`/api/settings/${key}`, { value: v(['serial', 'amount', 'dept', 'heads']), version: 0 });
+  const v = urules => JSON.stringify({ trxWs: [0], maxW: 0, urules });
+  const r1 = await c.put(`/api/settings/${key}`, { value: v(['serial', 'amount', 'dept']), version: 0 });
   assert.equal(r1.status, 200);
-  assert.equal((await c.put(`/api/settings/${key}`, { value: v(['heads', 'serial', 'amount', 'dept']), version: r1.json.version })).status, 200);
+  assert.equal((await c.put(`/api/settings/${key}`, { value: v(['amount', 'heads']), version: r1.json.version })).status, 200);
   const l = (await lastLogs(1))[0];
-  assert.equal(l.act, '更改 USDT 分配顺序');
-  assert.equal(l.det, '序号连续＞金额平均＞部门尽量不拆开＞人数平均 → 人数平均＞序号连续＞金额平均＞部门尽量不拆开');
+  assert.equal(l.act, '更改 USDT 分配规则');
+  assert.equal(l.det, '序号连续、金额平均、部门尽量不拆开 → 金额平均、人数平均');
 });
 
 test('操作记录：资料库层禁止修改和删除；验证能发现偷改', async () => {
