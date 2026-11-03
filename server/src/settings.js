@@ -6,7 +6,7 @@ const SETTINGS = {
   [PFX + 'capdefault-v1']: { jobs: [1], label: '每天预计拨款' },
   [PFX + 'pickmode-v1']: { jobs: [1], label: '排程方式' },
   [PFX + 'rules-v1']: { jobs: [1], label: '排程条件' },
-  [PFX + 'holdgroups-v1']: { jobs: [1], label: '暂缓分组' },
+  [PFX + 'holdgroups-v1']: { jobs: [1], readJobs: [1, 3], label: '暂缓分组' },
   [PFX + 'wallets-v1']: { jobs: [2, 3], label: '出款钱包', wallets: true },
   [PFX + 'wcap-v1']: { jobs: [2, 3], label: '每个钱包上限' },
   [PFX + 'wcfg-v1']: { jobs: [2, 3], label: '分钱包条件', wcfg: true },
@@ -15,6 +15,7 @@ const SETTINGS = {
   [PFX + 'lasttrxw-v1']: { jobs: [2, 3], label: '上次打 TRX 的钱包', silent: true },
   [PFX + 'lastpayrate']: { jobs: [3], label: '上次打款汇率', silent: true },
 };
+const canRead = (user, key) => !!SETTINGS[key] && (SETTINGS[key].readJobs || SETTINGS[key].jobs).some(j => user.jobs.includes(j));
 const canUse = (user, key) => !!SETTINGS[key] && SETTINGS[key].jobs.some(j => user.jobs.includes(j));
 const mask = a => { a = String(a || ''); return a.length > 12 ? `${a.slice(0, 5)}…${a.slice(-4)}` : (a || '（空白）'); };
 const RULE = { serial: '序号连续', amount: '金额平均', heads: '人数平均', dept: '部门尽量不拆开' };
@@ -44,4 +45,4 @@ function describeChange(key, before, after) {
   const short = v => v == null || (String(v).length <= 80 && !/^[[{]/.test(String(v)));
   return [{ act: `更改${s.label}`, det: short(before) && short(after) ? `${before ?? '（空白）'} → ${after}` : '内容已更新', risk: '' }];
 }
-module.exports = { SETTINGS, canUse, describeChange };
+module.exports = { SETTINGS, canUse, canRead, describeChange };

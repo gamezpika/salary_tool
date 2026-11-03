@@ -198,6 +198,14 @@ test('USDT 分配规则存到服务器共用，并写进记录', async () => {
   assert.equal(l.det, '序号连续、金额平均、部门尽量不拆开 → 金额平均、人数平均');
 });
 
+test('打款的人读得到暂缓分组，但不能改', async () => {
+  const key = 'payroll-allocator-holdgroups-v1', pl = await login('plan1', created.plan1.pw), pay = await makeUser('pay9', '打款');
+  assert.equal((await pl.put(`/api/settings/${key}`, { value: '{"groups":["SSC暂缓","HQ暂缓"],"map":{},"emp":{},"skip":{}}', version: 0 })).status, 200);
+  const r = await pay.get('/api/settings');
+  assert.ok(key in r.json.values); assert.ok(!r.json.writable.includes(key));
+  assert.equal((await pay.put(`/api/settings/${key}`, { value: '{}', version: 1 })).status, 403);
+});
+
 test('操作记录：资料库层禁止修改和删除；验证能发现偷改', async () => {
   assert.throws(() => app.db.exec("UPDATE audit SET det='x'"), /append-only/);
   assert.throws(() => app.db.exec('DELETE FROM audit'), /append-only/);

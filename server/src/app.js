@@ -5,7 +5,7 @@ const path = require('node:path');
 const { openDb } = require('./db');
 const { loadAuditKey, createAudit } = require('./audit');
 const A = require('./auth');
-const { SETTINGS, canUse, describeChange } = require('./settings');
+const { SETTINGS, canUse, canRead, describeChange } = require('./settings');
 const { createSource, inScope, SourceNotAvailable } = require('./datasource');
 
 class HttpError extends Error {
@@ -166,7 +166,7 @@ function createApp(config, log = console) {
   /* 设定：只回传这个账号的作业用得到的 */
   route('GET', '/api/settings', async c => {
     const u = needUser(c), values = {};
-    for (const r of q.allSettings.all()) if (canUse(u, r.key)) values[r.key] = { value: r.value, version: r.version };
+    for (const r of q.allSettings.all()) if (canRead(u, r.key)) values[r.key] = { value: r.value, version: r.version };
     return { values, writable: Object.keys(SETTINGS).filter(k => canUse(u, k)) };
   });
   route('PUT', '/api/settings/:key', async c => {
