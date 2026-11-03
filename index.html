@@ -375,6 +375,9 @@ small.wh.neg{color:var(--danger);font-weight:600}
 .rc{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 4px;border:1px solid var(--line);border-radius:14px;background:var(--panel);font-size:13px}
 .rc b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--w2);color:#fff;font-size:11px}
 .rc #ruleCap{color:var(--muted)}
+.ordb{border:1px solid var(--line);background:var(--soft);border-radius:4px;padding:0 5px;font-size:12px;line-height:18px;color:var(--ink)}
+.ordb:hover:not(:disabled){border-color:var(--muted)}
+.btn.sm{padding:3px 10px;font-size:13px}
 .rulechips .muted{color:var(--muted)}
 #cfgTrxWarn.muted{color:var(--muted);font-weight:400}
 #cfgTrxWarn.neg{font-weight:600}
@@ -501,10 +504,10 @@ tfoot tr.quota td{font-weight:400;color:var(--muted);font-size:13px}
       <div class="frow cfgrow"><label>固定由哪个钱包打 TRX<br><small>（第一次打款的 30 TRX）</small></label><span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span id="cfgTrx" class="chips"></span><span class="neg" id="cfgTrxWarn" style="font-size:13px">请至少勾一个，才能按「自动排」</span></span></div>
       <div class="frow cfgrow" id="cfgSplitRow" hidden><label>第一次打款的 TRX<br><small>各钱包打几人</small></label><div id="cfgSplit" class="trxsplit" style="margin:0;flex-direction:column;align-items:flex-start;max-width:460px"></div></div>
       <div class="frow cfgrow"><label>本次由哪个钱包打 USDT</label><span id="cfgUsdt" class="chips"></span></div>
-      <div class="frow cfgrow"><label>USDT 分配顺序</label><span class="rulechips"><span class="rc"><b>1</b>序号连续</span><span class="rc"><b>2</b>金额平均</span><span class="rc"><b>3</b>部门尽量不拆开</span><span id="ruleCap" hidden></span></span></div>
+      <div class="frow cfgrow"><label>USDT 分配顺序</label><span class="rulechips" id="wOrderChips"></span><span id="ruleCap" hidden></span></div>
       <p class="fhint" id="splitHint" hidden>预设平均分。</p>
     </div>
-    <div class="toolbar" style="margin:0 0 14px"><button class="btn primary" id="wAuto">自动排</button><button class="btn" id="wClear">全部清空</button><span class="automsg" id="wAutoMsg" hidden></span><span class="hint" style="margin:0;text-align:left;flex-basis:100%">自动排：照序号连续分段给各钱包，金额平均，差不多时尽量在部门交界切开。全部清空：清掉排的结果（名单保留，可以再按自动排）。</span></div>
+    <div class="toolbar" style="margin:0 0 14px"><button class="btn primary" id="wAuto">自动排</button><button class="btn" id="wClear">全部清空</button><span class="automsg" id="wAutoMsg" hidden></span><span class="hint" style="margin:0;text-align:left;flex-basis:100%"><span id="wAutoHint"></span>全部清空：清掉排的结果（名单保留，可以再按自动排）。</span></div>
     <div id="walletDays"></div>
     <div class="row" id="reqExportBar" style="margin-top:12px" hidden><button class="btn primary" id="reqExportBtn">导出请款单（照请款信格式）</button></div>
   </section>
@@ -1162,18 +1165,50 @@ const wInfo=w=>st.wallets[w]||{name:`钱包 ${w+1}`,addr:'',payer:''};
 const wLabel=w=>{const n=wName(w),p=(wInfo(w).payer||'').trim();return p||n};
 /* ---------- 钱包分配：资料来源是「每天核准后从 OA 导出的名单」，跟预估排程无关 ---------- */
 /* 分钱包：以事业处为一组；金额、人数、第一次打款人数都平均；一般事业处最多拆 2 个钱包，超过当天一半金额的才拆更多；第一次打款的人不受限制 */
-/* 照序号连续分段：每个钱包拿一段连续的序号（对帐方便）。
-   优先顺序：① 序号连续 ② 不超过每个钱包上限（打款时） ③ 金额平均 ④ 金额差不多时，尽量在部门交界切开。用动态规划找最好的切点 */
-function allocSerial(emps,K,capA){capA=capA>0?capA:Infinity;const sm=serialMap();
+/* USDT 分配顺序：四个条件可调整，排在前面的优先；每个钱包上限永远最优先（打款时） */
+const WORDER_DEF=['serial','amount','dept','heads'],WORDER_NAME={serial:'序号连续',amount:'金额平均',heads:'人数平均',dept:'部门尽量不拆开'};
+function wOrder(){const a=Array.isArray(st.wcfg&&st.wcfg.order)?st.wcfg.order:[],o=a.filter((x,i)=>WORDER_DEF.includes(x)&&a.indexOf(x)===i);WORDER_DEF.forEach(x=>{if(!o.includes(x))o.push(x)});return o}
+function allocSerial(emps,K,capA,order){order=order||wOrder();if(order[0]!=='serial')return allocFree(emps,K,capA,order);return allocSegments(emps,K,capA,order)}
+/* 序号排第一：每个钱包拿一段连续的序号（对帐方便），用动态规划找最好的切点；其余条件依顺序决定权重 */
+function allocSegments(emps,K,capA,order){capA=capA>0?capA:Infinity;const sm=serialMap();
   const L=emps.map((e,i)=>({e,i,s:String(sm.get(e)||''),a:e.a,d:[e.g,e.b,e.d].join('|')})).sort((x,y)=>x.s.localeCompare(y.s,undefined,{numeric:true})||x.i-y.i);
-  const n=L.length;if(!n)return 0;const Km=Math.min(K,n),P=[0];L.forEach(x=>P.push(P[P.length-1]+x.a));const T=P[n]/Km||1;
-  const bound=j=>j<=0||j>=n||L[j-1].d!==L[j].d,CUT=0.02;
-  const seg=(i,j)=>{const S=P[j]-P[i];return 100*((S-T)/T)**2+(S>capA+0.5?1e7*(1+(S-capA)/T)**2:0)};
+  const n=L.length;if(!n)return 0;const Km=Math.min(K,n),P=[0];L.forEach(x=>P.push(P[P.length-1]+x.a));const T=P[n]/Km||1,Tc=n/Km;
+  const rest=order.filter(x=>x!=='serial'),SQ=[100,1,0.01],CUTW=[100,0.02,0.0002],wa=SQ[rest.indexOf('amount')],wh=SQ[rest.indexOf('heads')],CUT=CUTW[rest.indexOf('dept')];
+  const bound=j=>j<=0||j>=n||L[j-1].d!==L[j].d;
+  const seg=(i,j)=>{const S=P[j]-P[i];return wa*((S-T)/T)**2+wh*((j-i-Tc)/Tc)**2+(S>capA+0.5?1e7*(1+(S-capA)/T)**2:0)};
   const f=[...Array(Km+1)].map(()=>new Float64Array(n+1).fill(Infinity)),bk=[...Array(Km+1)].map(()=>new Int32Array(n+1));f[0][0]=0;
   for(let k=1;k<=Km;k++)for(let j=k;j<=n-(Km-k);j++){const pen=j<n&&!bound(j)?CUT:0;let best=Infinity,bi=k-1;
     for(let i=k-1;i<j;i++){const v=f[k-1][i];if(v===Infinity)continue;const c=v+seg(i,j);if(c<best){best=c;bi=i}}f[k][j]=best+pen;bk[k][j]=bi}
   let j=n,maxA=0;for(let k=Km;k>=1;k--){const i=bk[k][j];for(let t=i;t<j;t++)L[t].e.w=k-1;maxA=Math.max(maxA,P[j]-P[i]);j=i}
   return maxA}
+/* 序号不是第一：先试几种起始分法，再一步步调整（搬一个人、对调两个人、搬一个部门在这钱包的人）。
+   只用固定种子和固定步数，同一份名单每次结果都一样 */
+function allocFree(emps,K,capA,order){capA=capA>0?capA:Infinity;const sm=serialMap();
+  const L=emps.map((e,i)=>({e,i,s:String(sm.get(e)||''),a:e.a,d:[e.g,e.b,e.d].join('|')})).sort((x,y)=>x.s.localeCompare(y.s,undefined,{numeric:true})||x.i-y.i);
+  const n=L.length;if(!n)return 0;const Km=Math.max(1,Math.min(K,n)),A=L.map(x=>x.a),total=A.reduce((a,b)=>a+b,0),T=total/Km||1,Tc=n/Km;
+  const dn=new Map();L.forEach(x=>{if(!dn.has(x.d))dn.set(x.d,dn.size)});const D=L.map(x=>dn.get(x.d)),Dn=dn.size;
+  const lv=[1e4,100,1,0.01],wt=k=>lv[order.indexOf(k)],wa=wt('amount'),wh=wt('heads'),wd=wt('dept'),ws=wt('serial');
+  const members=[...Array(Dn)].map(()=>[]);D.forEach((d,i)=>members[d].push(i));
+  const climb=init=>{const w=Int32Array.from(init),S=new Float64Array(Km),C=new Int32Array(Km),dc=[...Array(Dn)].map(()=>new Int32Array(Km));let extra=0,breaks=0;
+    for(let i=0;i<n;i++){S[w[i]]+=A[i];C[w[i]]++;if(dc[D[i]][w[i]]++===0)extra++;if(i&&w[i]!==w[i-1])breaks++}extra-=Dn;
+    const score=()=>{let v=wd*extra/Dn+ws*breaks/Math.max(1,n-1);for(let k=0;k<Km;k++){v+=wa*((S[k]-T)/T)**2+wh*((C[k]-Tc)/Tc)**2;if(S[k]>capA+0.5)v+=1e9*(1+(S[k]-capA)/T)**2}return v};
+    const put=(i,to)=>{const fr=w[i];if(fr===to)return;if(i>0)breaks+=(to!==w[i-1])-(fr!==w[i-1]);if(i<n-1)breaks+=(to!==w[i+1])-(fr!==w[i+1]);S[fr]-=A[i];S[to]+=A[i];C[fr]--;C[to]++;const c=dc[D[i]];if(--c[fr]===0)extra--;if(c[to]++===0)extra++;w[i]=to};
+    let cur=score(),x=20261103;const rnd=m=>{x=(x*48271)%2147483647;return x%m};
+    const steps=Math.min(200000,Math.max(5000,30*n*Km));
+    for(let it=0;it<steps;it++){const r=rnd(100),undo=[];
+      if(r<55){const i=rnd(n),to=rnd(Km);if(to===w[i])continue;undo.push([i,w[i]]);put(i,to)}
+      else if(r<85){const i=rnd(n),j=rnd(n);if(w[i]===w[j])continue;const a=w[i],b=w[j];undo.push([i,a],[j,b]);put(i,b);put(j,a)}
+      else{const d=rnd(Dn),i0=members[d][rnd(members[d].length)],fr=w[i0],to=rnd(Km);if(fr===to)continue;members[d].forEach(i=>{if(w[i]===fr){undo.push([i,fr]);put(i,to)}})}
+      const v=score();if(v<cur-1e-12)cur=v;else undo.forEach(([i,t])=>put(i,t))}
+    return {w,v:cur}};
+  const minW=S=>{let m=0;for(let k=1;k<Km;k++)if(S[k]<S[m])m=k;return m};
+  const starts=[];
+  {const w=new Int32Array(n);let run=0;for(let i=0;i<n;i++){w[i]=Math.min(Km-1,Math.floor(run/T));run+=A[i]}starts.push(w)}
+  {const w=new Int32Array(n),S=new Float64Array(Km);members.map((m,d)=>({m,a:m.reduce((v,i)=>v+A[i],0),d})).sort((p,q)=>q.a-p.a||p.d-q.d).forEach(g=>{const k=minW(S);g.m.forEach(i=>{w[i]=k});S[k]+=g.a});starts.push(w)}
+  {const w=new Int32Array(n),S=new Float64Array(Km);[...A.keys()].sort((p,q)=>A[q]-A[p]||p-q).forEach(i=>{const k=minW(S);w[i]=k;S[k]+=A[i]});starts.push(w)}
+  {const w=new Int32Array(n);for(let i=0;i<n;i++)w[i]=i%Km;starts.push(w)}
+  let best=null;starts.forEach(s=>{const r=climb(s);if(!best||r.v<best.v)best=r});
+  const S=new Float64Array(Km);L.forEach((x,i)=>{x.e.w=best.w[i];S[best.w[i]]+=x.a});return Math.max(...S)}
 function allocCore(units,K,capA){K=K||W;capA=capA>0?capA:Infinity;
   /* 多试几种起始排法，取最平均的结果，避免卡在局部最好。有每日上限时：超过上限的结果一律不要；
      一般规则（事业处最多拆 2 个钱包）排不进上限，才放宽拆分 */
@@ -1237,7 +1272,7 @@ function allocTry(units,seed,K,t0,capA,relax){t0=t0||Date.now();capA=capA>0?capA
 /* 条件对象：target 是「事业群」或「事业群|事业处」 */
 function wruleHits(r,key){const [g,b]=key.split('|');return r.target==='*'||r.target===g||r.target===key}
 const WRKEY='payroll-allocator-wrules-v1',WCKEY='payroll-allocator-wcfg-v1';
-function loadWcfg(){try{const v=JSON.parse(localStorage.getItem(WCKEY)||'null');if(v){const mx=Number(v.maxW)||0;return {trxWs:Array.isArray(v.trxWs)?v.trxWs:[],usdtWs:Array.isArray(v.usdtWs)?v.usdtWs:(mx>0?[...Array(mx).keys()]:[]),maxW:0}}}catch(_){}
+function loadWcfg(){try{const v=JSON.parse(localStorage.getItem(WCKEY)||'null');if(v){const mx=Number(v.maxW)||0;return {trxWs:Array.isArray(v.trxWs)?v.trxWs:[],usdtWs:Array.isArray(v.usdtWs)?v.usdtWs:(mx>0?[...Array(mx).keys()]:[]),maxW:0,...(Array.isArray(v.order)?{order:v.order}:{})}}}catch(_){}
   /* 从旧的条件转过来：固定打 TRX 的钱包 */
   try{const old=JSON.parse(localStorage.getItem(WRKEY)||'[]');const r=(old||[]).find(r=>r&&r.type==='trxw');if(r)return {trxWs:Array.isArray(r.ws)?r.ws:(r.w!=null?[r.w]:[]),maxW:0}}catch(_){}
   return {trxWs:[],maxW:0}}
@@ -1314,6 +1349,8 @@ function renderWallet(){
         $('cfgSplit').innerHTML=`<div class="tshead">第一次打款共 <b>${f}</b> 人，各钱包打几人：${b.trxPick?'<span class="rtag trxtag">已逐人指定</span>':''}</div>${uc.map(x=>`<label class="tsrow"><span class="wtag" style="--wc:${wc(x.w)}"></span><span class="tsname">${esc(wLabel(x.w))}</span><input type="number" min="0" step="1" class="fin sm" data-tsplit="${bi}~${x.w}" value="${x.n}" ${b.trxPick?'readonly title="已逐人指定，要改请按「逐人指定」"':''}> 人<small class="muted" data-tsamt="${x.w}">${per?`＝ ${fmt(x.n*per)} TRX`:''}</small></label>`).join('')}
         <div class="tsfoot"><span id="tsSum" data-tot="${f}" class="${ok?'okc':'neg'}">合计 ${sum}／${f} 人${ok?' ✓':''}</span><button class="btn sm" data-tsreset="${bi}">平均分</button><button class="btn sm" data-tspick="${bi}">逐人指定…</button></div>`}}}
    $('ruleCap').textContent=Number(st.wcap)>0?` ${fmt(st.wcap)} USDT `:'（没设）';
+   {const o=wOrder(),isDef=o.join()===WORDER_DEF.join();$('wOrderChips').innerHTML=o.map((k,i)=>`<span class="rc"><b>${i+1}</b>${WORDER_NAME[k]}<button class="ordb" data-worder="${i}:-1" ${i?'':'disabled'} aria-label="${WORDER_NAME[k]} 往前">↑</button><button class="ordb" data-worder="${i}:1" ${i<o.length-1?'':'disabled'} aria-label="${WORDER_NAME[k]} 往后">↓</button></span>`).join('')+`<button class="btn sm" id="wOrderReset" ${isDef?'disabled':''}>恢复预设</button>${st.orderDirty?'<span class="neg" style="font-size:13px;font-weight:600">顺序改了，按「自动排」才生效</span>':''}`;
+    $('wAutoHint').textContent=(o[0]==='serial'?'自动排：每个钱包拿一段连续的序号，再照顺序顾后面的条件。':'自动排：序号没排第一，同一个钱包的序号可能跳号，对帐时要对照各钱包的名单。')+'每个钱包上限永远最优先（打款时）。'}
    const uw=usdtWs();$('cfgUsdt').innerHTML=st.wallets.map((x,w)=>`<label class="chip"><input type="checkbox" data-cfgusdt="${w}" ${uw.includes(w)?'checked':''}>${esc(wLabel(w))}</label>`).join('')}
   if(!$('wsetBody').contains(document.activeElement)){
     $('wsetBody').innerHTML=st.wallets.map((x,w)=>{const c=addrCheck(x.addr);return `<tr><td><span class="wtag" style="--wc:${wc(w)}"></span>${w+1}${w>=4?` <button class="x" data-wsdel="${w}">删除</button>`:''}</td><td><input class="wsin" data-wset="${w}" data-k="both" value="${esc(x.payer||x.name)}" placeholder="姓名" aria-label="钱包 ${w+1} 打款人员"></td><td><input class="wsin addr" data-wset="${w}" data-k="addr" value="${esc(x.addr)}" placeholder="T 开头，34 码" aria-label="钱包 ${w+1} 出款地址"></td><td>${c?`<span class="bad">${esc(c)}</span>`:'<span class="ok">✓</span>'}</td><td>${x.bal&&x.bal.trx!=null&&x.bal.src==='chain'?`<div class="balval">${fmt3(x.bal.trx)}</div>`:''}<div class="balst" data-chk="trx-${w}"></div></td><td>${x.bal&&x.bal.usdt!=null&&x.bal.src==='chain'?`<div class="balval">${fmt2(x.bal.usdt)}</div>`:''}<div class="balst" data-chk="usdt-${w}"></div></td></tr>`}).join('');
@@ -1933,7 +1970,9 @@ document.addEventListener('click',e=>{
   const ud=e.target.closest('[data-ucdl]');if(ud){const [bi,w,cur]=ud.dataset.ucdl.split('~');ucExport(Number(bi),Number(w),cur,ud);return}
   if(e.target.id==='chainBal'){chainCheckWallets(e.target);return}
   if(e.target.id==='chainFirst'){chainCheckFirsts(e.target);return}
-  if(e.target.id==='wAuto'){if(!(st.batches||[]).length){$('batchMsg').textContent='请先导入当天核准名单。';return}{const lb=st.batches[st.batches.length-1];if(step2Missing().length||!trxWOk(lb)||!trxSplitOk(lb))return}st.batches.forEach(b=>{b.cleared=false;b.capMsg='';b.reqSnap=null});busy(()=>{allocAllBatches();const b=st.batches[st.batches.length-1],c=batchCells([b]),d=new Date();saveReqResult(b);st.autoMsg=`已自动排 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}：${c.map((o,w)=>`${wLabel(w)}：${o.heads} 人`).join('、')}`},'正在自动排…');return}
+  if(e.target.id==='wAuto'){if(!(st.batches||[]).length){$('batchMsg').textContent='请先导入当天核准名单。';return}{const lb=st.batches[st.batches.length-1];if(step2Missing().length||!trxWOk(lb)||!trxSplitOk(lb))return}st.orderDirty=false;st.batches.forEach(b=>{b.cleared=false;b.capMsg='';b.reqSnap=null});busy(()=>{allocAllBatches();const b=st.batches[st.batches.length-1],c=batchCells([b]),d=new Date();saveReqResult(b);st.autoMsg=`已自动排 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}：${c.map((o,w)=>`${wLabel(w)}：${o.heads} 人`).join('、')}`},'正在自动排…');return}
+  {const ob=e.target.closest&&e.target.closest('[data-worder]');if(ob){const [i,d]=ob.dataset.worder.split(':').map(Number),o=wOrder(),j=i+d;if(j<0||j>=o.length)return;[o[i],o[j]]=[o[j],o[i]];st.wcfg.order=o;saveWcfg();st.orderDirty=true;render();return}}
+  if(e.target.id==='wOrderReset'){st.wcfg.order=WORDER_DEF.slice();saveWcfg();st.orderDirty=true;render();return}
   if(e.target.id==='wClear'){(st.batches||[]).forEach(b=>{b.cleared=true;b.reqSnap=null;b.capMsg=''});st.ucOpen={};st.autoMsg='已清空排的结果（名单还在），按「自动排」重新排。';render();return}
   if(e.target.id==='wsAdd'){st.wallets.push({name:`钱包 ${st.wallets.length+1}`,addr:'',payer:''});saveWallets();busy(allocAllBatches);return}
   const wsd=e.target.closest('[data-wsdel]');if(wsd){wsd.blur();st.wallets.splice(Number(wsd.dataset.wsdel),1);saveWallets();busy(allocAllBatches);return}
