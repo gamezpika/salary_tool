@@ -2622,7 +2622,7 @@ document.addEventListener('change',e=>{if(!me)return;const t=e.target,D=t.datase
   if(act)log('设定',act,det,risk);t.__dmB=undefined},true);
 
 /* ---------- 后台 ---------- */
-let aTab='home',F={u:'',c:'',risk:false,q:''},confirmReset=false;
+let aTab='home',F={u:'',c:'',risk:false,q:''};
 function openAdmin(){if(!me||me.back==='none')return;$('dmAdmin').hidden=false;renderAdmin();log('权限','进入后台','')}
 const riskPill=r=>r==='high'?'<span class="dm-pill high">高风险</span>':r==='warn'?'<span class="dm-pill warn">留意</span>':'';
 const logRow=l=>`<tr><td class="nw">${esc(fmtT(l.t))}</td><td class="nw">${esc(l.n)}<small>${esc(l.u)}</small></td><td class="nw"><span class="dm-pill">${esc(l.cat)}</span></td><td>${esc(l.act)} ${riskPill(l.risk)}</td><td>${esc(l.det)}</td></tr>`;
@@ -2644,8 +2644,7 @@ function renderAdmin(){const A=$('dmAdmin'),act=document.activeElement,keep=act&
   if(aTab==='users'){const dis=ro?'disabled':'';
     body=`${ro?'<p class="dm-note">你的后台权限是只读，不能修改账号。</p>':`<div class="dm-add"><input class="dm-in" id="dmNA" placeholder="账号" aria-label="账号"><input class="dm-in" id="dmNN" placeholder="姓名" aria-label="姓名"><select class="dm-in" id="dmNR" aria-label="角色">${Object.keys(ROLES).map(r=>`<option>${r}</option>`).join('')}</select><button class="dm-btn pri" id="dmNAdd">新增账号</button><span class="dm-note" id="dmNE"></span></div>`}
     <div class="dm-tw"><table class="dm-t" style="min-width:1120px"><thead><tr><th>姓名</th><th>账号</th><th>角色</th><th>可用作业</th><th>可看范围</th><th>后台</th><th>状态</th><th>最后登录</th><th></th></tr></thead><tbody>${db.users.map(u=>{const lock=u.fails>=5,self=u.acc===me.acc;return `<tr><td><input class="dm-in" data-dmname="${esc(u.acc)}" value="${esc(u.name)}" ${dis} style="width:110px" aria-label="${esc(u.name)} 姓名"></td><td><input class="dm-in" data-dmacc="${esc(u.acc)}" value="${esc(u.acc)}" ${dis} style="width:120px" aria-label="${esc(u.name)} 账号"></td><td><select class="dm-in" data-dmrole="${esc(u.acc)}" ${dis||(self?'disabled':'')} aria-label="${esc(u.name)} 角色">${Object.keys(ROLES).map(r=>`<option ${u.role===r?'selected':''}>${r}</option>`).join('')}</select></td><td><span class="dm-jobs">${[1,2,3].map(j=>`<label><input type="checkbox" data-dmj="${esc(u.acc)}" value="${j}" ${u.jobs.includes(j)?'checked':''} ${dis} aria-label="${esc(u.name)} ${JOBN[j]}">${'一二三'[j-1]}</label>`).join('')}</span></td><td><button class="dm-btn dm-scb" data-dmsco="${esc(u.acc)}" aria-expanded="${scopeOpen===u.acc}">${esc(scopeText(u))}</button></td><td><select class="dm-in" data-dmb="${esc(u.acc)}" ${dis||(self?'disabled':'')} aria-label="${esc(u.name)} 后台权限">${Object.entries(BACKN).map(([k,n])=>`<option value="${k}" ${u.back===k?'selected':''}>${n}</option>`).join('')}</select></td><td class="nw">${lock?'<span class="dm-pill high">已锁定</span>':u.on?'<span class="dm-pill ok">启用</span>':'<span class="dm-pill">已停用</span>'}</td><td class="nw">${u.last?esc(fmtT(u.last)):'—'}</td><td class="nw">${ro?'':lock?`<button class="dm-btn" data-dmun="${esc(u.acc)}">解除锁定</button>`:self?'':`<button class="dm-btn ${u.on?'dang':''}" data-dmtog="${esc(u.acc)}">${u.on?'停用':'启用'}</button>`}</td></tr>${scopeOpen===u.acc?scopeRow(u,ro):''}`}).join('')}</tbody></table></div>
-    <p class="dm-note">所有账号的密码目前都是 1234。改角色时，可用作业和后台权限会照新角色重新带入，之后还可以个别调整。旧记录保留当时的账号和姓名。自己的角色和后台权限不能自己改。可看范围的选项来自最新导入的 Excel：每次导入月度薪资表都会更新，核准名单和打款名单只会补上新的单位。什么都不勾代表全部。按照目前的方案，后端不存明细，所以范围只是过滤画面，真正的管控要靠每个人在 OA 只导出自己范围的名单。</p>
-    ${ro?'':`<div><button class="dm-btn dang" id="dmReset">${confirmReset?'再按一次确认：清掉示范账号和记录':'重置示范资料'}</button></div>`}`}
+    <p class="dm-note">所有账号的密码目前都是 1234。改角色时，可用作业和后台权限会照新角色重新带入，之后还可以个别调整。旧记录保留当时的账号和姓名。自己的角色和后台权限不能自己改。可看范围的选项来自最新导入的 Excel：每次导入月度薪资表都会更新，核准名单和打款名单只会补上新的单位。什么都不勾代表全部。按照目前的方案，后端不存明细，所以范围只是过滤画面，真正的管控要靠每个人在 OA 只导出自己范围的名单。</p>`}
   A.innerHTML=`<div class="dm-ain">${head}${body}</div>`;A.scrollTop=sy;
   if(keep&&$(keep.id)){const k=$(keep.id);k.focus();try{k.setSelectionRange(keep.s,keep.s)}catch(_){}}}
 let scopeOpen=null;
@@ -2661,14 +2660,13 @@ document.addEventListener('click',e=>{const A=$('dmAdmin');if(!e.target.closest|
   if(t.dataset.dmsco){scopeOpen=scopeOpen===t.dataset.dmsco?null:t.dataset.dmsco;return renderAdmin()}
   if(t.dataset.dmscl!==undefined){scopeOpen=null;return renderAdmin()}
   if(t.id==='dmOut2')return logout();
-  if(t.dataset.dmtab){aTab=t.dataset.dmtab;confirmReset=false;return renderAdmin()}
+  if(t.dataset.dmtab){aTab=t.dataset.dmtab;return renderAdmin()}
   if(t.id==='dmCopyLog'){const txt=['时间\t账号\t姓名\t类别\t操作\t内容',...filtered().map(l=>[fmtT(l.t),l.u,l.n,l.cat,l.act,l.det].join('\t'))].join('\n');const ok=()=>toast('已复制，可以贴到 Excel。');try{navigator.clipboard.writeText(txt).then(ok,()=>toast('浏览器不允许自动复制。'))}catch(_){toast('浏览器不允许自动复制。')}log('导出','复制操作记录',`${filtered().length} 笔`);return}
   if(me.back!=='full')return;
   if(t.id==='dmNAdd'){const a=$('dmNA').value.trim(),n=$('dmNN').value.trim(),r=$('dmNR').value;if(!a||!n){$('dmNE').textContent='账号和姓名都要填。';return}if(db.users.some(u=>u.acc===a)){$('dmNE').textContent='这个账号已经有了。';return}const p=ROLES[r];db.users.push({acc:a,name:n,role:r,jobs:p.jobs.slice(),scope:[],back:p.back,on:true,fails:0,last:0});chg('新增账号',`${n}（${a}）· 角色 ${r}`);return}
   if(t.dataset.dmsall){const u=db.users.find(x=>x.acc===t.dataset.dmsall),b=scopeText(u);u.scope=[];u.scopeB=[];chg('更改可看范围',`${u.name}：${b} → 全部`);if(u===me)renderBar();return}
   if(t.dataset.dmun){const u=db.users.find(x=>x.acc===t.dataset.dmun);u.fails=0;chg('解除账号锁定',`${u.name}（${u.acc}）`);return}
   if(t.dataset.dmtog){const u=db.users.find(x=>x.acc===t.dataset.dmtog);u.on=!u.on;chg(u.on?'启用账号':'停用账号',`${u.name}（${u.acc}）`);return}
-  if(t.id==='dmReset'){if(!confirmReset){confirmReset=true;return renderAdmin()}try{localStorage.removeItem(K)}catch(_){}ssSet(null);me=null;db=null;load();confirmReset=false;aTab='home';renderLogin();return}
 });
 document.addEventListener('change',e=>{const A=$('dmAdmin'),t=e.target;if(!A.contains(t))return;
   if(t.id==='dmFu'){F.u=t.value;return renderAdmin()}if(t.id==='dmFc'){F.c=t.value;return renderAdmin()}if(t.id==='dmFr'){F.risk=t.checked;return renderAdmin()}
