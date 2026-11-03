@@ -486,7 +486,6 @@ nav.jobs .job.dm-lock small::after{content:"（没有权限）";color:var(--dang
 .dm-pill.high{background:var(--dangerbg);border-color:var(--danger);color:var(--danger);font-weight:600}
 .dm-pill.warn{background:var(--sel);border-color:var(--line);color:var(--ink);font-weight:600}
 .dm-pill.ok{color:var(--ok);border-color:var(--ok)}
-.dm-seed{color:var(--muted);font-size:11.5px;margin-left:6px}
 .dm-filter{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .dm-filter label{display:inline-flex;align-items:center;gap:5px;font-size:13.5px}
 .dm-note{margin:0;color:var(--muted);font-size:13px;line-height:1.6}
@@ -2514,7 +2513,7 @@ render();
 <script>
 /* Demo 层：用浏览器模拟后端（账号、权限、操作记录）。正式版这些都在服务器上。 */
 (function(){
-const K='payroll-demo-v2',SK='payroll-demo-session',PW='1234';
+const K='payroll-demo-v3',SK='payroll-demo-session',PW='1234';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtN=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:0});
@@ -2524,35 +2523,8 @@ const ROLES={'管理员':{jobs:[1,2,3],back:'full'},'排程':{jobs:[1],back:'non
 const JOBN={1:'作业一 排程',2:'作业二 请款',3:'作业三 打款'};
 const BACKN={full:'管理',read:'只读',none:'无'};
 
-function seed(){const now=Date.now(),h=3600e3;
-  const users=[
-    {acc:'1234',name:'周主管',role:'管理员',jobs:[1,2,3],scope:[],back:'full',on:true,fails:0,last:now-1.2*h},
-    {acc:'planner',name:'林小姐',role:'排程',jobs:[1],scope:[],back:'none',on:true,fails:0,last:now-5*h},
-    {acc:'planner_a',name:'何先生',role:'排程',jobs:[1],scope:[],back:'none',on:true,fails:0,last:0},
-    {acc:'request',name:'陈小姐',role:'请款',jobs:[2],scope:[],back:'none',on:true,fails:0,last:now-3*h},
-    {acc:'payer',name:'王先生',role:'打款',jobs:[3],scope:[],back:'none',on:true,fails:0,last:now-1.5*h},
-    {acc:'auditor',name:'吴小姐',role:'查核',jobs:[],scope:[],back:'read',on:true,fails:0,last:0}];
-  const s=(ago,u,n,cat,act,det,risk)=>({t:now-ago*h,u,n,cat,act,det,risk:risk||'',seed:true});
-  const logs=[
-    s(5.2,'planner','林小姐','登录','登录成功',''),
-    s(5.1,'planner','林小姐','导入','导入本月月度薪资表','202611_薪资表.xlsx · 120 人 · PHP 3,842,500 · 指纹 8f3a1c9e02d4'),
-    s(4.9,'planner','林小姐','操作','作业一 自动排',''),
-    s(4.8,'planner','林小姐','设定','每天预计拨款','26,500,000 → 1,500,000'),
-    s(4.6,'planner','林小姐','导出','导出发薪日送审总名单','202611-发薪日送审总名单.xlsx · 指纹 b27e40aa913f'),
-    s(3.1,'request','陈小姐','登录','登录成功',''),
-    s(3.0,'request','陈小姐','导入','导入当天核准名单','核准名单_1105.xlsx · 42 人 · PHP 1,356,200 · 指纹 41dd07c6e8b1'),
-    s(2.9,'request','陈小姐','设定','更改出款钱包地址','钱包 2：TQn9Y…x3Ka → TLa2f…9rPw','high'),
-    s(2.7,'request','陈小姐','导出','导出请款单','请款单_请款日2026-11-04_打款日2026-11-05.xlsx · 指纹 c9014fe7ab22'),
-    s(2.2,'unknown_user','（未知账号）','登录','登录失败','账号不存在','warn'),
-    s(1.5,'payer','王先生','登录','登录成功',''),
-    s(1.4,'payer','王先生','导入','导入请款单','版本比对通过：与陈小姐导出的文件相同 · 指纹 c9014fe7ab22'),
-    s(1.3,'payer','王先生','设定','打款汇率','（空白） → 7.12','high'),
-    s(1.25,'payer','王先生','导出','下载 UC 打款文件','UC打款_2026-11-05_00_钱包1.xlsx · 指纹 77ab1d04c3e9','high'),
-    s(1.2,'1234','周主管','登录','登录成功','')
-  ].reverse();
-  return {users,logs};
-}
-let db;function load(){try{db=JSON.parse(localStorage.getItem(K)||'null')}catch(_){db=null}if(!db||!db.users)db=seed();db.org=db.org||{};db.users.forEach(u=>{u.scope=(u.scope||[]).filter(g=>g!=='示范事业群A');u.scopeB=u.scopeB||[]});save()}
+function seed(){return {users:[{acc:'1234',name:'管理员',role:'管理员',jobs:[1,2,3],scope:[],scopeB:[],back:'full',on:true,fails:0,last:0}],logs:[],org:{}}}
+let db;function load(){try{db=JSON.parse(localStorage.getItem(K)||'null')}catch(_){db=null}if(!db||!db.users)db=seed();db.org=db.org||{};db.users.forEach(u=>{u.scope=(u.scope||[]);u.scopeB=u.scopeB||[]});save()}
 function save(){try{localStorage.setItem(K,JSON.stringify(db))}catch(_){}}
 let me=null;
 /* 范围：scope=整个事业群，scopeB=单独的事业处（存成「事业群|事业处」）；两者都空=全部 */
@@ -2614,7 +2586,7 @@ function finishImport(){const p=pend;if(!p)return;pend=null;const r=parsed;parse
   p.hash.then(h=>{const bits=[p.name];if(r){bits.push(r.kept===r.all?`${r.kept} 人`:`${r.kept}／${r.all} 人（按范围过滤）`);if(r.sum!=null)bits.push('PHP '+fmtN(r.sum))}if(h)bits.push('指纹 '+h);
     let risk=bad?'warn':'',act=IMP[p.id][0];
     if(bad)act+='（失败）';
-    if(p.id==='progFile'&&!bad&&h){const ex=db.logs.find(l=>l.cat==='导出'&&l.hash===h&&!l.seed);if(ex)bits.unshift(`版本比对通过：与${ex.n} ${fmtT(ex.t)} 导出的文件相同`);else{bits.unshift('找不到这份文件的导出记录，可能被改过或不是系统产生的');risk='high';toast('注意：这份请款单没有导出记录，可能被改过。')}}
+    if(p.id==='progFile'&&!bad&&h){const ex=db.logs.find(l=>l.cat==='导出'&&l.hash===h);if(ex)bits.unshift(`版本比对通过：与${ex.n} ${fmtT(ex.t)} 导出的文件相同`);else{bits.unshift('找不到这份文件的导出记录，可能被改过或不是系统产生的');risk='high';toast('注意：这份请款单没有导出记录，可能被改过。')}}
     log('导入',act,bits.join(' · '),risk);
     if(r&&r.kept!==r.all)toast(`已按你的范围过滤：显示 ${r.kept}／${r.all} 人`)})}
 document.addEventListener('change',e=>{const t=e.target;if(t.type==='file'&&IMP[t.id]&&t.files&&t.files[0]&&me){patchXlsx();const f=t.files[0];parsed=null;pend={id:t.id,name:f.name,hash:sha(f),tm:setTimeout(finishImport,3000)}}},true);
@@ -2653,7 +2625,7 @@ document.addEventListener('change',e=>{if(!me)return;const t=e.target,D=t.datase
 let aTab='home',F={u:'',c:'',risk:false,q:''},confirmReset=false;
 function openAdmin(){if(!me||me.back==='none')return;$('dmAdmin').hidden=false;renderAdmin();log('权限','进入后台','')}
 const riskPill=r=>r==='high'?'<span class="dm-pill high">高风险</span>':r==='warn'?'<span class="dm-pill warn">留意</span>':'';
-const logRow=l=>`<tr><td class="nw">${esc(fmtT(l.t))}</td><td class="nw">${esc(l.n)}<small>${esc(l.u)}</small></td><td class="nw"><span class="dm-pill">${esc(l.cat)}</span></td><td>${esc(l.act)} ${riskPill(l.risk)}${l.seed?'<span class="dm-seed">示范</span>':''}</td><td>${esc(l.det)}</td></tr>`;
+const logRow=l=>`<tr><td class="nw">${esc(fmtT(l.t))}</td><td class="nw">${esc(l.n)}<small>${esc(l.u)}</small></td><td class="nw"><span class="dm-pill">${esc(l.cat)}</span></td><td>${esc(l.act)} ${riskPill(l.risk)}</td><td>${esc(l.det)}</td></tr>`;
 const LH='<thead><tr><th>时间</th><th>人员</th><th>类别</th><th>操作</th><th>内容</th></tr></thead>';
 function filtered(){const q=F.q.trim().toLowerCase();return db.logs.filter(l=>(!F.u||l.u===F.u)&&(!F.c||l.cat===F.c)&&(!F.risk||l.risk)&&(!q||(l.act+' '+l.det+' '+l.n+' '+l.u).toLowerCase().includes(q)))}
 function renderAdmin(){const A=$('dmAdmin'),act=document.activeElement,keep=act&&act.id&&A.contains(act)?{id:act.id,s:act.selectionStart}:null,sy=A.scrollTop;const ro=me.back!=='full';
