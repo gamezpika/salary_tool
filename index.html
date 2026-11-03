@@ -1088,7 +1088,7 @@ function reviewAllRows(){const rows=[],seen=new Set();
   /* 送审名单照序号排列（序号已按：发薪日期 → 同部门在一起 → 姓名 A～Z 编好，暂缓在最后） */
   rows.sort((a,b)=>{const sa=String(a.serial||''),sb=String(b.serial||'');if(!sa!==!sb)return sa?-1:1;return sa.localeCompare(sb)});
   return rows}
-const REV_HEAD=['发薪','发放日期','薪资年月','序号','工号','姓名','事业群','事业处','部门','实发工资PHP','PHP→RMB 汇率','实发工资RMB','工资发放方式','第一次打款'];
+const REV_HEAD=['发薪','发放日期','薪资年月','序号','工号','姓名','事业群','事业处','部门','实发工资PHP','PHP→RMB 汇率','实发工资RMB','工资发放方式','第一次打款','钱包地址'];
 const isHoldRow=r=>/^[HX]\|/.test(r.key);
 const revRows=()=>{let rows=reviewAllRows();const f=st.revFilter;
   /* 单天预览：只留这一天的人（现金发放日期是这天的也一起） */
@@ -1097,11 +1097,11 @@ const revRows=()=>{let rows=reviewAllRows();const f=st.revFilter;
 const revTitle=()=>st.revDay!=null&&st.days[st.revDay]?`第 ${st.revDay+1} 天（${st.days[st.revDay].date}）送审名单`:'发薪日送审总名单';
 function renderReview(){$('revTitle').textContent=revTitle();document.querySelectorAll('[data-revf]').forEach(b=>b.classList.toggle('on',b.dataset.revf===(st.revFilter||'all')));const rows=revRows(),on=rows.filter(r=>r.on);
   $('revSum').innerHTML=`共 <b>${rows.length}</b> 人；发薪（1）<b>${on.length}</b> 人，${fmt(on.reduce((a,r)=>a+r.amt,0))} PHP`;
-  $('revTable').innerHTML=`<thead><tr>${REV_HEAD.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr class="${r.on?'':'revoff'}"><td class="ck"><b>${r.on?1:0}</b></td><td>${esc(r.date)}</td><td>${esc(r.month)}</td><td>${esc(r.serial)}</td><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.g)}</td><td>${esc(r.b)}</td><td>${esc(r.d)}</td><td class="num">${fmt(r.amt)}</td><td class="num">${r.rate===''?'':esc(String(r.rate))}</td><td class="num">${r.rmb===''?'':fmt2(r.rmb)}</td><td class="way${r.way==='暂缓'?' hold':''}">${esc(r.way)}</td><td class="first">${r.first?'是':''}</td></tr>`).join('')}</tbody>`;
+  $('revTable').innerHTML=`<thead><tr>${REV_HEAD.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr class="${r.on?'':'revoff'}"><td class="ck"><b>${r.on?1:0}</b></td><td>${esc(r.date)}</td><td>${esc(r.month)}</td><td>${esc(r.serial)}</td><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.g)}</td><td>${esc(r.b)}</td><td>${esc(r.d)}</td><td class="num">${fmt(r.amt)}</td><td class="num">${r.rate===''?'':esc(String(r.rate))}</td><td class="num">${r.rmb===''?'':fmt2(r.rmb)}</td><td class="way${r.way==='暂缓'?' hold':''}">${esc(r.way)}</td><td class="first">${r.first?'是':''}</td><td class="addrcell">${esc(r.addr||'')}</td></tr>`).join('')}</tbody>`;
 }
 function copyReviewAll(btn,rowsIn,title){const rows=rowsIn||revRows(),lab=btn.textContent,on=rows.filter(r=>r.on),tot=on.reduce((a,r)=>a+r.amt,0);
   const B="border:1px solid #000;padding:2px 6px;font-family:Calibri,'Microsoft YaHei',sans-serif;font-size:11pt;";
-  const cells=r=>[r.on?1:0,r.date,r.month,r.serial,r.code,r.name,r.g,r.b,r.d,r.amt,r.rate,r.rmb===''?'':r.rmb,r.way,r.first?'是':''];
+  const cells=r=>[r.on?1:0,r.date,r.month,r.serial,r.code,r.name,r.g,r.b,r.d,r.amt,r.rate,r.rmb===''?'':r.rmb,r.way,r.first?'是':'',r.addr||''];
   const html=`<table style="border-collapse:collapse"><tr>${REV_HEAD.map(h=>`<td style="${B}background:#DCE6F1;font-weight:bold;text-align:center">${h}</td>`).join('')}</tr>${rows.map(r=>`<tr>${cells(r).map((v,k)=>`<td style="${B}${k===0?'text-align:center;font-size:13pt;':''}${k===9||k===10||k===11?'text-align:right;':''}${k===3?'mso-number-format:&quot;\\@&quot;;':''}">${esc(String(v))}</td>`).join('')}</tr>`).join('')}</table>`;
   const text=[REV_HEAD.join('\t'),...rows.map(r=>cells(r).join('\t'))].join('\n');
   copyRich(html,text).then(()=>{btn.textContent=`已复制 ${rows.length} 人，到 Excel 贴上即可`}).catch(()=>{btn.textContent='请用跳出的视窗手动复制'}).finally(()=>setTimeout(()=>{btn.textContent=lab},3000));
@@ -1682,7 +1682,7 @@ function importBatch(f,rows){
   const kRmb=find(['实发工资RMB','兑人民币RMB','实发工资人民币','人民币实发工资','RMB实发工资','人民币金额']);
   /* PHP → RMB 汇率一律来自作业一的「汇率Peso」：送审名单里叫「PHP→RMB 汇率」；名单若保留原本的「汇率Peso」也认得 */
   const kR=keys.find(k=>norm(k)===norm('PHP→RMB 汇率'))||keys.find(k=>norm(k)===norm('汇率Peso'));
-  const need=[['序号',kSeq],['工号',kE],['姓名',kN],['事业群',kG],['部门',kD],['实发工资PHP',kPhp],['实发工资RMB（兑人民币RMB）',kRmb],['PHP→RMB 汇率（作业一的汇率Peso）',kR],['第一次打款',kF]];
+  const need=[['序号',kSeq],['工号',kE],['姓名',kN],['事业群',kG],['部门',kD],['实发工资PHP',kPhp],['实发工资RMB（兑人民币RMB）',kRmb],['PHP→RMB 汇率（作业一的汇率Peso）',kR],['第一次打款',kF],['钱包地址（充值地址、钱包地址或收款地址）',kAd]];
   const miss=need.filter(x=>!x[1]).map(x=>`「${x[0]}」`);
   if(miss.length)throw new Error(`名单缺少 ${miss.join('、')} 栏位，请用作业一导出的送审名单（核准后保留这些栏位）。`);
   /* 送审名单里「发薪」是 0 的（现金、暂缓、其他）不打 USDT，只取 1 的；要先过滤，这些人汇率空白不该挡住导入 */
@@ -1980,9 +1980,9 @@ document.addEventListener('click',e=>{
   if(e.target.id==='reviewAll'){st.revDay=null;st.revFilter='all';renderReview();$('revModal').hidden=false;return}
   if(e.target.id==='revCopy'){copyReviewAll(e.target);return}
   if(e.target.id==='revDl'){const rows=revRows(),btn=e.target,lab=btn.textContent;
-    const aoa=[REV_HEAD,...rows.map(r=>[r.on?1:0,r.date,r.month,String(r.serial),r.code,r.name,r.g,r.b,r.d,r.amt,r.rate,r.rmb,r.way,r.first?'是':''])];
+    const aoa=[REV_HEAD,...rows.map(r=>[r.on?1:0,r.date,r.month,String(r.serial),r.code,r.name,r.g,r.b,r.d,r.amt,r.rate,r.rmb,r.way,r.first?'是':'',r.addr||''])];
     if(!DL||typeof XLSX==='undefined'){btn.textContent='这里不能下载，请用复制';setTimeout(()=>btn.textContent=lab,2500);return}
-    try{const ws=XLSX.utils.aoa_to_sheet(aoa);rows.forEach((r,i)=>{const c=ws[XLSX.utils.encode_cell({r:i+1,c:3})];if(c){c.t='s';c.v=String(r.serial)}});ws['!cols']=[{wch:5},{wch:11},{wch:9},{wch:12},{wch:20},{wch:12},{wch:10},{wch:14},{wch:14},{wch:12},{wch:10},{wch:12},{wch:10},{wch:10}];
+    try{const ws=XLSX.utils.aoa_to_sheet(aoa);rows.forEach((r,i)=>{const c=ws[XLSX.utils.encode_cell({r:i+1,c:3})];if(c){c.t='s';c.v=String(r.serial)}});ws['!cols']=[{wch:5},{wch:11},{wch:9},{wch:12},{wch:20},{wch:12},{wch:10},{wch:14},{wch:14},{wch:12},{wch:10},{wch:12},{wch:10},{wch:10},{wch:38}];
       const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'送审总名单');
       DL.save({filename:(st.revDay!=null&&st.days[st.revDay]?`${st.serialMonth||''}-${st.days[st.revDay].date}-第${st.revDay+1}天`:`${st.serialMonth||''}-发薪日送审总名单`)+(st.revFilter==='hold'?'-暂缓':st.revFilter==='usdt'?'-USDT':st.revFilter==='other'?'-其他':'')+'.xlsx',data:new Uint8Array(XLSX.write(wb,{type:'array',bookType:'xlsx'}))}).then(()=>{btn.textContent='已下载'}).catch(()=>{btn.textContent='已取消'}).finally(()=>setTimeout(()=>btn.textContent=lab,2500))}catch(_){btn.textContent='下载失败';setTimeout(()=>btn.textContent=lab,2500)}
     return}
