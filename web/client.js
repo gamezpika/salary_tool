@@ -101,8 +101,8 @@
     writable.clear(); r.writable.forEach(k => writable.add(k));
     applying = true;
     try {
-      // 换了账号：上一个人留下的资料（包含明细）不能带过来
-      if (ls.get(LAST) !== me.acc) ls.keys().filter(k => k.startsWith(PFX)).forEach(k => localStorage.removeItem(k));
+      // 换了账号：上一个人留下的资料（包含明细）不能带过来；暂缓名单和最后发薪日除外，这台电脑的人都要看得到
+      if (ls.get(LAST) !== me.acc) ls.keys().filter(k => k.startsWith(PFX) && !/-(adj|lastpay)-v1$/.test(k)).forEach(k => localStorage.removeItem(k));
       set0.call(localStorage, LAST, me.acc);
       r.writable.forEach(k => { const v = r.values[k]; versions[k] = v?.version || 0; if (!v) localStorage.removeItem(k); });
       Object.entries(r.values).forEach(([k, v]) => set0.call(localStorage, k, v.value));
@@ -181,7 +181,7 @@
 
   /* ---------- 记录：导出 ---------- */
   addEventListener('payroll:audit', e => { const d = e.detail || {}; log(d.cat, d.act, d.det, d.risk); });
-  const exportAct = n => (/UC打款/.test(n) ? ['下载 UC 打款文件', 'high'] : /作业三暂缓表/.test(n) ? ['导出作业三暂缓表', 'high'] : /请款单/.test(n) ? ['导出请款单', ''] : /打款单/.test(n) ? ['导出打款单', ''] : /送审/.test(n) ? ['导出发薪日送审总名单', ''] : ['导出文件', '']);
+  const exportAct = n => (/UC打款/.test(n) ? ['下载 UC 打款文件', 'high'] : /暂缓名单/.test(n) ? ['导出当月暂缓名单', 'high'] : /请款单/.test(n) ? ['导出请款单', ''] : /打款单/.test(n) ? ['导出打款单', ''] : /送审/.test(n) ? ['导出发薪日送审总名单', ''] : ['导出文件', '']);
   window.__DS = function (DL, o) {
     const p = DL.save(o), data = o.data;
     Promise.resolve(p).then(() => 'ok', () => 'no').then(async s => { const h = await sha(data), [a, r] = exportAct(o.filename || ''); log('导出', s === 'ok' ? a : a + '（未保存）', `${o.filename || ''}${h ? ' · 指纹 ' + h.slice(0, 12) : ''}`, s === 'ok' ? r : '', s === 'ok' ? h : ''); });
