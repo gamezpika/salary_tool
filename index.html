@@ -489,7 +489,7 @@ tfoot tr.quota td{font-weight:400;color:var(--muted);font-size:13px}
   <section class="step wstep ph-req">
     <h2><span class="n">2</span>汇率与矿工费</h2>
     <div class="cbar vlist">
-      <div class="frow"><label>PHP → RMB</label><span class="cval" id="phpRateView">—</span><span class="fst" id="phpRateSt"></span><span class="funit" id="phpRateFrom">来自核准名单</span></div><input type="number" id="phpRate" hidden>
+      <div class="frow"><label>RMB → PHP</label><span class="cval" id="phpRateView">—</span><span class="fst" id="phpRateSt"></span><span class="funit" id="phpRateFrom">来自核准名单</span></div><input type="number" id="phpRate" hidden>
       <div class="frow"><label>转 USDT 矿工费</label><input type="number" min="0" step="0.001" data-trx="feeU" class="fin"><span class="fst"></span><span class="funit">TRX／笔</span></div>
       <div class="frow"><label>转 TRX 矿工费（旧地址）</label><input type="number" min="0" step="0.001" data-trx="feeOld" class="fin"><span class="fst"></span><span class="funit">TRX／笔</span></div>
       <div class="frow"><label>转 TRX 矿工费（新地址）</label><input type="number" min="0" step="0.001" data-trx="feeNew" class="fin"><span class="fst"></span><span class="funit">TRX／笔</span></div>
@@ -1109,7 +1109,7 @@ function reviewAllRows(){const rows=[],seen=new Set();
   /* 送审名单照序号排列（序号已按：发薪日期 → 同部门在一起 → 姓名 A～Z 编好，暂缓在最后） */
   rows.sort((a,b)=>{const sa=String(a.serial||''),sb=String(b.serial||'');if(!sa!==!sb)return sa?-1:1;return sa.localeCompare(sb)});
   return rows}
-const REV_HEAD=['发薪','发放日期','薪资年月','序号','工号','姓名','事业群','事业处','部门','岗位','实发工资PHP','PHP→RMB 汇率','实发工资RMB','工资发放方式','第一次打款','钱包地址'];
+const REV_HEAD=['发薪','发放日期','薪资年月','序号','工号','姓名','事业群','事业处','部门','岗位','实发工资PHP','RMB→PHP 汇率','实发工资RMB','工资发放方式','第一次打款','钱包地址'];
 const isHoldRow=r=>/^[HX]\|/.test(r.key);
 const revRows=()=>{let rows=reviewAllRows();const f=st.revFilter;
   /* 单天预览：只留这一天的人（现金发放日期是这天的也一起） */
@@ -1171,7 +1171,7 @@ const isYes=v=>/^(是|1|✓|✔|√|v|y|yes|true|有|x|☑)$/i.test(String(v||''
 function isNewEmp(e){if(!e||!e.code)return false;if(e.first!==undefined)return e.first;const o=st.newOverride[e.code];if(o!==undefined)return o;return !!newReason(e)}
 /* ---------- 钱包分配分页 ---------- */
 const r2=v=>Math.round(v*100)/100, fmt2=v=>v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-/* 进位规则：PHP→RMB 小数 2 位四舍五入；RMB→USDT 小数 2 位无条件舍去；TRX 显示小数 3 位 */
+/* 进位规则：RMB→PHP 小数 2 位四舍五入；RMB→USDT 小数 2 位无条件舍去；TRX 显示小数 3 位 */
 const round2=v=>Math.round((v+Number.EPSILON)*100)/100, floor2=v=>Math.floor(v*100+1e-7)/100;
 const fmt3=v=>(Number(v)||0).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3}), r3=v=>Math.round(v*1000)/1000;
 function rmbOf(php){const a=Number(st.phpRate)||0;return a>0?round2(php/a):null}
@@ -1559,11 +1559,11 @@ async function encSave(pw,b){const salt=crypto.getRandomValues(new Uint8Array(16
 async function encOpen(pw){const v=encMeta();if(!v)throw new Error('没有保存的资料');const key=await encKey(pw,ub64(v.salt));
   let pt;try{pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:ub64(v.iv)},key,ub64(v.ct))}catch(_){throw new Error('密码不对')}return JSON.parse(new TextDecoder().decode(pt))}
 /* 第 ② 步的汇率和矿工费都要有值（不是 0），才可以往下自动排 */
-function step2Missing(){const t=st.trx||{},m=[];if(!(Number(st.phpRate)>0))m.push('PHP → RMB');if(!(Number(t.feeU)>0))m.push('转 USDT 矿工费');if(!(Number(t.feeOld)>0))m.push('转 TRX 矿工费（旧地址）');if(!(Number(t.feeNew)>0))m.push('转 TRX 矿工费（新地址）');if(!(Number(t.perNew)>0))m.push('第一次补助');return m}
+function step2Missing(){const t=st.trx||{},m=[];if(!(Number(st.phpRate)>0))m.push('RMB → PHP');if(!(Number(t.feeU)>0))m.push('转 USDT 矿工费');if(!(Number(t.feeOld)>0))m.push('转 TRX 矿工费（旧地址）');if(!(Number(t.feeNew)>0))m.push('转 TRX 矿工费（新地址）');if(!(Number(t.perNew)>0))m.push('第一次补助');return m}
 /* 导入失败时，卡片变红色，标题写失败原因；画面上如果还有上一次的资料，也写清楚 */
 function paintErr(box,icon,note,sub,err,okIcon,prevTxt){const B=$(box);if(!err){B.classList.remove('bad');return}
   B.classList.remove('ok');B.classList.add('bad');$(icon).textContent='!';$(note).textContent='导入失败：'+err;$(sub).textContent=prevTxt?`画面上还是上一次导入的：${prevTxt}。请检查档案后重新导入。`:'请检查档案后重新导入。'}
-/* 找 PHP → RMB 汇率栏：「汇率Peso」优先；栏名不完全一样时，用「实发工资PHP ÷ 汇率 ≈ 实发工资RMB」验证，挑对得上的那一栏 */
+/* 找 RMB → PHP 汇率栏：「汇率Peso」优先；栏名不完全一样时，用「实发工资PHP ÷ 汇率 ≈ 实发工资RMB」验证，挑对得上的那一栏 */
 function pickRateCol(keys,rows,norm,kPhp,kRmb){
   const exact=keys.find(k=>norm(k)===norm('汇率Peso'));if(exact)return exact;
   const cands=keys.filter(k=>/汇率|peso|rate/i.test(k));if(!cands.length)return undefined;
@@ -1729,7 +1729,7 @@ async function ucSave(rows,cur,fname,btn){
   const lab=btn.dataset.lab||(btn.dataset.lab=btn.textContent),done=(t,ms)=>{btn.textContent=t;clearTimeout(btn._t);btn._t=setTimeout(()=>{btn.textContent=lab;delete btn.dataset.ok},ms||3000)};
   /* 不用浏览器的确认视窗（有些环境会被挡掉），改成「再按一次」 */
   if(!rows.length){done(cur==='01'?'没有第一次补助的 TRX 资料':'没有资料',3000);return}
-  if(cur==='00'&&rows.some(r=>r.amt===null)){done('请先填 PHP→RMB 汇率和当天的 RMB→USDT 汇率',4000);return}
+  if(cur==='00'&&rows.some(r=>r.amt===null)){done('请先填 RMB→PHP 汇率和当天的 RMB→USDT 汇率',4000);return}
   const badN=rows.filter(r=>r.bad).length;
   if(badN&&btn.dataset.ok!=='1'){btn.dataset.ok='1';done(`有 ${badN} 笔收款地址有问题，再按一次仍要下载`,6000);return}
   delete btn.dataset.ok;
@@ -1804,7 +1804,7 @@ function adjHold(){const b=adjBatch();if(!b||b.ucDone)return;const reason=$('adj
 function adjUndo(id){const b=adjBatch();if(!b||b.ucDone)return;const i=(b.adj||[]).findIndex(a=>a.id===id);if(i<0)return;const a=b.adj[i];
   if(a.type==='hold')b.emps.push(a.e);else{const k=b.emps.findIndex(e=>e.code===a.e.code);if(k>=0)b.emps.splice(k,1)}
   b.adj.splice(i,1);adjSave(b);auditEvt('设定',a.type==='hold'?'撤销中途暂缓':'撤销中途补发',`工号 ${a.e.code} · 原因：${a.reason}`,'high');adjMsg('已撤销。');render()}
-const ADJ_HEAD=['类型','调整时间','操作人','薪资年月','序号','工号','姓名','事业群','事业处','部门','实发工资PHP','兑人民币RMB','USDT','PHP→RMB 汇率','打款汇率','钱包','原因','钱包地址','打款日'];
+const ADJ_HEAD=['类型','调整时间','操作人','薪资年月','序号','工号','姓名','事业群','事业处','部门','实发工资PHP','兑人民币RMB','USDT','RMB→PHP 汇率','打款汇率','钱包','原因','钱包地址','打款日'];
 function adjRowsAoa(b){const sm=serialMap(),d=new Date();return (b.adj||[]).map(a=>{const m=adjAmt(a),u=adjUsdt(a,b);return [a.type==='add'?'补发':'暂缓',new Date(a.at).toLocaleString('zh-CN',{hour12:false}),a.by||'',a.e.month||'',String(a.seq||sm.get(b.emps.find(e=>e.code===a.e.code)||a.e)||''),a.e.code,a.e.name,a.e.g||'',a.e.b||'',a.e.d||'',m.php,m.rmb,u==null?'':u,a.e.rateF||'',payRateOf(b)||'',wLabel(a.wallet),a.reason,a.e.addr||'',b.date]})}
 function parseBatchRows(rows){
   const keys=rows.length?Object.keys(rows[0]):[],norm=v=>String(v).replace(/[\s()（）\[\]【】_\-:：/]/g,'').toLowerCase(),find=c=>{for(const x of c){const ex=keys.find(k=>norm(k)===norm(x));if(ex)return ex}for(const x of c){const k=keys.find(k=>norm(k).includes(norm(x)));if(k)return k}};
@@ -1812,9 +1812,9 @@ function parseBatchRows(rows){
   /* 必要栏位缺一不可：少了就导入失败 */
   const kPhp=keys.find(k=>norm(k)===norm('实发工资PHP'))||(kA&&!/rmb|人民币/i.test(kA)?kA:undefined);
   const kRmb=find(['实发工资RMB','兑人民币RMB','实发工资人民币','人民币实发工资','RMB实发工资','人民币金额']);
-  /* PHP → RMB 汇率一律来自作业一的「汇率Peso」：送审名单里叫「PHP→RMB 汇率」；名单若保留原本的「汇率Peso」也认得 */
-  const kR=keys.find(k=>norm(k)===norm('PHP→RMB 汇率'))||keys.find(k=>norm(k)===norm('汇率Peso'));
-  const need=[['序号',kSeq],['工号',kE],['姓名',kN],['事业群',kG],['部门',kD],['实发工资PHP',kPhp],['实发工资RMB（兑人民币RMB）',kRmb],['PHP→RMB 汇率（作业一的汇率Peso）',kR],['第一次打款',kF],['钱包地址',kAd]];
+  /* RMB → PHP 汇率一律来自作业一的「汇率Peso」：送审名单里叫「RMB→PHP 汇率」；名单若保留原本的「汇率Peso」也认得 */
+  const kR=keys.find(k=>norm(k)===norm('RMB→PHP 汇率'))||keys.find(k=>norm(k)===norm('PHP'+'→RMB 汇率'))||keys.find(k=>norm(k)===norm('汇率Peso'));
+  const need=[['序号',kSeq],['工号',kE],['姓名',kN],['事业群',kG],['部门',kD],['实发工资PHP',kPhp],['实发工资RMB（兑人民币RMB）',kRmb],['RMB→PHP 汇率（作业一的汇率Peso）',kR],['第一次打款',kF],['钱包地址',kAd]];
   const miss=need.filter(x=>!x[1]).map(x=>`「${x[0]}」`);
   if(miss.length)throw new Error(`名单缺少 ${miss.join('、')} 栏位，请用作业一导出的送审名单（核准后保留这些栏位）。`);
   /* 送审名单里「发薪」是 0 的（现金、暂缓、其他）不打 USDT，只取 1 的；要先过滤，这些人汇率空白不该挡住导入 */
@@ -1882,8 +1882,8 @@ function showList(title,rows){
   whoRows=rows;const showW=rows.some(r=>r.wallet>=0),showU=rows.some(r=>r.usdt!=null),rate=Number(st.phpRate)||0;
   rows.forEach(r=>{const e=r.ref||{};r.gg=e.g||r.g||'';r.bb=e.b||'';r.dd=e.d||'';r.rmb=r.ref?bRmb(r.ref):null;r.rt=r.ref&&r.ref.rateF>0?r.ref.rateF:'';r.isFirst=!!(r.ref&&isNewEmp(r.ref))});
   $('whoTitle').textContent=`${title}：${rows.length} 人`;
-  const th=['序号',...(showW?['钱包']:[]),'工号','姓名','事业群','事业处','部门','实发工资PHP','PHP → RMB 汇率','实发工资RMB',...(showU?['USDT']:[]),'第一次打款'];
-  const num=new Set(['实发工资PHP','PHP → RMB 汇率','实发工资RMB','USDT']);
+  const th=['序号',...(showW?['钱包']:[]),'工号','姓名','事业群','事业处','部门','实发工资PHP','RMB → PHP 汇率','实发工资RMB',...(showU?['USDT']:[]),'第一次打款'];
+  const num=new Set(['实发工资PHP','RMB → PHP 汇率','实发工资RMB','USDT']);
   $('whoTable').innerHTML=`<thead><tr>${th.map(h=>`<th${num.has(h)?' class="num"':''}>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.serial||'')}</td>${showW?`<td>${r.wallet>=0?esc(wLabel(r.wallet)):''}</td>`:''}<td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.gg)}</td><td>${esc(r.bb)}</td><td>${esc(r.dd)}</td><td class="num">${fmt(r.amount)}</td><td class="num">${r.rt||rate||''}</td><td class="num">${r.rmb==null?'':fmt2(r.rmb)}</td>${showU?`<td class="num">${r.usdt==null?'':fmt2(r.usdt)}</td>`:''}<td class="first">${r.isFirst?'是':''}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="${6+(showW?1:0)}">合计 ${rows.length} 人</td><td class="num">${fmt(rows.reduce((a,r)=>a+r.amount,0))}</td><td></td><td class="num">${fmt2(r2(rows.reduce((a,r)=>a+(r.rmb||0),0)))}</td>${showU?`<td class="num">${fmt2(r2(rows.reduce((a,r)=>a+(r.usdt||0),0)))}</td>`:''}<td class="first">${rows.filter(r=>r.isFirst).length} 人</td></tr></tfoot>`;
   $('whoModal').hidden=false;$('whoClose').focus();
 }
@@ -2103,7 +2103,7 @@ document.addEventListener('click',e=>{
   if(e.target.id==='whoClose'||e.target.id==='whoModal'){closeWho();return}
   if(e.target.id==='whoCopy'&&st.listSimple){const L=['序号\t工号\t姓名\t事业群\t事业处／部门\t实发工资PHP\t工资发放方式\t第一次打款\t备注',...whoRows.map(r=>[r.serial||'',r.code,r.name,r.g,r.unit,Math.round(r.amount),r.way||'USDT',r.first?'是':'',r.snote||''].join('\t'))];
     copyRich(null,L.join('\n')).then(()=>{$('whoCopy').textContent='已复制，到 Excel 贴上即可';setTimeout(()=>{$('whoCopy').textContent='复制这份名单，贴到 Excel'},3000)}).catch(()=>{$('whoCopy').textContent='请用跳出的视窗手动复制'});return}
-  if(e.target.id==='whoCopy'){const rt=Number(st.phpRate)||'';const L=['序号\t钱包\t工号\t姓名\t事业群\t事业处\t部门\t实发工资PHP\tPHP→RMB 汇率\t实发工资RMB\tUSDT\t第一次打款',...whoRows.map(r=>[r.serial||'',r.wallet>=0?wLabel(r.wallet):'',r.code,r.name,r.gg||'',r.bb||'',r.dd||'',Math.round(r.amount),r.rt||rt,r.rmb==null?'':r.rmb.toFixed(2),r.usdt==null?'':r.usdt.toFixed(2),r.isFirst?'是':''].join('\t'))];
+  if(e.target.id==='whoCopy'){const rt=Number(st.phpRate)||'';const L=['序号\t钱包\t工号\t姓名\t事业群\t事业处\t部门\t实发工资PHP\tRMB→PHP 汇率\t实发工资RMB\tUSDT\t第一次打款',...whoRows.map(r=>[r.serial||'',r.wallet>=0?wLabel(r.wallet):'',r.code,r.name,r.gg||'',r.bb||'',r.dd||'',Math.round(r.amount),r.rt||rt,r.rmb==null?'':r.rmb.toFixed(2),r.usdt==null?'':r.usdt.toFixed(2),r.isFirst?'是':''].join('\t'))];
     copyRich(null,L.join('\n')).then(()=>{$('whoCopy').textContent='已复制，到 Excel 贴上即可';setTimeout(()=>{$('whoCopy').textContent='复制这份名单，贴到 Excel'},3000)}).catch(()=>{$('whoCopy').textContent='请用跳出的视窗手动复制'});return}
   const fo=e.target.closest('[data-fold]');if(fo){const k=fo.dataset.fold;st.viewFold.has(k)?st.viewFold.delete(k):st.viewFold.add(k);render();return}
   const jb=e.target.closest('[data-job]');if(jb){const j=jb.dataset.job;if(j==='1')st.tab=st.job1Tab||'main';else{st.tab='wallet';st.wjob=j}render();window.scrollTo({top:0});return}
@@ -2446,7 +2446,7 @@ function loaded(label){st.loadedName=label;st.curErr='';
   const li=[];
   {const allE=st.roots.flatMap(id=>empsOf(id)),nNew=allE.filter(isNewEmp).length;li.push(`第一次发 TRX：<button class="who inl first" data-list="newall">${nNew} 人</button>（${esc(st.periodStart||'')} 之后入职）`)}
   if(st.reArranged)li.push(`<b>已用新的薪资表重新自动排好发放日期</b>（日期沿用之前的），请到第 ⑤ 步检查`);
-  li.push(`PHP → RMB 汇率：取自「汇率Peso」栏${st.rmbCol1?`；实发工资RMB：取自「${esc(st.rmbCol1)}」栏`:'；名单没有实发工资RMB 栏，用汇率Peso 换算'}`);
+  li.push(`RMB → PHP 汇率：取自「汇率Peso」栏${st.rmbCol1?`；实发工资RMB：取自「${esc(st.rmbCol1)}」栏`:'；名单没有实发工资RMB 栏，用汇率Peso 换算'}`);
   if(st.serialMonth){li.push(`序号：排好发放日期后，按发薪日期 → 同部门在一起 → 姓名 A～Z，从 ${st.serialMonth}0001 开始编；暂缓的员工排在最后。日期或部门有变动，序号会跟着重编`)}
   li.push(`共 <b>${groups}</b> 个事业群，排入分配 <button class="who inl" data-list="imp:alloc">${allHeads} 人</button>，应发合计 <b>${fmt(st.total)}</b> PHP`);
   if(st.hasWay){
@@ -2470,7 +2470,7 @@ $('file').addEventListener('change',e=>{
       const find=c=>{for(const x of c){const ex=keys.find(k=>norm(k)===norm(x));if(ex)return ex}for(const x of c){const k=keys.find(k=>norm(k).includes(norm(x)));if(k)return k}};
       const kA=find(['实发工资PHP','实发工资','应发']),kG=find(['事业群']),kB=find(['事业处']),kD=find(['部门','事业部']),kC=find(['工资发放方式','发放方式','发放渠道']),kN=find(['姓名']),kPos=find(['岗位','职位']),kRmb=find(['实发工资RMB','RMB实发工资','实发工资人民币','人民币实发工资','人民币金额']),kRem=find(['备注']),kE=find(['工号']),kM=find(['薪资年月','年月','Salary period']),kAddr=find(['充值地址','钱包地址','收款地址']),kP=find(['所属BP','BP']),kRate=keys.find(k=>norm(k)===norm('汇率Peso')),kHire=find(['入职日期','入职日','到职日期','报到日期','入职时间']);st.hasHire=!!kHire;st.rateCol1=kRate||'';st.rmbCol1=kRmb||'';
       if(!kA)throw new Error('找不到「实发工资PHP」这一栏。');
-      if(!kRate)throw new Error('找不到「汇率Peso」这一栏（PHP → RMB 汇率一律用这一栏）。');
+      if(!kRate)throw new Error('找不到「汇率Peso」这一栏（RMB → PHP 汇率一律用这一栏）。');
       if(!kHire)throw new Error('找不到「入职日期」这一栏，请 OA 导出时带上，才能判断谁是第一次发 TRX。');
       if(!kG&&!kB&&!kD)throw new Error('找不到「事业群」「事业处」「部门」任何一栏。');
       const data=[],held=[],other=new Map(),cash=[],otherRows=[];
