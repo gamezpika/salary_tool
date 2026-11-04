@@ -529,12 +529,11 @@ tfoot tr.quota td{font-weight:400;color:var(--muted);font-size:13px}
   </section>
   <div class="phase pay ph-pay"><b>打款作业</b><span>打款日当天：填打款汇率 → 下载 UC 打款文件打给员工（矿工费由链上自动扣）</span></div>
   <section class="step wstep ph-pay">
-    <h2><span class="n">1</span>导入请款单、打款汇率与上限</h2>
+    <h2><span class="n">1</span>导入请款单、打款汇率</h2>
     <div class="impgrid" style="margin-bottom:12px"><div class="prevbox" id="progBox"><span class="previcon" id="progIcon">↺</span><div class="prevtxt"><span class="imptag">请款单</span><b id="progNote">导入作业二导出的请款单</b><small id="progMsg">请款单是分配确认后的结果，导入后会带回那天每个人分到哪个钱包、TRX 分配。</small></div><label class="btn prevbtn" for="progFile" id="progBtn">导入请款单（Excel）</label><input type="file" id="progFile" accept=".xlsx" hidden></div></div>
     <div id="reqCmp"></div>
     <div class="fsec" style="max-width:640px"><div id="payRates"></div>
-      <div class="frow"><label for="wcap">每个钱包上限</label><input type="number" id="wcap" min="0" step="1000" class="fin"><span class="fst"></span><span class="funit">USDT／天（打款时不能超过，可以调整）</span></div>
-      <p class="fhint">打款当天的 RMB → USDT 汇率；UC 打款文件和 USDT 余额检查都用这个汇率。有钱包超过上限会自动照上限重新分配。</p></div>
+      <p class="fhint">打款当天的 RMB → USDT 汇率；UC 打款文件和 USDT 余额检查都用这个汇率。</p></div>
     <div id="payDiff"></div>
   </section>
   <section class="step wstep ph-pay" id="adjSec">
@@ -915,7 +914,7 @@ function render(){
   $('walletSec').hidden=st.tab!=='wallet';$('job1Phase').hidden=st.tab==='wallet';
   if(st.tab==='wallet')renderWallet();
   $('tabs').hidden=!loadedData||st.tab==='wallet';
-  $('leadText').innerHTML=st.tab==='wallet'?((st.wjob||'2')==='3'?'作业三（打款日）：① 导入作业二导出的请款单、填打款汇率与上限 → ② 暂缓（有人今天不发才做）→ ③ 导出打款单、下载 UC 打款文件。':'作业二（请款日）：① 导入当天核准名单 → ② 汇率与矿工费 → ③ 出款钱包与请款单，导出请款单给老板。'):'作业一（月初、送审前）：① 导入资料 → ② 每天预计拨款 → ③ 设定排的条件 → ④ 选择分配单位 → ⑤ 排发放日期 → ⑥ 总结，导出送审名单。';
+  $('leadText').innerHTML=st.tab==='wallet'?((st.wjob||'2')==='3'?'作业三（打款日）：① 导入作业二导出的请款单、填打款汇率 → ② 暂缓（有人今天不发才做）→ ③ 导出打款单、下载 UC 打款文件。':'作业二（请款日）：① 导入当天核准名单 → ② 汇率与矿工费 → ③ 出款钱包与请款单，导出请款单给老板。'):'作业一（月初、送审前）：① 导入资料 → ② 每天预计拨款 → ③ 设定排的条件 → ④ 选择分配单位 → ⑤ 排发放日期 → ⑥ 总结，导出送审名单。';
   document.querySelectorAll('nav.jobs [data-job]').forEach(b=>{const j=b.dataset.job,on=j==='1'?st.tab!=='wallet':(st.tab==='wallet'&&(st.wjob||'2')===j);b.classList.toggle('on',on);b.setAttribute('aria-selected',on)});
   $('walletSec').dataset.w=st.wjob||'2';
   $('tabHold').hidden=!hasHold;$('tabOther').hidden=!hasOther;
@@ -1202,7 +1201,7 @@ const wInfo=w=>st.wallets[w]||{name:`钱包 ${w+1}`,addr:'',payer:''};
 const wLabel=w=>{const n=wName(w),p=(wInfo(w).payer||'').trim();return p||n};
 /* ---------- 钱包分配：资料来源是「每天核准后从 OA 导出的名单」，跟预估排程无关 ---------- */
 /* 分钱包：以事业处为一组；金额、人数、第一次打款人数都平均；一般事业处最多拆 2 个钱包，超过当天一半金额的才拆更多；第一次打款的人不受限制 */
-/* USDT 分配规则：可复选，勾了才算数；每个钱包上限永远最优先（打款时）。
+/* USDT 分配规则：可复选，勾了才算数。
    条件冲突时：金额和人数同等重要；有勾金额或人数时，部门是「差不多时才顾」 */
 const WRULE_DEF=['serial','amount','dept'],WRULE_ALL=['serial','amount','heads','dept'],WRULE_NAME={serial:'序号连续',amount:'金额平均',heads:'人数平均',dept:'部门尽量不拆开'};
 function wRules(){const a=Array.isArray(st.wcfg&&st.wcfg.urules)?st.wcfg.urules:[],o=WRULE_ALL.filter(x=>a.includes(x));return o.length?o:WRULE_DEF.slice()}
@@ -1391,7 +1390,7 @@ function renderWallet(){
    $('ruleCap').textContent=Number(st.wcap)>0?` ${fmt(st.wcap)} USDT `:'（没设）';
    chainMarks();renderAdj();renderBatWarn();
    {const o=wRules();$('wOrderChips').innerHTML=WRULE_ALL.map(k=>`<label class="chip ${o.includes(k)?'on':''}"><input type="checkbox" data-wrule="${k}" ${o.includes(k)?'checked':''}>${WRULE_NAME[k]}</label>`).join('')+(st.orderDirty?'<span class="neg" style="font-size:13px;font-weight:600">规则改了，按「自动排」才生效</span>':'');
-    $('wAutoHint').textContent=(o.includes('serial')?'自动排：每个钱包拿一段连续的序号，再照顾其他勾选的规则。':'自动排：没勾序号连续，同一个钱包的序号可能跳号，对帐时要对照各钱包的名单。')+'每个钱包上限永远最优先（打款时）。'}
+    $('wAutoHint').textContent=(o.includes('serial')?'自动排：每个钱包拿一段连续的序号，再照顾其他勾选的规则。':'自动排：没勾序号连续，同一个钱包的序号可能跳号，对帐时要对照各钱包的名单。')}
    const uw=usdtWs();$('cfgUsdt').innerHTML=st.wallets.map((x,w)=>`<label class="chip"><input type="checkbox" data-cfgusdt="${w}" ${uw.includes(w)?'checked':''}>${esc(wLabel(w))}</label>`).join('')}
   if(!$('wsetBody').contains(document.activeElement)){
     $('wsetBody').innerHTML=st.wallets.map((x,w)=>{const c=addrCheck(x.addr);return `<tr><td><span class="wtag" style="--wc:${wc(w)}"></span>${w+1}${w>=4?` <button class="x" data-wsdel="${w}">删除</button>`:''}</td><td><input class="wsin" data-wset="${w}" data-k="both" value="${esc(x.payer||x.name)}" placeholder="姓名" aria-label="钱包 ${w+1} 打款人员"></td><td><input class="wsin addr" data-wset="${w}" data-k="addr" value="${esc(x.addr)}" placeholder="T 开头，34 码" aria-label="钱包 ${w+1} 出款地址"></td><td>${c?`<span class="bad">${esc(c)}</span>`:'<span class="ok">✓</span>'}</td><td>${x.bal&&x.bal.trx!=null&&x.bal.src==='chain'?`<div class="balval">${fmt3(x.bal.trx)}</div>`:''}<div class="balst" data-chk="trx-${w}"></div></td><td>${x.bal&&x.bal.usdt!=null&&x.bal.src==='chain'?`<div class="balval">${fmt2(x.bal.usdt)}</div>`:''}<div class="balst" data-chk="usdt-${w}"></div></td></tr>`}).join('');
@@ -1401,7 +1400,6 @@ function renderWallet(){
   updateBalChk();updFieldStatus();
   {const miss=st.wallets.map((x,w)=>{const a=addrCheck(x.addr),p=(x.payer||x.name||'').trim();if(!a&&p)return '';return `${wLabel(w)}：${[!p?'没填打款人员':'',a==='还没填'?'没填出款地址':a?'出款地址'+a:''].filter(Boolean).join('、')}`}).filter(Boolean);st.walletMiss=miss}
   document.querySelector('.wset>summary').innerHTML=`${done===nW?`出款钱包：${nW} 个都填好地址和打款人员`:`出款钱包：${done}／${nW} 个已填好地址和打款人员（<b class="neg">${esc(st.walletMiss.join('；'))}</b>）`}${st.balShort?`；<b class="neg">${st.balShort} 项余额不够</b>`:''}（按 ＋／－ 展开或收起）`;
-  if(document.activeElement!==$('wcap'))$('wcap').value=st.wcap||'';
   if(document.activeElement!==$('phpRate'))$('phpRate').value=st.phpRate||'';
   /* 第 ④ 步：打款汇率 */
   if(!$('payRates').contains(document.activeElement))$('payRates').innerHTML=(st.batches||[]).map((b,i)=>`<div class="frow"><label>打款 RMB → USDT</label><input type="number" step="0.0001" min="0" data-brate="${i}" value="${b.rate||''}" placeholder="打款日汇率" class="fin"><span class="fst"></span><span class="funit">打款日 ${esc(b.date)}</span></div>`).join('')||'<div class="frow"><label>打款 RMB → USDT</label><span class="funit" style="grid-column:2 / 5">导入当天核准名单后，这里会出现打款汇率格</span></div>';
@@ -2202,8 +2200,6 @@ document.addEventListener('change',e=>{
   if(t.dataset.brate!==undefined){const b=st.batches[Number(t.dataset.brate)];if(b){b.rate=Number(t.value)>0?Number(t.value):'';b.capMsg='';
     /* 打款时才检查上限：用打款汇率算，有钱包超过就照上限重排 */
     const cap=Number(st.wcap)||0;if(!b.cleared&&cap>0&&b.rate){const over=batchCells([b]).some(o=>o.usdt>cap+0.005);if(over){if(!b.reqSnap)b.reqSnap=b.emps.map(e=>e.w);allocBatch(b);b.capMsg=`用打款汇率 ${b.rate} 算有钱包超过 ${fmt(cap)} USDT 上限，已照上限重新分配（跟请款时的分配不同）`}}}if(Number(t.value)>0){st.lastPayRate=Number(t.value);try{localStorage.setItem('payroll-allocator-lastpayrate',String(st.lastPayRate))}catch(_){}}render();return}
-  if(t.id==='wcap'){st.wcap=Math.max(0,Number(t.value)||0);try{localStorage.setItem(CAPKEY,String(st.wcap))}catch(_){}
-    (st.batches||[]).forEach(b=>{if(b.cleared||!b.rate||!st.wcap)return;if(batchCells([b]).some(o=>o.usdt>st.wcap+0.005)){if(!b.reqSnap)b.reqSnap=b.emps.map(e=>e.w);allocBatch(b);b.capMsg=`上限改成 ${fmt(st.wcap)} USDT，有钱包超过，已照上限重新分配（跟请款时的分配不同）`}});render();return}
   if(t.dataset.sumkey!==undefined){st.sumLabels[t.dataset.sumkey]=t.value;render();return}
   if(t.dataset.cashdate!==undefined){st.cashDate=t.value;render();return}
   if(t.dataset.ddate!==undefined){st.days[Number(t.dataset.ddate)].date=t.value;render();return}
@@ -2590,7 +2586,7 @@ $('expCopy').addEventListener('click',()=>copyExport($('expCopy'),'复制，贴�
 $('expClose').addEventListener('click',()=>{$('expModal').hidden=true});
 $('expModal').addEventListener('click',e=>{if(e.target.id==='expModal')$('expModal').hidden=true});
 
-st.pickMode='fit';st.defaultCap=loadCap();st.wallets=loadWallets();st.wrules=[];st.wcfg=loadWcfg();st.wcap=loadWcap();try{localStorage.removeItem('payroll-allocator-wbatches-v1');localStorage.removeItem('payroll-allocator-enc-v1')}catch(_){}try{st.lastPayRate=Number(localStorage.getItem('payroll-allocator-lastpayrate'))||0}catch(_){st.lastPayRate=0}
+st.pickMode='fit';st.defaultCap=loadCap();st.wallets=loadWallets();st.wrules=[];st.wcfg=loadWcfg();st.wcap=0;try{localStorage.removeItem('payroll-allocator-wbatches-v1');localStorage.removeItem('payroll-allocator-enc-v1')}catch(_){}try{st.lastPayRate=Number(localStorage.getItem('payroll-allocator-lastpayrate'))||0}catch(_){st.lastPayRate=0}
 render();
 })();
 </script>
