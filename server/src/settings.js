@@ -6,7 +6,7 @@ const SETTINGS = {
   [PFX + 'capdefault-v1']: { jobs: [1], label: '每天预计拨款' },
   [PFX + 'pickmode-v1']: { jobs: [1], label: '排程方式' },
   [PFX + 'rules-v1']: { jobs: [1], label: '排程条件' },
-  [PFX + 'holdgroups-v1']: { jobs: [1], readJobs: [1, 3], label: '暂缓分组' },
+  [PFX + 'holdgroups-v1']: { jobs: [1], label: '暂缓分组' },
   [PFX + 'wallets-v1']: { jobs: [2, 3], label: '出款钱包', wallets: true },
   [PFX + 'wcap-v1']: { jobs: [2, 3], label: '每个钱包上限' },
   [PFX + 'wcfg-v1']: { jobs: [2, 3], label: '分钱包条件', wcfg: true },
