@@ -561,7 +561,7 @@ tfoot tr.quota td{font-weight:400;color:var(--muted);font-size:13px}
     </div>
     <div class="subsec" id="hmBox" style="margin-top:14px">
       <div class="hmhead"><h3 style="margin:0">当月暂缓名单</h3><label class="adjf inline2">薪资年月<select class="adjin" id="hmMonth"></select></label><label class="adjf inline2">本月最后发薪日<input type="date" class="adjin" id="hmLast"></label><span style="flex:1"></span><button class="btn" id="hmExport">导出 Excel</button></div>
-      <p class="fhint" style="margin:6px 0 8px">预计发放日预设是最后发薪日 + 7 天，碰到周末顺延，可以逐人改。这只是提醒，工具不会自动发钱。发了之后按「已发」，这个人就会从名单消失。名单只存在这个浏览器，要给别人看请导出 Excel。</p>
+      <p class="fhint" style="margin:6px 0 8px">预计发放日预设是最后发薪日 + 7 天，碰到周末顺延，可以逐人改。这只是提醒，工具不会自动发钱。名单只存在这个浏览器，要给别人看请导出 Excel。</p>
       <div id="hmBody"></div>
     </div>
   </section>
@@ -1776,7 +1776,7 @@ async function ucSave(rows,cur,fname,btn){
 const ADJKEY='payroll-allocator-adj-v1';
 const adjBatch=()=>{const bs=st.batches||[],b=bs[bs.length-1];return b&&!b.cleared?b:null};
 const auditEvt=(cat,act,det,risk)=>{try{window.dispatchEvent(new CustomEvent('payroll:audit',{detail:{cat,act,det,risk}}))}catch(_){}};
-function adjSave(b){try{const v=JSON.parse(localStorage.getItem(ADJKEY)||'{}')||{};if((b.adj&&b.adj.length)||b.ucDone)v[b.date]={adj:b.adj||[],ucDone:!!b.ucDone,at:Date.now()};else delete v[b.date];let ks=Object.keys(v).sort().filter(d=>!(v[d].adj||[]).some(a=>a.type==='hold'&&!a.paid));while(Object.keys(v).length>60&&ks.length)delete v[ks.shift()];localStorage.setItem(ADJKEY,JSON.stringify(v))}catch(_){}}
+function adjSave(b){try{const v=JSON.parse(localStorage.getItem(ADJKEY)||'{}')||{};if((b.adj&&b.adj.length)||b.ucDone)v[b.date]={adj:b.adj||[],ucDone:!!b.ucDone,at:Date.now()};else delete v[b.date];const cut=isoOf(new Date(Date.now()-400*864e5));Object.keys(v).forEach(d=>{if(d<cut)delete v[d]});localStorage.setItem(ADJKEY,JSON.stringify(v))}catch(_){}}
 /* 重新整理后再导入同一天的请款单：把调整接回来 */
 function adjRestore(b){let r=null;try{r=(JSON.parse(localStorage.getItem(ADJKEY)||'{}')||{})[b.date]}catch(_){}if(!r)return 0;b.adj=r.adj||[];b.ucDone=!!r.ucDone;
   b.adj.forEach(a=>{const has=b.emps.findIndex(e=>e.code===a.e.code);if(a.type==='hold'&&has>=0)b.emps.splice(has,1);if(a.type==='add'&&has<0)b.emps.push(a.e)});return b.adj.length}
@@ -1806,8 +1806,8 @@ function renderAdj(){renderHoldMonth();const b=adjBatch();if(!$('adjBody'))retur
   const cells=batchCells([b],'pay'),warns=[...new Set(add.map(a=>a.wallet))].map(w=>{const bal=usdtBalOf(w),need=(cells[w]||{usdt:0}).usdt;return bal!=null&&payRateOf(b)>0&&need>bal+1e-9?`${esc(wLabel(w))} 余额不够：需要 ${fmt2(need)} USDT，目前 ${fmt2(bal)}，还差 ${fmt2(need-bal)}`:''}).filter(Boolean);
   const dis=b.ucDone?'disabled':'';
   $('adjBody').innerHTML=`${warns.length?`<div class="notice">${warns.join('<br>')}</div>`:''}<div class="adjsum">${hold.length?`<span><b>暂缓合计</b>：${txt(sum(hold))}</span>${grp}${byW}`:''}${add.length?`<span><b>补发合计</b>：${txt(sum(add))}</span>`:''}</div>
-  <div class="tablewrap"><table class="ctable adjtbl"><thead><tr><th>类型</th><th>时间</th><th>工号</th><th>姓名</th><th>单位</th><th>PHP</th><th>RMB</th><th>USDT</th><th>钱包</th><th>归入</th><th>原因</th><th></th></tr></thead><tbody>${adj.map(a=>{const m=adjAmt(a),u=adjUsdt(a,b);return `<tr><td><span class="adjtype ${a.type==='add'?'add':''}">${a.type==='add'?'补发':'暂缓'}</span></td><td>${esc(fmtAgo(a.at))}${a.by?`<small class="wh">${esc(a.by)}</small>`:''}</td><td>${esc(a.e.code)}</td><td>${esc(a.e.name)}</td><td>${esc([a.e.g,a.e.b,a.e.d].filter(Boolean).join(' / '))}</td><td class="num">${fmt(m.php)}</td><td class="num">${fmt2(m.rmb)}</td><td class="num">${u==null?'—':fmt2(u)}</td><td>${a.type==='add'?`<select class="adjin" data-adjw="${esc(a.id)}" ${dis} aria-label="${esc(a.e.name)} 由哪个钱包打">${[...Array((st.wallets||[]).length).keys()].map(w=>`<option value="${w}" ${w===a.wallet?'selected':''}>${esc(wLabel(w))}</option>`).join('')}</select>`:esc(wLabel(a.wallet))}</td><td>${esc(a.group||'—')}</td><td style="white-space:normal;min-width:140px">${esc(a.reason)}</td><td>${a.paid?'<span class="fhint">已发</span>':`<button class="x" data-adjundo="${esc(a.id)}" ${dis}>撤销</button>`}</td></tr>`}).join('')}</tbody></table></div>`}
-/* ---------- 当月暂缓名单：跨打款日、按薪资年月；只列还没发的 ---------- */
+  <div class="tablewrap"><table class="ctable adjtbl"><thead><tr><th>类型</th><th>时间</th><th>工号</th><th>姓名</th><th>单位</th><th>PHP</th><th>RMB</th><th>USDT</th><th>钱包</th><th>归入</th><th>原因</th><th></th></tr></thead><tbody>${adj.map(a=>{const m=adjAmt(a),u=adjUsdt(a,b);return `<tr><td><span class="adjtype ${a.type==='add'?'add':''}">${a.type==='add'?'补发':'暂缓'}</span></td><td>${esc(fmtAgo(a.at))}${a.by?`<small class="wh">${esc(a.by)}</small>`:''}</td><td>${esc(a.e.code)}</td><td>${esc(a.e.name)}</td><td>${esc([a.e.g,a.e.b,a.e.d].filter(Boolean).join(' / '))}</td><td class="num">${fmt(m.php)}</td><td class="num">${fmt2(m.rmb)}</td><td class="num">${u==null?'—':fmt2(u)}</td><td>${a.type==='add'?`<select class="adjin" data-adjw="${esc(a.id)}" ${dis} aria-label="${esc(a.e.name)} 由哪个钱包打">${[...Array((st.wallets||[]).length).keys()].map(w=>`<option value="${w}" ${w===a.wallet?'selected':''}>${esc(wLabel(w))}</option>`).join('')}</select>`:esc(wLabel(a.wallet))}</td><td>${esc(a.group||'—')}</td><td style="white-space:normal;min-width:140px">${esc(a.reason)}</td><td><button class="x" data-adjundo="${esc(a.id)}" ${dis}>撤销</button></td></tr>`}).join('')}</tbody></table></div>`}
+/* ---------- 当月暂缓名单：跨打款日、按薪资年月，保留约 13 个月 ---------- */
 const LPKEY='payroll-allocator-lastpay-v1';
 function lpGet(){try{return JSON.parse(localStorage.getItem(LPKEY)||'{}')||{}}catch(_){return{}}}
 function lpSet(m,d){try{const v=lpGet();if(d)v[m]=d;else delete v[m];localStorage.setItem(LPKEY,JSON.stringify(v))}catch(_){}}
@@ -1817,7 +1817,7 @@ const isoOf=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${S
 /* 最后发薪日 + 7 天，碰到周末顺延到星期一 */
 function holdDueFrom(last){const d=new Date((last||'')+'T00:00:00');if(isNaN(d))return'';d.setDate(d.getDate()+7);while(d.getDay()===0||d.getDay()===6)d.setDate(d.getDate()+1);return isoOf(d)}
 function adjStore(){try{return JSON.parse(localStorage.getItem(ADJKEY)||'{}')||{}}catch(_){return{}}}
-function hmAll(){const v=adjStore(),out=[];Object.entries(v).forEach(([date,r])=>(r.adj||[]).forEach(a=>{if(a.type==='hold'&&!a.paid)out.push({date,a,month:/^\d{6}$/.test(a.e.month||'')?a.e.month:ym(date)})}));return out}
+function hmAll(){const v=adjStore(),out=[];Object.entries(v).forEach(([date,r])=>(r.adj||[]).forEach(a=>{if(a.type==='hold')out.push({date,a,month:/^\d{6}$/.test(a.e.month||'')?a.e.month:ym(date)})}));return out}
 /* 改存档，也同步到目前载入的那一批 */
 function adjPatch(date,id,fn){const v=adjStore();const r=v[date];const it=r&&(r.adj||[]).find(a=>a.id===id);if(!it)return null;fn(it);try{localStorage.setItem(ADJKEY,JSON.stringify(v))}catch(_){}const lb=(st.batches||[]).find(b=>b.date===date);const live=lb&&(lb.adj||[]).find(a=>a.id===id);if(live)fn(live);return it}
 const hmUsdtText=a=>a.usdt==null?'—':fmt2(a.usdt);
@@ -1832,12 +1832,11 @@ function renderHoldMonth(){if(!$('hmBody'))return;const all=hmAll(),b=(st.batche
   const t=x=>`<b>${x.n}</b> 人，PHP <b>${fmt(x.php)}</b>，RMB <b>${fmt2(x.rmb)}</b>，USDT <b>${fmt2(x.u)}</b>${x.miss?`（${x.miss} 人还没有 USDT）`:''}`;
   const by=(f,lab)=>[...new Set(rows.map(f))].sort().map(k=>`<span>${esc(lab(k))}：${t(sum(rows.filter(r=>f(r)===k)))}</span>`).join('');
   $('hmBody').innerHTML=`${last?'':'<div class="notice">还不知道本月最后发薪日：请在上面填，或在这台电脑做作业一排程，才算得出预计发放日。</div>'}<div class="adjsum"><span><b>合计</b>：${t(sum(rows))}</span>${by(r=>r.a.group||'',k=>k||'未分组')}${by(r=>r.a.wallet,k=>wLabel(k))}</div>
-  <div class="tablewrap"><table class="ctable hmtbl"><thead><tr><th>预计发放日</th><th>打款日</th><th>薪资年月</th><th>工号</th><th>姓名</th><th>单位</th><th>PHP</th><th>RMB</th><th>USDT</th><th>原钱包</th><th>归入</th><th>原因</th><th>暂缓人员／时间</th><th></th></tr></thead><tbody>${rows.map(({date,a,month,due})=>{const m=adjAmt(a),key=`${date}~${a.id}`,cf=st.hmConfirm===key;return `<tr><td><input type="date" class="adjin" data-hmdue="${esc(key)}" value="${esc(due||'')}" aria-label="${esc(a.e.name)} 预计发放日"></td><td>${esc(date)}</td><td>${esc(month)}</td><td>${esc(a.e.code)}</td><td>${esc(a.e.name)}</td><td>${esc([a.e.g,a.e.b,a.e.d].filter(Boolean).join(' / '))}</td><td class="num">${fmt(m.php)}</td><td class="num">${fmt2(a.rmb||m.rmb)}</td><td class="num">${hmUsdtText(a)}</td><td>${esc(wLabel(a.wallet))}</td><td>${esc(a.group||'')}</td><td style="white-space:normal;min-width:130px">${esc(a.reason)}</td><td>${esc(a.by||'')}<small class="wh">${esc(fmtAgo(a.at))}</small></td><td><button class="btn sm${cf?' primary':''}" data-hmpaid="${esc(key)}">${cf?'再按一次确认':'已发'}</button></td></tr>`}).join('')}</tbody></table></div>`}
+  <div class="tablewrap"><table class="ctable hmtbl"><thead><tr><th>预计发放日</th><th>打款日</th><th>薪资年月</th><th>工号</th><th>姓名</th><th>单位</th><th>PHP</th><th>RMB</th><th>USDT</th><th>原钱包</th><th>归入</th><th>原因</th><th>暂缓人员／时间</th></tr></thead><tbody>${rows.map(({date,a,month,due})=>{const m=adjAmt(a),key=`${date}~${a.id}`;return `<tr><td><input type="date" class="adjin" data-hmdue="${esc(key)}" value="${esc(due||'')}" aria-label="${esc(a.e.name)} 预计发放日"></td><td>${esc(date)}</td><td>${esc(month)}</td><td>${esc(a.e.code)}</td><td>${esc(a.e.name)}</td><td>${esc([a.e.g,a.e.b,a.e.d].filter(Boolean).join(' / '))}</td><td class="num">${fmt(m.php)}</td><td class="num">${fmt2(a.rmb||m.rmb)}</td><td class="num">${hmUsdtText(a)}</td><td>${esc(wLabel(a.wallet))}</td><td>${esc(a.group||'')}</td><td style="white-space:normal;min-width:130px">${esc(a.reason)}</td><td>${esc(a.by||'')}<small class="wh">${esc(fmtAgo(a.at))}</small></td></tr>`}).join('')}</tbody></table></div>`}
 async function hmExport(btn){const lab=btn.textContent,done=t=>{btn.textContent=t;setTimeout(()=>btn.textContent=lab,3000)};if(!DL||typeof XLSX==='undefined')return done('不能下载');const dflt=holdDueFrom(lpGet()[st.hmMonth]||'');const rows=hmAll().filter(x=>x.month===st.hmMonth);
   const head=['预计发放日','打款日','薪资年月','序号','工号','姓名','事业群','事业处','部门','实发工资PHP','兑人民币RMB','USDT','打款汇率','原钱包','归入','原因','暂缓人员','暂缓时间','钱包地址'];
   const aoa=[head,...rows.map(({date,a,month})=>[a.due||dflt,date,month,String(a.seq||''),a.e.code,a.e.name,a.e.g||'',a.e.b||'',a.e.d||'',adjAmt(a).php,a.rmb||adjAmt(a).rmb,a.usdt==null?'':a.usdt,a.payRate||'',wLabel(a.wallet),a.group||'',a.reason,a.by||'',new Date(a.at).toLocaleString('zh-CN',{hour12:false}),a.e.addr||''])];
   try{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa),'当月暂缓名单');await DL.save({filename:`当月暂缓名单_${st.hmMonth}.xlsx`,data:new Uint8Array(XLSX.write(wb,{type:'array',bookType:'xlsx'}))});done('已导出')}catch(err){done(err&&err.code==='declined'?'已取消':'导出失败')}}
-function hmPaid(key){if(st.hmConfirm!==key){st.hmConfirm=key;clearTimeout(st.hmT);st.hmT=setTimeout(()=>{st.hmConfirm=null;renderHoldMonth()},5000);renderHoldMonth();return}st.hmConfirm=null;clearTimeout(st.hmT);const i=key.indexOf('~'),date=key.slice(0,i),id=key.slice(i+1),it=adjPatch(date,id,a=>{a.paid={at:Date.now(),by:window.__payUser||''}});if(it)auditEvt('设定','暂缓标记已发',`工号 ${it.e.code} · 打款日 ${date} · PHP ${fmt(adjAmt(it).php)}${it.usdt==null?'':` · USDT ${fmt2(it.usdt)}`}`,'high');render()}
 function adjMsg(t,err){$('adjMsg').textContent=t;$('adjMsg').classList.toggle('err',!!err)}
 function adjNew(type,e,extra){return {id:`${Date.now()}-${Math.random().toString(36).slice(2,8)}`,at:Date.now(),by:adjWho(),type,e,...extra}}
 let adjPick=null;
@@ -2122,7 +2121,6 @@ document.addEventListener('click',e=>{
   if(e.target.id==='adjClose'){st.adjOpen=false;render();return}
   if(e.target.dataset&&e.target.dataset.adjpick){const b=adjBatch(),hit=b&&b.emps.find(x=>x.code===e.target.dataset.adjpick);if(hit){$('adjPerson').value=`${hit.code} ${hit.name}`;adjPickSet(hit);$('adjReason').focus()}return}
   if(e.target.id==='hmExport'){hmExport(e.target);return}
-  if(e.target.dataset&&e.target.dataset.hmpaid){hmPaid(e.target.dataset.hmpaid);return}
   if(e.target.id==='adjHold'){adjHold();return}
   if(e.target.dataset&&e.target.dataset.adjundo){adjUndo(e.target.dataset.adjundo);return}
   if(e.target.id==='wClear'){(st.batches||[]).forEach(b=>{b.cleared=true;b.reqSnap=null;b.capMsg=''});st.ucOpen={};st.autoMsg='已清空排的结果（名单还在），按「自动排」重新排。';render();return}
@@ -2225,7 +2223,7 @@ document.addEventListener('change',e=>{
   if(t.dataset.tsplit!==undefined){const [bi,w]=t.dataset.tsplit.split('~').map(Number),b=st.batches[bi];if(b){if(b.trxPick)return;const uc=trxUserCounts(b);b.trxSplit={};uc.forEach(x=>b.trxSplit[x.w]=x.n);b.trxSplit[w]=Math.max(0,parseInt(t.value,10)||0);saveTS(b)}t.blur&&0;render();return}
   if(t.dataset.cfgtrx!==undefined){const w=Number(t.dataset.cfgtrx),a=new Set(st.wcfg.trxWs||[]);t.checked?a.add(w):a.delete(w);st.wcfg.trxWs=[...a];saveWcfg();render();return}
   if(t.dataset.adjw!==undefined){const b=adjBatch();if(!b||b.ucDone)return;const a=(b.adj||[]).find(x=>x.id===t.dataset.adjw);if(a){const from=a.wallet,to=Number(t.value);a.wallet=to;a.e.w=to;const e=b.emps.find(x=>x.code===a.e.code);if(e)e.w=to;adjSave(b);auditEvt('设定','更改补发钱包',`工号 ${a.e.code}：钱包 ${from+1} → 钱包 ${to+1}`,'high');render()}return}
-  if(t.id==='hmMonth'){st.hmMonth=t.value;st.hmConfirm=null;renderHoldMonth();return}
+  if(t.id==='hmMonth'){st.hmMonth=t.value;renderHoldMonth();return}
   if(t.id==='hmLast'){lpSet(st.hmMonth,t.value);auditEvt('设定','更改本月最后发薪日',`${st.hmMonth}：${t.value||'（空白）'}`,'');renderHoldMonth();return}
   if(t.dataset.hmdue!==undefined){const k=t.dataset.hmdue,i=k.indexOf('~'),it=adjPatch(k.slice(0,i),k.slice(i+1),a=>{a.due=t.value});if(it)auditEvt('设定','更改暂缓预计发放日',`工号 ${it.e.code}：${t.value||'恢复预设'}`,'');renderHoldMonth();return}
   if(t.dataset.wrule!==undefined){const a=new Set(wRules());t.checked?a.add(t.dataset.wrule):a.delete(t.dataset.wrule);if(!a.size){t.checked=true;st.notice={text:'至少要勾一个规则。'};return}st.wcfg.urules=WRULE_ALL.filter(x=>a.has(x));saveWcfg();st.orderDirty=true;render();return}
@@ -2464,7 +2462,7 @@ $('batchFile').addEventListener('change',e=>{
       $('batchMsg').textContent=`正在读取 ${f.name}，并分配钱包…`;await new Promise(r=>setTimeout(r,30));
       st.batchErr='';
       /* 同一个打款日重新导入，会清掉那天的暂缓记录：先提醒一次 */
-      {const d=parseBatchRows(rows).date,r0=d&&adjStore()[d],n=r0?(r0.adj||[]).filter(a=>a.type==='hold'&&!a.paid).length:0;if(n&&st.adjOver!==f.name){st.adjOver=f.name;$('batchMsg').textContent=`打款日 ${d} 已有 ${n} 人暂缓，重新导入会把这些暂缓记录清掉。确定要导入，请再选一次文件。`;e.target.value='';return}st.adjOver=''}
+      {const d=parseBatchRows(rows).date,r0=d&&adjStore()[d],n=r0?(r0.adj||[]).filter(a=>a.type==='hold').length:0;if(n&&st.adjOver!==f.name){st.adjOver=f.name;$('batchMsg').textContent=`打款日 ${d} 已有 ${n} 人暂缓，重新导入会把这些暂缓记录清掉。确定要导入，请再选一次文件。`;e.target.value='';return}st.adjOver=''}
       const {b,replaced}=importBatch(f.name,rows);const before=st.prev;autoPrevW();if(st.prev!==before)allocAllBatches();savePaidBatches();
       $('batchMsg').innerHTML=`已导入 <b>${esc(b.date)}</b>：${b.emps.length} 人，${fmt(b.emps.reduce((a,e)=>a+e.a,0))} PHP${replaced?'（之前的资料已清空，全部重算）':''}。`;render()}
     catch(err){st.batchErr=err.message;render()}e.target.value=''};
