@@ -566,7 +566,7 @@ tfoot tr.quota td{font-weight:400;color:var(--muted);font-size:13px}
 
   <section class="step" id="holdSec" hidden>
     <h2>暂缓表</h2>
-    <p class="msg" style="margin-top:0">这里只用来核对。暂缓的员工按分组排在最后一天，金额算进当天的预计拨款。</p>
+    <p class="msg" style="margin-top:0">暂缓的员工按分组排在最后一天，金额算进当天的预计拨款。可以逐人改「归入」。</p>
     <details class="fold-list hgset"><summary>暂缓分组设定（通常不用改）</summary>
       <p class="msg" style="margin-top:0">勾选每一组包含哪些事业群，没勾的归最后一组。</p>
       <div id="hgGroups" class="hglist"></div>
@@ -725,7 +725,7 @@ const hKey=(h,i)=>h.code||('#'+i+'|'+h.name+'|'+h.g);
 /* 特例不发：按「薪资年月 + 员工」记住，只影响当月 */
 const skipKey=(h,i)=>(h.month||'')+'|'+hKey(h,i);
 const isSkip=()=>false; /* 「特例不发」已拿掉；旧设定不再生效 */
-function holdGroupOfH(h,i){return holdGroupOf(h.g)}
+function holdGroupOfH(h,i){const c=st.holdCfg,k=hKey(h,i),v=c.emp[k];return v!==undefined&&c.groups[v]!==undefined?c.groups[v]:holdGroupOf(h.g)}
 const isHold=id=>st.nodes.has(id)&&st.holdNames.has(N(id).path[0]);
 const st={nodes:new Map(),roots:[],open:new Set(),checked:new Set(),days:[],defaultCap:0,draft:{date:'',cap:0},target:'new',notice:null,total:0,planDays:0,rules:[],pickMode:'top',held:[],other:[],hasWay:false,locked:new Set(),tab:'main',cashRows:[],cashDate:'',allGroups:[],otherRows:[],viewFold:new Set(),sumLabels:{},revChecks:{},phpRate:0,usdtRate:{},prev:null,prevName:'',newOverride:{},batches:[],trx:loadTrx(),addrState:loadAddrState(),chain:loadChain(),holdCfg:loadHoldCfg(),holdNames:new Set(),baseData:null};
 const $=id=>document.getElementById(id);
@@ -925,7 +925,7 @@ function render(){
         return `<div class="hgrow"><input value="${esc(name)}" data-hgname="${i}" aria-label="第 ${i+1} 组名称"><small><button class="who" style="display:inline" data-list="holdgrp:${esc(name)}">${gStat[i].heads} 人</button>，${fmt(gStat[i].amount)}</small>${gs.length>1?`<button class="x" data-hgdel="${i}">删除</button>`:''}</div><div class="chips">${chips||'<span class="hint">导入后会列出表单里的事业群</span>'}</div>`}).join('');
     }
     const hs=st.held.reduce((a,h)=>a+h.amount,0);
-    $('holdTable').innerHTML=`<thead><tr><th>工号</th><th>姓名</th><th>事业群</th><th>事业处</th><th>部门</th><th class="num">实发工资PHP</th><th>工资发放方式</th><th>归入</th></tr></thead><tbody>${st.held.length?st.held.map((h,hi)=>`<tr class="${h.ok?'':'notin'}"><td>${esc(h.code)}</td><td>${esc(h.name)}</td><td>${esc(h.g)}</td><td>${esc(h.b)}</td><td>${esc(h.d)}</td><td class="num">${h.ok?fmt(h.amount):`${esc(h.raw||'（空白）')}<small class="warnline">${!isFinite(toNum(h.raw))?'读不到金额':'金额为 0 或负数'}，没有排进去</small>`}</td><td class="way hold">${esc(h.way)}</td><td>${esc(holdGroupOfH(h,hi))}</td></tr>`).join(''):'<tr><td colspan="8" class="empty">没有暂缓的员工</td></tr>'}</tbody><tfoot><tr><td colspan="5">合计 <button class="who inl" data-list="imp:hold">${st.held.length} 人</button></td><td class="num">${fmt(hs)}</td><td colspan="2"></td></tr></tfoot>`;
+    $('holdTable').innerHTML=`<thead><tr><th>工号</th><th>姓名</th><th>事业群</th><th>事业处</th><th>部门</th><th class="num">实发工资PHP</th><th>工资发放方式</th><th>归入</th></tr></thead><tbody>${st.held.length?st.held.map((h,hi)=>`<tr class="${h.ok?'':'notin'}"><td>${esc(h.code)}</td><td>${esc(h.name)}</td><td>${esc(h.g)}</td><td>${esc(h.b)}</td><td>${esc(h.d)}</td><td class="num">${h.ok?fmt(h.amount):`${esc(h.raw||'（空白）')}<small class="warnline">${!isFinite(toNum(h.raw))?'读不到金额':'金额为 0 或负数'}，没有排进去</small>`}</td><td class="way hold">${esc(h.way)}</td><td><select data-hgemp="${esc(hKey(h,hi))}" aria-label="${esc(h.name||h.code)} 归入">${st.holdCfg.groups.map((name,gi)=>`<option value="${gi}" ${holdGroupOfH(h,hi)===name?'selected':''}>${esc(name)}</option>`).join('')}</select>${st.holdCfg.emp[hKey(h,hi)]!==undefined?`<button class="x" data-hgreset="${esc(hKey(h,hi))}" title="改回按事业群的分组">改回预设</button>`:''}</td></tr>`).join(''):'<tr><td colspan="8" class="empty">没有暂缓的员工</td></tr>'}</tbody><tfoot><tr><td colspan="5">合计 <button class="who inl" data-list="imp:hold">${st.held.length} 人</button></td><td class="num">${fmt(hs)}</td><td colspan="2"></td></tr></tfoot>`;
     $('copyHold').disabled=!st.held.length;
   }
   // 分配单位树
@@ -2184,6 +2184,7 @@ document.addEventListener('change',e=>{
   if(t.dataset.cfgtrx!==undefined){const w=Number(t.dataset.cfgtrx),a=new Set(st.wcfg.trxWs||[]);t.checked?a.add(w):a.delete(w);st.wcfg.trxWs=[...a];saveWcfg();render();return}
   if(t.dataset.adjw!==undefined){const b=adjBatch();if(!b||b.ucDone)return;const a=(b.adj||[]).find(x=>x.id===t.dataset.adjw);if(a){const from=a.wallet,to=Number(t.value);a.wallet=to;a.e.w=to;const e=b.emps.find(x=>x.code===a.e.code);if(e)e.w=to;adjSave(b);auditEvt('设定','更改补发钱包',`工号 ${a.e.code}：钱包 ${from+1} → 钱包 ${to+1}`,'high');render()}return}
   if(t.id==='periodStart'){st.periodStart=t.value||'';busy(()=>{rebalance()});return}
+  if(t.dataset.hgemp!==undefined){st.holdCfg.emp[t.dataset.hgemp]=Number(t.value);saveHoldCfg();regroup();return}
   if(t.dataset.wrule!==undefined){const a=new Set(wRules());t.checked?a.add(t.dataset.wrule):a.delete(t.dataset.wrule);if(!a.size){t.checked=true;st.notice={text:'至少要勾一个规则。'};return}st.wcfg.urules=WRULE_ALL.filter(x=>a.has(x));saveWcfg();st.orderDirty=true;render();return}
   if(t.dataset.cfgusdt!==undefined){const w=Number(t.dataset.cfgusdt),a=new Set(usdtWs());t.checked?a.add(w):a.delete(w);if(!a.size){t.checked=true;return}st.wcfg.usdtWs=[...a];st.wcfg.maxW=0;saveWcfg();if((st.batches||[]).some(b=>!b.cleared))busy(allocAllBatches);else render();return}
   if(t.dataset.trx!==undefined){st.trx[t.dataset.trx]=t.value;saveTrx();render();return}
