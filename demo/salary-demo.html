@@ -152,9 +152,8 @@ tr.lockedrow td:not(.merged){background:color-mix(in srgb,var(--sel) 60%,transpa
 .tabs[hidden]{display:none}
 .tab{border:0;background:none;padding:10px 18px;font-size:15px;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px}
 .tab.on{color:var(--ink);font-weight:700;border-bottom-color:var(--ink)}
-.tabcount.gray{background:var(--muted)}
 .tab[hidden]{display:none}
-.tabcount{display:inline-block;min-width:22px;padding:0 6px;border-radius:10px;background:var(--danger);color:#fff;font-size:12px;font-weight:500;margin-left:4px}
+.tabcount{display:inline-block;margin-left:2px;font-size:inherit;font-weight:inherit;color:inherit}
 .rtag.hold{color:var(--danger);border-color:var(--danger);background:var(--dangerbg)}
 tr.notin td{background:var(--dangerbg)}
 tr.cashrow td:not(.merged){background:color-mix(in srgb,var(--w3) 8%,transparent)}
@@ -546,7 +545,6 @@ nav.jobs .job.dm-lock small::after{content:"（没有权限）";color:var(--dang
   <nav class="tabs" id="tabs" role="tablist" hidden>
     <button class="tab on" role="tab" data-tab="main" aria-selected="true">排程</button>
     <button class="tab" role="tab" data-tab="hold" aria-selected="false" id="tabHold">暂缓表 <span class="tabcount" id="holdCount">0</span></button>
-    <button class="tab" role="tab" data-tab="other" aria-selected="false" id="tabOther">其他发放方式 <span class="tabcount gray" id="otherCount">0</span></button>
   </nav>
   <section class="step" id="step1">
     <h2><span class="n">1</span>导入资料</h2>
@@ -648,25 +646,17 @@ nav.jobs .job.dm-lock small::after{content:"（没有权限）";color:var(--dang
 
   <section class="step" id="holdSec" hidden>
     <h2>暂缓表</h2>
-    <p class="msg" style="margin-top:0">暂缓的员工按下面的分组，排在最后一天发。</p>
-    <div class="hgset">
-      <h3>暂缓分组</h3>
-      <p class="msg" style="margin-top:0">勾选每一组包含哪些事业群，没勾的归最后一组。个别员工在明细的「归入」改；不发的勾「特例不发」。</p>
+    <p class="msg" style="margin-top:0">这里只用来核对。暂缓的员工按分组排在最后一天，金额算进当天的预计拨款。</p>
+    <details class="fold-list hgset"><summary>暂缓分组设定（通常不用改）</summary>
+      <p class="msg" style="margin-top:0">勾选每一组包含哪些事业群，没勾的归最后一组。</p>
       <div id="hgGroups" class="hglist"></div>
       <button class="btn" id="hgAdd">＋新增分组</button>
-    </div>
+    </details>
     <h3 style="margin:18px 0 8px">暂缓员工明细</h3>
     <div class="tablewrap"><table id="holdTable" style="min-width:720px"></table></div>
     <div class="row" style="margin-top:10px"><button class="btn" id="copyHold">复制暂缓表，贴到 Excel</button></div>
   </section>
 
-  <section class="step" id="otherSec" hidden>
-    <h2>其他发放方式</h2>
-    <p class="msg" style="margin-top:0">不是 USDT、暂缓、现金的员工，不分配，列在这里核对。</p>
-    <div id="otherSummary" class="chips" style="margin-bottom:10px"></div>
-    <div class="tablewrap"><table id="otherTable" style="min-width:720px"></table></div>
-    <div class="row" style="margin-top:10px"><button class="btn" id="copyOther">复制这张表，贴到 Excel</button></div>
-  </section>
 
   <section class="step" id="stepCap" hidden>
     <h2><span class="n">2</span>每天预计拨款</h2>
@@ -814,8 +804,8 @@ function holdGroupOf(g){const c=st.holdCfg,i=c.map[g];return c.groups[i!==undefi
 const hKey=(h,i)=>h.code||('#'+i+'|'+h.name+'|'+h.g);
 /* 特例不发：按「薪资年月 + 员工」记住，只影响当月 */
 const skipKey=(h,i)=>(h.month||'')+'|'+hKey(h,i);
-const isSkip=(h,i)=>!!st.holdCfg.skip[skipKey(h,i)];
-function holdGroupOfH(h,i){const c=st.holdCfg,k=hKey(h,i),v=c.emp[k];return v!==undefined&&c.groups[v]!==undefined?c.groups[v]:holdGroupOf(h.g)}
+const isSkip=()=>false; /* 「特例不发」已拿掉；旧设定不再生效 */
+function holdGroupOfH(h,i){return holdGroupOf(h.g)}
 const isHold=id=>st.nodes.has(id)&&st.holdNames.has(N(id).path[0]);
 const st={nodes:new Map(),roots:[],open:new Set(),checked:new Set(),days:[],defaultCap:0,draft:{date:'',cap:0},target:'new',notice:null,total:0,planDays:0,rules:[],pickMode:'top',held:[],other:[],hasWay:false,locked:new Set(),tab:'main',cashRows:[],cashDate:'',allGroups:[],otherRows:[],viewFold:new Set(),sumLabels:{},revChecks:{},phpRate:0,usdtRate:{},prev:null,prevName:'',newOverride:{},batches:[],trx:loadTrx(),addrState:loadAddrState(),chain:loadChain(),holdCfg:loadHoldCfg(),holdNames:new Set(),baseData:null};
 const $=id=>document.getElementById(id);
@@ -989,23 +979,16 @@ function render(){
   ['stepUnits','stepRules','step2'].forEach(x=>$(x).classList.toggle('locked',!ready));
   const pm=placed();
 
-  // 暂缓表与其他发放方式
-  const hasHold=st.hasWay&&st.held.length>0, hasOther=st.hasWay&&(st.otherRows||[]).length>0;
-  if((st.tab==='hold'&&!hasHold)||(st.tab==='other'&&!hasOther))st.tab='main';
+  // 暂缓表
+  const hasHold=st.hasWay&&st.held.length>0;
+  if(st.tab==='hold'&&!hasHold)st.tab='main';
   $('walletSec').hidden=st.tab!=='wallet';$('job1Phase').hidden=st.tab==='wallet';
   if(st.tab==='wallet')renderWallet();
   $('tabs').hidden=!loadedData||st.tab==='wallet';
   $('leadText').innerHTML=st.tab==='wallet'?((st.wjob||'2')==='3'?'作业三（打款日）：① 导入作业二导出的请款单、填打款汇率 → ② 暂缓（有人今天不发才做）→ ③ 导出打款单、下载 UC 打款文件。':'作业二（请款日）：① 导入当天核准名单 → ② 汇率与矿工费 → ③ 出款钱包与请款单，导出请款单给老板。'):'作业一（月初、送审前）：① 导入资料 → ② 每天预计拨款 → ③ 设定排的条件 → ④ 选择分配单位 → ⑤ 排发放日期 → ⑥ 总结，导出送审名单。';
   document.querySelectorAll('nav.jobs [data-job]').forEach(b=>{const j=b.dataset.job,on=j==='1'?st.tab!=='wallet':(st.tab==='wallet'&&(st.wjob||'2')===j);b.classList.toggle('on',on);b.setAttribute('aria-selected',on)});
   $('walletSec').dataset.w=st.wjob||'2';
-  $('tabHold').hidden=!hasHold;$('tabOther').hidden=!hasOther;
-  $('otherCount').textContent=(st.otherRows||[]).length;
-  $('otherSec').hidden=!hasOther||st.tab!=='other';
-  if(hasOther){
-    const rows=st.otherRows,sum=rows.reduce((a,r)=>a+r.amount,0);
-    $('otherSummary').innerHTML=st.other.map(([k,o])=>`<span class="chip on">${esc(k)}：<button class="who" style="display:inline" data-list="other:${esc(k)}">${o.heads} 人</button>，${fmt(o.amount)}</span>`).join('');
-    $('otherTable').innerHTML=`<thead><tr><th>工号</th><th>姓名</th><th>事业群</th><th>事业处</th><th>部门</th><th class="num">实发工资PHP</th><th>工资发放方式</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.g)}</td><td>${esc(r.b)}</td><td>${esc(r.d)}</td><td class="num">${fmt(r.amount)}</td><td>${esc(r.way)}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="5">合计 <button class="who inl" data-list="imp:other">${rows.length} 人</button></td><td class="num">${fmt(sum)}</td><td></td></tr></tfoot>`;
-  }
+  $('tabHold').hidden=!hasHold;
   $('holdCount').textContent=st.held.length;
   document.querySelectorAll('[data-tab]').forEach(b=>{const on=b.dataset.tab===st.tab;b.classList.toggle('on',on);b.setAttribute('aria-selected',on)});
   ['step1','stepUnits','stepRules','step2'].forEach(x=>$(x).hidden=st.tab!=='main');$('stepCap').hidden=st.tab!=='main'||!loadedData;
@@ -1022,7 +1005,7 @@ function render(){
         return `<div class="hgrow"><input value="${esc(name)}" data-hgname="${i}" aria-label="第 ${i+1} 组名称"><small><button class="who" style="display:inline" data-list="holdgrp:${esc(name)}">${gStat[i].heads} 人</button>，${fmt(gStat[i].amount)}</small>${gs.length>1?`<button class="x" data-hgdel="${i}">删除</button>`:''}</div><div class="chips">${chips||'<span class="hint">导入后会列出表单里的事业群</span>'}</div>`}).join('');
     }
     const hs=st.held.reduce((a,h)=>a+h.amount,0);
-    $('holdTable').innerHTML=`<thead><tr><th>工号</th><th>姓名</th><th>事业群</th><th>事业处</th><th>部门</th><th class="num">实发工资PHP</th><th>工资发放方式</th><th>归入</th><th>特例不发</th></tr></thead><tbody>${st.held.length?st.held.map((h,hi)=>`<tr class="${h.ok?'':'notin'}${isSkip(h,hi)?' skiprow':''}"><td>${esc(h.code)}</td><td>${esc(h.name)}</td><td>${esc(h.g)}</td><td>${esc(h.b)}</td><td>${esc(h.d)}</td><td class="num">${h.ok?fmt(h.amount):`${esc(h.raw||'（空白）')}<small class="warnline">${!isFinite(toNum(h.raw))?'读不到金额':'金额为 0 或负数'}，没有排进分配</small>`}</td><td>${esc(h.way)}</td><td><select data-hgemp="${esc(hKey(h,hi))}" aria-label="${esc(h.name||h.code)} 归入">${st.holdCfg.groups.map((name,gi)=>`<option value="${gi}" ${holdGroupOfH(h,hi)===name?'selected':''}>${esc(name)}</option>`).join('')}</select>${st.holdCfg.emp[hKey(h,hi)]!==undefined?`<button class="x" data-hgreset="${esc(hKey(h,hi))}" title="改回按事业群的分组">改回预设</button>`:''}</td><td class="ck"><input type="checkbox" data-hgskip="${esc(skipKey(h,hi))}" ${isSkip(h,hi)?'checked':''} aria-label="${esc(h.name||h.code)} 特例不发"></td></tr>`).join(''):'<tr><td colspan="9" class="empty">这个月没有暂缓的员工。</td></tr>'}</tbody><tfoot><tr><td colspan="5">暂缓合计 <button class="who inl" data-list="imp:hold">${st.held.length} 人</button>${st.held.some((h,i)=>isSkip(h,i))?`，其中特例不发 ${st.held.filter((h,i)=>isSkip(h,i)).length} 人（${fmt(st.held.reduce((a,h,i)=>a+(isSkip(h,i)&&h.ok?h.amount:0),0))}）`:''}${st.held.some(h=>!h.ok)?`（其中 ${st.held.filter(h=>!h.ok).length} 人金额有问题，没有排进分配，已用红字标出）`:''}</td><td class="num">${fmt(hs)}</td><td></td><td></td><td></td></tr></tfoot>`;
+    $('holdTable').innerHTML=`<thead><tr><th>工号</th><th>姓名</th><th>事业群</th><th>事业处</th><th>部门</th><th class="num">实发工资PHP</th><th>工资发放方式</th><th>归入</th></tr></thead><tbody>${st.held.length?st.held.map((h,hi)=>`<tr class="${h.ok?'':'notin'}"><td>${esc(h.code)}</td><td>${esc(h.name)}</td><td>${esc(h.g)}</td><td>${esc(h.b)}</td><td>${esc(h.d)}</td><td class="num">${h.ok?fmt(h.amount):`${esc(h.raw||'（空白）')}<small class="warnline">${!isFinite(toNum(h.raw))?'读不到金额':'金额为 0 或负数'}，没有排进去</small>`}</td><td class="way hold">${esc(h.way)}</td><td>${esc(holdGroupOfH(h,hi))}</td></tr>`).join(''):'<tr><td colspan="8" class="empty">没有暂缓的员工</td></tr>'}</tbody><tfoot><tr><td colspan="5">合计 <button class="who inl" data-list="imp:hold">${st.held.length} 人</button></td><td class="num">${fmt(hs)}</td><td colspan="2"></td></tr></tfoot>`;
     $('copyHold').disabled=!st.held.length;
   }
   // 分配单位树
@@ -2272,8 +2255,6 @@ document.addEventListener('change',e=>{
   if(t.dataset.hgpick!==undefined){const i=Number(t.dataset.hgpick),g=t.dataset.g,last=st.holdCfg.groups.length-1;
     if(t.checked)st.holdCfg.map[g]=i;else if(i!==last)delete st.holdCfg.map[g];else{st.notice={text:'最后一组是预设分组，没被其他组选走的事业群都会归在这里。要把它移走，请在其他组勾选。'};render();return}
     saveHoldCfg();regroup();return}
-  if(t.dataset.hgskip!==undefined){if(t.checked)st.holdCfg.skip[t.dataset.hgskip]=true;else delete st.holdCfg.skip[t.dataset.hgskip];saveHoldCfg();regroup();return}
-  if(t.dataset.hgemp!==undefined){st.holdCfg.emp[t.dataset.hgemp]=Number(t.value);saveHoldCfg();regroup();return}
   if(t.dataset.hgname!==undefined){const i=Number(t.dataset.hgname),v=t.value.trim();if(!v||st.holdCfg.groups.some((g,j)=>j!==i&&g===v)||[...st.nodes.values()].some(n=>n.depth===0&&!st.holdNames.has(n.id)&&n.id===v)){t.value=st.holdCfg.groups[i];st.notice={text:'组名不能空白，也不能跟其他组或事业群同名。'};render();return}
     st.holdCfg.groups[i]=v;saveHoldCfg();regroup();return}
   if(t.dataset.wset!==undefined){const w=Number(t.dataset.wset),k=t.dataset.k,v=t.value.trim();if(k==='both'){st.wallets[w].payer=v;st.wallets[w].name=v||`钱包 ${w+1}`}else st.wallets[w][k]=k==='addr'?v:v||(k==='name'?`钱包 ${w+1}`:'');saveWallets();render();return}
@@ -2530,13 +2511,8 @@ $('copySum').addEventListener('click',async()=>{
   try{await copyRich(null,L.join('\n'));$('copySum').textContent='已复制，到 Excel 贴上即可'}catch(_){$('copySum').textContent='请用跳出的视窗手动复制'}
   setTimeout(()=>{$('copySum').textContent='复制总结，贴到 Excel'},3000);
 });
-$('copyOther').addEventListener('click',async()=>{
-  const L=['工号\t姓名\t事业群\t事业处\t部门\t实发工资PHP\t工资发放方式',...(st.otherRows||[]).map(r=>[r.code,r.name,r.g,r.b,r.d,Math.round(r.amount),r.way].join('\t'))];
-  try{await copyRich(null,L.join('\n'));$('copyOther').textContent='已复制，到 Excel 贴上即可'}catch(_){$('copyOther').textContent='请用跳出的视窗手动复制'}
-  setTimeout(()=>{$('copyOther').textContent='复制这张表，贴到 Excel'},3000);
-});
 $('copyHold').addEventListener('click',async()=>{
-  const L=['工号\t姓名\t事业群\t事业处\t部门\t实发工资PHP\t工资发放方式\t归入\t特例不发',...st.held.map((h,i)=>[h.code,h.name,h.g,h.b,h.d,Math.round(h.amount),h.way,holdGroupOfH(h,i),isSkip(h,i)?'是':''].join('\t'))];
+  const L=['工号\t姓名\t事业群\t事业处\t部门\t实发工资PHP\t工资发放方式\t归入',...st.held.map((h,i)=>[h.code,h.name,h.g,h.b,h.d,Math.round(h.amount),h.way,holdGroupOfH(h,i)].join('\t'))];
   const text=L.join('\n');
   try{await copyRich(null,text);$('copyHold').textContent='已复制，到 Excel 贴上即可'}catch(_){$('copyHold').textContent='请用跳出的视窗手动复制'}
   setTimeout(()=>{$('copyHold').textContent='复制暂缓表，贴到 Excel'},3000);
