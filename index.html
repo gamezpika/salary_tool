@@ -1794,10 +1794,9 @@ function renderAdj(){const b=adjBatch();if(!$('adjBody'))return;
   const adj=b.adj||[];if(!adj.length){$('adjBody').innerHTML='<p class="fhint" style="margin:0">这个打款日目前没有人暂缓。</p>';return}
   const hold=adj.filter(a=>a.type==='hold'),add=adj.filter(a=>a.type==='add'),sum=l=>{let php=0,rmb=0,u=0,uok=true;l.forEach(a=>{const m=adjAmt(a),x=adjUsdt(a,b);php+=m.php;rmb+=m.rmb;if(x==null)uok=false;else u+=x});return {n:l.length,php,rmb:r2(rmb),u:uok?r2(u):null}};
   const txt=x=>`<b>${x.n}</b> 人，PHP <b>${fmt(x.php)}</b>，RMB <b>${fmt2(x.rmb)}</b>，USDT <b>${x.u==null?'待填打款汇率':fmt2(x.u)}</b>`;
-  const byW=[...new Set(hold.map(a=>a.wallet))].sort((p,q)=>p-q).map(w=>{const x=sum(hold.filter(a=>a.wallet===w));return `<span>${esc(wLabel(w))} 多出 USDT <b>${x.u==null?'待填汇率':fmt2(x.u)}</b></span>`}).join('');
   const cells=batchCells([b],'pay'),warns=[...new Set(add.map(a=>a.wallet))].map(w=>{const bal=usdtBalOf(w),need=(cells[w]||{usdt:0}).usdt;return bal!=null&&payRateOf(b)>0&&need>bal+1e-9?`${esc(wLabel(w))} 余额不够：需要 ${fmt2(need)} USDT，目前 ${fmt2(bal)}，还差 ${fmt2(need-bal)}`:''}).filter(Boolean);
   const dis=b.ucDone?'disabled':'';
-  $('adjBody').innerHTML=`${warns.length?`<div class="notice">${warns.join('<br>')}</div>`:''}<div class="adjsum">${hold.length?`<span><b>暂缓合计</b>：${txt(sum(hold))}</span>${byW}`:''}</div>
+  $('adjBody').innerHTML=`${warns.length?`<div class="notice">${warns.join('<br>')}</div>`:''}<div class="adjsum"><span><b>暂缓合计</b>：<b>${hold.length}</b> 人</span></div>
   <div class="tablewrap"><table class="ctable adjtbl"><thead><tr>${OA_HEAD.map(h=>`<th>${esc(h)}</th>`).join('')}<th></th></tr></thead><tbody>${hold.map(a=>`<tr>${adjOaRow(a).map((v,i)=>`<td${OA_NUM.includes(i)?' class="num"':''}${i===11?' style="white-space:normal;min-width:140px"':''}>${OA_NUM.includes(i)?(i===8?fmt(v):fmt2(v)):esc(v)}</td>`).join('')}<td><button class="x" data-adjundo="${esc(a.id)}" ${dis}>撤销</button></td></tr>`).join('')}</tbody></table></div>
   <div class="row" style="margin-top:10px"><button class="btn" id="adjExportToday">导出暂缓名单（回写 OA 用）</button></div>`}
 function adjStore(){try{return JSON.parse(localStorage.getItem(ADJKEY)||'{}')||{}}catch(_){return{}}}
