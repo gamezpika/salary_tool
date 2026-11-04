@@ -2753,7 +2753,7 @@ function finishImport(){const p=pend;if(!p)return;pend=null;const r=parsed;parse
 document.addEventListener('change',e=>{const t=e.target;if(t.type==='file'&&IMP[t.id]&&t.files&&t.files[0]&&me){patchXlsx();const f=t.files[0];parsed=null;pend={id:t.id,name:f.name,hash:sha(f),tm:setTimeout(finishImport,3000)}}},true);
 
 /* ---------- 记录：导出 ---------- */
-function exportAct(n){return /UC打款/.test(n)?['下载 UC 打款文件','high']:/暂缓名单/.test(n)?['导出当月暂缓名单','high']:/请款单/.test(n)?['导出请款单','']:/打款单/.test(n)?['导出打款单','']:/送审/.test(n)?['导出发薪日送审总名单','']:['导出文件','']}
+function exportAct(n){return /UC打款/.test(n)?['下载 UC 打款文件','high']:/暂缓名单/.test(n)?['导出暂缓名单','high']:/请款单/.test(n)?['导出请款单','']:/打款单/.test(n)?['导出打款单','']:/送审/.test(n)?['导出发薪日送审总名单','']:['导出文件','']}
 window.__DS=function(DL,o){const p=DL.save(o),data=o.data;Promise.resolve(p).then(()=>'ok',()=>'no').then(async s=>{const h=await sha(data),[a,r]=exportAct(o.filename||'');if(!me)return;log('导出',s==='ok'?a:a+'（未保存）',`${o.filename||''}${h?' · 指纹 '+h:''}`,s==='ok'?r:'');if(s==='ok'&&h){db.logs[0].hash=h;save()}});return p};
 
 /* ---------- 记录：按钮操作 ---------- */
