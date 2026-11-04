@@ -390,7 +390,7 @@ small.wh.neg{color:var(--danger);font-weight:600}
 .adjtype{display:inline-block;padding:0 8px;border-radius:10px;font-size:12px;font-weight:600;white-space:nowrap;background:var(--dangerbg);color:var(--danger)}
 .adjtype.add{background:var(--soft);color:var(--ok);border:1px solid var(--ok)}
 .wsin.reqmiss{border:2px solid var(--danger);background:var(--dangerbg)}
-.wdhead .neg,#reqNeedDate,#wOrderChips .neg,#firstBody .neg{color:var(--danger)}
+.wdhead .neg,#reqNeedDate,#wOrderChips .neg{color:var(--danger)}
 .btn.chkdone{position:relative}
 .btn.chkdone::after{content:'✓';position:absolute;top:-9px;right:-9px;width:20px;height:20px;display:grid;place-items:center;border-radius:50%;background:var(--ok);color:var(--panel);font-size:13px;font-weight:700;line-height:1}
 .rulechips .muted{color:var(--muted)}
@@ -470,10 +470,9 @@ tfoot tr.quota td{font-weight:400;color:var(--muted);font-size:13px}
     <h2><span class="n">1</span>导入资料</h2>
     <div class="impgrid">
       <div class="prevbox" id="curBox"><span class="previcon" id="curIcon" aria-hidden="true">!</span><div class="prevtxt"><span class="imptag">本月</span><b id="curNote"></b><small id="curSub">OA 的「菲律宾USDT薪资发放名单」。档案只在你的浏览器里读取，不会上传。</small></div><label class="btn prevbtn" for="file" id="curBtn">导入本月月度薪资表（Excel）</label><input type="file" id="file" accept=".xlsx,.xls,.csv" hidden></div>
-      <div class="prevbox" id="prevBox"><span class="previcon" id="prevIcon" aria-hidden="true">!</span><div class="prevtxt"><span class="imptag">上个月</span><b id="prevNote1"></b><small id="prevSub1">选用（只要有「工号」栏）：找出入职较早、但上个月没发的人列为待确认。薪资表有入职日期时，第一次发 TRX 看入职日期。正式版会查 OA 的历史发薪记录。</small></div><label class="btn prevbtn" for="prevFile1">导入上个月打款名单（Excel）</label><input type="file" id="prevFile1" accept=".xlsx,.xls,.csv" hidden></div>
+      <div class="prevbox" id="prevBox"><span class="previcon" id="prevIcon" aria-hidden="true">!</span><div class="prevtxt"><span class="imptag">上个月</span><b id="prevNote1"></b><small id="prevSub1">选用（只要有「工号」栏）：用来提醒钱包地址跟上月不同。第一次发 TRX 看入职日期，不用这份名单。</small></div><label class="btn prevbtn" for="prevFile1">导入上个月打款名单（Excel）</label><input type="file" id="prevFile1" accept=".xlsx,.xls,.csv" hidden></div>
     </div>
     <div class="msg" id="importMsg"></div>
-    <div class="subsec" id="firstBox" hidden><h3 style="margin:0 0 8px">第一次发 TRX</h3><div class="adjrow"><label class="adjf">本期考勤开始日<input type="date" class="adjin" id="periodStart"></label><span class="fhint" style="margin:0 0 7px">在这天（含）之后入职的算新员工。预设照薪资年月算，可以改。</span></div><div id="firstBody"></div></div>
   </section>
 
   <div id="walletSec" hidden>
@@ -890,7 +889,6 @@ function render(){
   try{if(st.nodes.size>0)computeSerials()}catch(_){}
   {const ok=st.nodes.size>0;$('curSub').textContent='OA 的「菲律宾USDT薪资发放名单」。档案只在你的浏览器里读取，不会上传。';$('curNote').textContent=ok?`已导入：${st.loadedName||''}（${st.roots.reduce((a,id)=>a+N(id).heads,0)} 人排入分配，应发 ${fmt(st.total)} PHP）`:'导入本月的月度薪资表';$('curBox').classList.toggle('ok',ok);$('curIcon').textContent=ok?'✓':'1';$('curBtn').textContent=ok?'重新导入本月月度薪资表':'导入本月月度薪资表（Excel）';
    paintErr('curBox','curIcon','curNote','curSub',st.curErr,'',ok?`${st.loadedName||''}`:'')}
-  try{renderFirstBox()}catch(_){}
   if(document.getElementById('prevNote1')){$('prevNote1').textContent=st.prev?`已导入：${st.prevName}（${st.prev.size} 人）`:'导入上个月的打款名单（选用）';$('prevBox').classList.toggle('ok',!!st.prev);$('prevIcon').textContent=st.prev?'✓':'2';$('prevBox').querySelector('.prevbtn').textContent=st.prev?'重新导入上个月打款名单':'导入上个月打款名单（Excel）';$('prevSub1').textContent='用来比对第一次发薪（只要有「工号」栏）。过渡阶段：正式版会直接从资料库判断。';paintErr('prevBox','prevIcon','prevNote1','prevSub1',st.prevErr,'',st.prev?st.prevName:'')}
   const loadedData=st.nodes.size>0, ready=loadedData&&st.defaultCap>0;
   const estDays=st.defaultCap>0?Math.ceil(st.total/st.defaultCap):0;
@@ -1136,20 +1134,11 @@ function exportReview(dayIdx,btn,holdOnly){
   copyReviewAll(btn,rows,`第 ${dayIdx+1} 天（${d.date}）送审名单`);
 }
 /* ---------- 第一次打款：跟上个月打款名单比对工号，上月没有的就是第一次 ---------- */
-/* 第一次发 TRX（过渡做法，正式版改查 OA 的历史发薪记录）：
-   入职日期在本期考勤开始日（含）之后＝新员工。薪资年月 X 的考勤是 X-1 月 20 日到 X 月 19 日。
-   留停回来的人入职日期早，不算新人；入职早、上个月又没发的人列为待确认，由人决定。没有入职日期才比对上个月名单。 */
+/* 第一次发 TRX（过渡做法）：入职日期在本期考勤开始日（含）之后＝新员工。薪资年月 X 的考勤是 X-1 月 20 日到 X 月 19 日。
+   作业一一定要有入职日期，没有就挡下；作业二、三读名单上的「第一次打款」。 */
 function periodStartOf(m){if(!/^\d{6}$/.test(m||''))return'';let y=Number(m.slice(0,4)),mo=Number(m.slice(4));mo--;if(mo<1){mo=12;y--}return `${y}-${String(mo).padStart(2,'0')}-20`}
 function parseHire(v){if(typeof v==='number'&&v>20000&&v<80000){const d=new Date(Math.round((v-25569)*864e5));return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`}return normDate(v)}
 function newReason(e){if(!e.code)return '';if(e.hire&&st.periodStart)return e.hire>=st.periodStart?`入职日期 ${e.hire}，在本期考勤开始（${st.periodStart}）之后`:'';if(!st.prev)return '';return st.prev.has(e.code)?'':'上月名单没有这个工号'}
-const firstPending=e=>!!(e.code&&e.hire&&st.periodStart&&e.hire<st.periodStart&&st.prev&&!st.prev.has(e.code)&&st.newOverride[e.code]===undefined);
-function renderFirstBox(){const x=$('firstBox');if(!x)return;const all=st.roots.flatMap(id=>empsOf(id)),show=!!all.length;x.hidden=!show;if(!show)return;
-  const fresh=all.filter(isNewEmp),pend=all.filter(firstPending),noHire=st.hasHire?all.filter(e=>!e.hire).length:0,list=[...pend,...all.filter(e=>!firstPending(e)&&(isNewEmp(e)||st.newOverride[e.code]!==undefined))];
-  const st0=e=>firstPending(e)?'<b class="neg">待确认</b>':st.newOverride[e.code]!==undefined?'人工决定':(e.hire?'入职日期':'上个月没有');
-  if(document.activeElement!==$('periodStart'))$('periodStart').value=st.periodStart||'';
-  $('firstBody').innerHTML=`<p class="msg" style="margin:4px 0">第一次发 TRX <b>${fresh.length}</b> 人${pend.length?`；<b class="neg">待确认 ${pend.length} 人</b>（入职较早、但上个月名单没有，例如留停回来，请勾选是否算第一次）`:''}</p>
-   ${st.hasHire?(noHire?`<p class="neg" style="margin:4px 0;font-size:13.5px;font-weight:600">有 ${noHire} 人没有入职日期，这些人改用上个月名单判断。</p>`:''):'<p class="neg" style="margin:4px 0;font-size:13.5px;font-weight:600">薪资表没有「入职日期」栏，暂时比对上个月名单；留停回来的人可能被误判。</p>'}
-   ${list.length?`<details class="fold-list"${pend.length?' open':''}><summary>查看名单（${list.length} 人）</summary><div class="tablewrap" style="margin-top:6px"><table class="ctable" style="min-width:640px"><thead><tr><th>工号</th><th>姓名</th><th>入职日期</th><th>判断依据</th><th>算第一次</th></tr></thead><tbody>${list.map(e=>`<tr><td>${esc(e.code)}</td><td>${esc(e.name)}</td><td>${esc(e.hire||'—')}</td><td>${st0(e)}</td><td class="ck"><input type="checkbox" data-newck="${esc(e.code)}" ${isNewEmp(e)?'checked':''} aria-label="${esc(e.name)} 算第一次"></td></tr>`).join('')}</tbody></table></div></details>`:''}`}
 /* 只是标注：工号一样，但这个月的钱包地址跟上个月不同（不算第一次打款，不另外打 TRX） */
 const shortAddr=a=>a&&a.length>14?a.slice(0,6)+'…'+a.slice(-4):(a||'');
 function addrChanged(e){if(!st.prev||!e||!e.code||!e.addr)return false;const pa=st.prev.get(e.code);return !!pa&&pa!==e.addr}
@@ -2183,7 +2172,6 @@ document.addEventListener('change',e=>{
   if(t.dataset.tsplit!==undefined){const [bi,w]=t.dataset.tsplit.split('~').map(Number),b=st.batches[bi];if(b){if(b.trxPick)return;const uc=trxUserCounts(b);b.trxSplit={};uc.forEach(x=>b.trxSplit[x.w]=x.n);b.trxSplit[w]=Math.max(0,parseInt(t.value,10)||0);saveTS(b)}t.blur&&0;render();return}
   if(t.dataset.cfgtrx!==undefined){const w=Number(t.dataset.cfgtrx),a=new Set(st.wcfg.trxWs||[]);t.checked?a.add(w):a.delete(w);st.wcfg.trxWs=[...a];saveWcfg();render();return}
   if(t.dataset.adjw!==undefined){const b=adjBatch();if(!b||b.ucDone)return;const a=(b.adj||[]).find(x=>x.id===t.dataset.adjw);if(a){const from=a.wallet,to=Number(t.value);a.wallet=to;a.e.w=to;const e=b.emps.find(x=>x.code===a.e.code);if(e)e.w=to;adjSave(b);auditEvt('设定','更改补发钱包',`工号 ${a.e.code}：钱包 ${from+1} → 钱包 ${to+1}`,'high');render()}return}
-  if(t.id==='periodStart'){st.periodStart=t.value||'';busy(()=>{rebalance()});return}
   if(t.dataset.hgskip!==undefined){if(t.checked)st.holdCfg.skip[t.dataset.hgskip]=true;else delete st.holdCfg.skip[t.dataset.hgskip];saveHoldCfg();regroup();return}
   if(t.dataset.hgemp!==undefined){st.holdCfg.emp[t.dataset.hgemp]=Number(t.value);saveHoldCfg();regroup();return}
   if(t.dataset.wrule!==undefined){const a=new Set(wRules());t.checked?a.add(t.dataset.wrule):a.delete(t.dataset.wrule);if(!a.size){t.checked=true;st.notice={text:'至少要勾一个规则。'};return}st.wcfg.urules=WRULE_ALL.filter(x=>a.has(x));saveWcfg();st.orderDirty=true;render();return}
@@ -2456,7 +2444,7 @@ function loaded(label){st.loadedName=label;st.curErr='';
   const bad=(st.held||[]).filter(h=>!h.ok).length, skip=(st.held||[]).filter((h,i)=>isSkip(h,i)).length;
   const otherN=(st.otherRows||[]).length, cashN=(st.cashRows||[]).length, cashAmt=(st.cashRows||[]).reduce((a,r)=>a+r.amount,0);
   const li=[];
-  {const allE=st.roots.flatMap(id=>empsOf(id)),nNew=allE.filter(isNewEmp).length;li.push(st.hasHire&&st.periodStart?`第一次发 TRX：<button class="who inl first" data-list="newall">${nNew} 人</button>（${esc(st.periodStart)} 之后入职）`:st.prev?`第一次发 TRX：<button class="who inl first" data-list="newall">${nNew} 人</button>（跟 ${esc(st.prevName)} 的名单比对工号）`:'第一次发 TRX：薪资表没有入职日期，也还没导入上个月名单，暂时标不出来')}
+  {const allE=st.roots.flatMap(id=>empsOf(id)),nNew=allE.filter(isNewEmp).length;li.push(`第一次发 TRX：<button class="who inl first" data-list="newall">${nNew} 人</button>（${esc(st.periodStart||'')} 之后入职）`)}
   if(st.reArranged)li.push(`<b>已用新的薪资表重新自动排好发放日期</b>（日期沿用之前的），请到第 ⑤ 步检查`);
   li.push(`PHP → RMB 汇率：取自「汇率Peso」栏${st.rmbCol1?`；实发工资RMB：取自「${esc(st.rmbCol1)}」栏`:'；名单没有实发工资RMB 栏，用汇率Peso 换算'}`);
   if(st.serialMonth){li.push(`序号：排好发放日期后，按发薪日期 → 同部门在一起 → 姓名 A～Z，从 ${st.serialMonth}0001 开始编；暂缓的员工排在最后。日期或部门有变动，序号会跟着重编`)}
@@ -2480,9 +2468,10 @@ $('file').addEventListener('change',e=>{
       const keys=Object.keys(rows[0]);
       const norm=v=>String(v).replace(/[\s()（）\[\]【】_\-:：/]/g,'').toLowerCase();
       const find=c=>{for(const x of c){const ex=keys.find(k=>norm(k)===norm(x));if(ex)return ex}for(const x of c){const k=keys.find(k=>norm(k).includes(norm(x)));if(k)return k}};
-      const kA=find(['实发工资PHP','实发工资','应发']),kG=find(['事业群']),kB=find(['事业处']),kD=find(['部门','事业部']),kC=find(['工资发放方式','发放方式','发放渠道']),kN=find(['姓名']),kPos=find(['岗位','职位']),kRmb=find(['实发工资RMB','RMB实发工资','实发工资人民币','人民币实发工资','人民币金额']),kRem=find(['备注']),kE=find(['工号']),kM=find(['薪资年月','年月','Salary period']),kAddr=find(['充值地址','钱包地址','收款地址']),kP=find(['所属BP','BP']),kRate=keys.find(k=>norm(k)===norm('汇率Peso')),kHire=find(['入职日期','到职日期','报到日期','入职时间']);st.hasHire=!!kHire;st.rateCol1=kRate||'';st.rmbCol1=kRmb||'';
+      const kA=find(['实发工资PHP','实发工资','应发']),kG=find(['事业群']),kB=find(['事业处']),kD=find(['部门','事业部']),kC=find(['工资发放方式','发放方式','发放渠道']),kN=find(['姓名']),kPos=find(['岗位','职位']),kRmb=find(['实发工资RMB','RMB实发工资','实发工资人民币','人民币实发工资','人民币金额']),kRem=find(['备注']),kE=find(['工号']),kM=find(['薪资年月','年月','Salary period']),kAddr=find(['充值地址','钱包地址','收款地址']),kP=find(['所属BP','BP']),kRate=keys.find(k=>norm(k)===norm('汇率Peso')),kHire=find(['入职日期','入职日','到职日期','报到日期','入职时间']);st.hasHire=!!kHire;st.rateCol1=kRate||'';st.rmbCol1=kRmb||'';
       if(!kA)throw new Error('找不到「实发工资PHP」这一栏。');
       if(!kRate)throw new Error('找不到「汇率Peso」这一栏（PHP → RMB 汇率一律用这一栏）。');
+      if(!kHire)throw new Error('找不到「入职日期」这一栏，请 OA 导出时带上，才能判断谁是第一次发 TRX。');
       if(!kG&&!kB&&!kD)throw new Error('找不到「事业群」「事业处」「部门」任何一栏。');
       const data=[],held=[],other=new Map(),cash=[],otherRows=[];
       const txt=k=>k?String(row_[k]??'').trim():'';let row_;
@@ -2505,10 +2494,11 @@ $('file').addEventListener('change',e=>{
         const path=orgPath(kG?row[kG]:'',kB?row[kB]:'',kD?row[kD]:'');if(path.length)data.push({path,heads:1,amount:a,code:kE?String(row[kE]).trim():'',month:normMonth(txt(kM)),bp:txt(kP),name:txt(kN),pos:txt(kPos),rmb:kRmb?toNum(row[kRmb]):NaN,rateF:kRate?toNum(row[kRate]):NaN,rem:txt(kRem),addr:kAddr?txt(kAddr):'',hire:kHire?parseHire(row[kHire]):''});
       });
       if(!data.length&&!held.length)throw new Error('没有找到要用 USDT 发放的员工，请确认档案内容。');
+      {const noH=[...data,...held].filter(x=>!/^\d{4}-\d{2}-\d{2}$/.test(x.hire||'')).map(x=>x.code||x.name||'（没有工号）');if(noH.length)throw new Error(`有 ${noH.length} 人的「入职日期」是空的或读不到（${noH.slice(0,5).join('、')}${noH.length>5?' 等':''}），请补上再导入。`)}
       {const bad=rows.filter(row=>toNum(row[kA])>0&&!(toNum(row[kRate])>0)).map(row=>kE?String(row[kE]??'').trim():'').filter(Boolean);
        if(bad.length)throw new Error(`「汇率Peso」有 ${bad.length} 人是空的或 0（${bad.slice(0,5).join('、')}${bad.length>5?' 等':''}），请补上汇率再导入。`)}
       const prevDays=st.days.filter(d=>d.items.length).map(d=>d.date);st.reArranged=false;st.serialMonthPending=fileMonth;
-      st.serialMonth=fileMonth;if(st.periodMonth!==fileMonth){st.periodMonth=fileMonth;st.periodStart=periodStartOf(fileMonth)}st.newOverride={};st.serialAdded=0;st.serialCache=null;st.serialKey='';autoPrevJob1();st.rate=rate;st.phpRate=Number(String(rate).replace(/[^0-9.]/g,''))||0;st.baseData=data;st.held=held;st.allGroups=[...seenG];st.newOverride={};buildAll();st.other=[...other.entries()];st.otherRows=otherRows;st.hasWay=!!kC;st.cashRows=cash;st.cashDate='';
+      st.serialMonth=fileMonth;st.periodStart=periodStartOf(fileMonth);st.newOverride={};st.serialAdded=0;st.serialCache=null;st.serialKey='';autoPrevJob1();st.rate=rate;st.phpRate=Number(String(rate).replace(/[^0-9.]/g,''))||0;st.baseData=data;st.held=held;st.allGroups=[...seenG];st.newOverride={};buildAll();st.other=[...other.entries()];st.otherRows=otherRows;st.hasWay=!!kC;st.cashRows=cash;st.cashDate='';
       /* 重新导入：之前排过的话，用新的薪资表自动重排，日期沿用之前的 */
       if(prevDays.length){try{autoSplit();autoAll();st.days.forEach((d,i)=>{if(prevDays[i])d.date=prevDays[i]});rebalance();st.reArranged=true}catch(_){}}
       loaded(f.name);
