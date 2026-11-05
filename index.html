@@ -374,6 +374,8 @@ small.wh.neg{color:var(--danger);font-weight:600}
 .rc{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 4px;border:1px solid var(--line);border-radius:14px;background:var(--panel);font-size:13px}
 .rc b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--w2);color:#fff;font-size:11px}
 .rc #ruleCap{color:var(--muted)}
+.faddrhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}.faddrhead h3{margin:0}
+.faddrstat{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14px;margin-bottom:6px}.faddrstat b{font-variant-numeric:tabular-nums}
 .adjrow{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:6px}
 .adjf{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--muted);min-width:0}
 .adjf.grow{flex:1;min-width:200px}.adjf.grow .adjin{width:100%}
@@ -390,7 +392,7 @@ small.wh.neg{color:var(--danger);font-weight:600}
 .adjtype{display:inline-block;padding:0 8px;border-radius:10px;font-size:12px;font-weight:600;white-space:nowrap;background:var(--dangerbg);color:var(--danger)}
 .adjtype.add{background:var(--soft);color:var(--ok);border:1px solid var(--ok)}
 .wsin.reqmiss{border:2px solid var(--danger);background:var(--dangerbg)}
-.wdhead .neg,#reqNeedDate,#wOrderChips .neg{color:var(--danger)}
+.wdhead .neg,#reqNeedDate,#wOrderChips .neg,.faddrstat .neg{color:var(--danger)}
 .btn.chkdone{position:relative}
 .btn.chkdone::after{content:'✓';position:absolute;top:-9px;right:-9px;width:20px;height:20px;display:grid;place-items:center;border-radius:50%;background:var(--ok);color:var(--panel);font-size:13px;font-weight:700;line-height:1}
 .rulechips .muted{color:var(--muted)}
@@ -506,13 +508,16 @@ tfoot tr.quota td{font-weight:400;color:var(--muted);font-size:13px}
       <div class="chainbar">
         <label class="trxp"><b>TronScan API Key</b><input type="password" id="chainKey" autocomplete="off" placeholder="在 tronscan.org 申请" style="width:260px;text-align:left"></label>
         <button class="btn" id="chainBal">查询链上余额</button>
-        <button class="btn" id="chainFirst">上链查询第一次发薪员工的地址</button>
-        <span class="hint chainhint" style="margin:0;text-align:left;flex-basis:100%">API Key 只存在这台电脑的浏览器；<br>余额会自动填进下方表格；<br>地址查询决定打 TRX 矿工费用 0.268（用过的地址）或 1.1（新地址），还没查的先当新地址。</span>
+        <span class="hint chainhint" style="margin:0;text-align:left;flex-basis:100%">API Key 只存在这台电脑的浏览器；余额会自动填进下方表格。</span>
       </div>
       <details class="fold-list wset" open><summary>出款钱包设定</summary>
       <div class="tablewrap" style="margin:8px 0 8px"><table class="ctable wsettbl" style="min-width:820px"><colgroup><col style="width:5%"><col style="width:12%"><col style="width:31%"><col style="width:12%"><col style="width:20%"><col style="width:20%"></colgroup><thead><tr><th>钱包</th><th>打款人员</th><th>出款地址</th><th>检查</th><th>目前 TRX<br><small id="chkHead1"></small></th><th>目前 USDT<br><small id="chkHead2"></small></th></tr></thead><tbody id="wsetBody"></tbody></table></div>
       <div class="row" style="margin-bottom:10px;gap:16px"><button class="btn" id="wsAdd">＋新增钱包</button></div>
     </details>
+    </div>
+    <div class="subsec" id="faddrBox"><div class="faddrhead"><h3>第一次发薪员工的地址</h3><button class="btn" id="chainFirst">上链查询第一次发薪员工的地址</button></div>
+      <p class="fhint" style="margin:2px 0 6px">用来决定打 TRX 的矿工费：用过的地址较便宜，新地址较贵；还没查的先当新地址。</p>
+      <div id="faddrBody"></div>
     </div>
     <div class="subsec"><h3>分钱包的条件</h3>
       <div class="frow cfgrow"><label>固定由哪个钱包打 TRX<br><small>（第一次打款的 30 TRX）</small></label><span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span id="cfgTrx" class="chips"></span><span class="neg" id="cfgTrxWarn" style="font-size:13px">请至少勾一个，才能按「自动排」</span></span></div>
@@ -1374,7 +1379,7 @@ function renderWallet(){
         $('cfgSplit').innerHTML=`<div class="tshead">第一次打款共 <b>${f}</b> 人，各钱包打几人：${b.trxPick?'<span class="rtag trxtag">已逐人指定</span>':''}</div>${uc.map(x=>`<label class="tsrow"><span class="wtag" style="--wc:${wc(x.w)}"></span><span class="tsname">${esc(wLabel(x.w))}</span><input type="number" min="0" step="1" class="fin sm" data-tsplit="${bi}~${x.w}" value="${x.n}" ${b.trxPick?'readonly title="已逐人指定，要改请按「逐人指定」"':''}> 人<small class="muted" data-tsamt="${x.w}">${per?`＝ ${fmt(x.n*per)} TRX`:''}</small></label>`).join('')}
         <div class="tsfoot"><span id="tsSum" data-tot="${f}" class="${ok?'okc':'neg'}">合计 ${sum}／${f} 人${ok?' ✓':''}</span><button class="btn sm" data-tsreset="${bi}">平均分</button><button class="btn sm" data-tspick="${bi}">逐人指定…</button></div>`}}}
    $('ruleCap').textContent=Number(st.wcap)>0?` ${fmt(st.wcap)} USDT `:'（没设）';
-   chainMarks();renderAdj();renderBatWarn();
+   chainMarks();renderAdj();renderBatWarn();renderFirstAddr();
    {const o=wRules();$('wOrderChips').innerHTML=WRULE_ALL.map(k=>`<label class="chip ${o.includes(k)?'on':''}"><input type="checkbox" data-wrule="${k}" ${o.includes(k)?'checked':''}>${WRULE_NAME[k]}</label>`).join('')+(st.orderDirty?'<span class="neg" style="font-size:13px;font-weight:600">规则改了，按「自动排」才生效</span>':'');
     $('wAutoHint').textContent=(o.includes('serial')?'自动排：每个钱包拿一段连续的序号，再照顾其他勾选的规则。':'自动排：没勾序号连续，同一个钱包的序号可能跳号，对帐时要对照各钱包的名单。')}
    const uw=usdtWs();$('cfgUsdt').innerHTML=st.wallets.map((x,w)=>`<label class="chip"><input type="checkbox" data-cfgusdt="${w}" ${uw.includes(w)?'checked':''}>${esc(wLabel(w))}</label>`).join('')}
@@ -1438,7 +1443,7 @@ function renderWallet(){
     const cell=(need,bal,short,f,ok)=>bal===null?`<td class="num"><span class="hint" style="margin:0">没有余额</span></td>`:short===null?`<td class="num"><span class="hint" style="margin:0">待填汇率</span></td>`:short>0?`<td class="num"><b class="neg">还差 ${f(short)}</b><small class="wh">需要 ${f(need)}／目前 ${f(bal)}</small></td>`:`<td class="num"><span class="okc">✓ 够</span></td>`;
     const chkHTML=chk.length?`<div class="balchk"><div class="balhead">${esc(b.date)} 余额检查（只列不够或还没输入余额的钱包）</div><table class="ctable balt"><thead><tr><th>钱包</th><th>TRX</th><th>USDT</th></tr></thead><tbody>${chk.map(c=>`<tr><td><span class="wtag" style="--wc:${wc(c.w)}"></span>${esc(wLabel(c.w))}</td>${cell(c.tN,c.tB,c.tS,fmt3)}${cell(c.uN,c.uB,c.uS,fmt2)}</tr>`).join('')}</tbody></table>${chk.some(c=>c.tB===null||c.uB===null)?'<p class="hint" style="text-align:left;margin:4px 0 0">没有余额的钱包，请在上方「出款钱包」输入目前余额，或按「查询链上余额」。</p>':''}</div>`:'';
     h+=`${wv.length?`<div class="notice">${esc(b.date)}：${wv.map(esc).join('；')}</div>`:''}<div class="wday"><div class="wdhead"><b>请款日</b><input type="date" class="wsin${reqDate(b)?'':' reqmiss'}" style="width:auto" data-breq="${i}" value="${esc(reqDate(b))}" required aria-required="true" aria-label="请款日（必填）">${reqDate(b)?'':'<b class="neg" style="font-size:13px">必填</b>'}<span class="hint" style="margin:0">（<b>${esc(b.date)}</b> 打款用）${esc(b.file)}，${b.emps.length} 人</span><span class="hint" style="margin:0">TRX 由 <b>${esc(trxWsOf().map(wLabel).join('、'))}</b> 打${trxWsOf().length>1?`（${trxCounts(b).map(x=>`${esc(wLabel(x.w))}：${x.n} 人`).join('、')}）`:''}</span>
-      </div><div class="tablewrap">${rowsFor(batchCells([b]),i,true,[b])}</div>${feeDetail(b,i)}</div>`;
+      </div><div class="tablewrap">${rowsFor(batchCells([b]),i,true,[b])}</div></div>`;
     if(curW)b.emps.forEach((e,k)=>e.w=curW[k]);
     uh+=`<div class="wday"><div class="wdhead"><b>打款日 ${esc(b.date)}</b><span class="hint" style="margin:0">（${reqDate(b)?`${esc(reqDate(b))} 已请款`:"请款日未填"}）${esc(b.file)}，${b.emps.length} 人</span><span class="hint" style="margin:0">打款汇率 ${Number(b.rate)?`<b>${esc(String(b.rate))}</b>`:'<b class="neg">未填（上面第 ① 步）</b>'}</span></div>${payTable2(b,i)}${ucBlock(b,i)}</div>`});
   if(!(st.batches||[]).length)h='<p class="empty">还没有导入任何一天的核准名单。每天核准后，从 OA 导出当天的名单，按上方「导入当天核准名单」。</p>';
@@ -1697,12 +1702,15 @@ function payTable2(b,bi){const cells=batchCells([b]),rateA=Number(st.phpRate)||0
   return `<div class="tsub"><span class="tsubtag pay">打款单</span><span class="tsubdesc">跟请款单同格式，USDT 用打款汇率 ${hasU?esc(String(b.rate)):'（还没填）'} 计算，在最下方导出</span></div>
   <div class="tablewrap" style="margin:0 12px"><table class="wtbl reqtbl"><thead><tr><th>打款人员</th><th>人数</th><th>总比索PHP</th><th>兑人民币RMB</th><th>USDT数量</th></tr></thead><tbody>${rows}<tr class="wsub"><td>小计</td><td>${th}</td><td class="num">${fmt(tp)}</td><td class="num">${rateA>0?fmt2(r2(tr)):''}</td><td class="num">${hasU?fmt2(r2(tu)):'—'}</td></tr></tbody></table></div>${hasU?'':'<p class="fhint" style="margin:4px 12px 0">先在上面第 ① 步填打款汇率，USDT数量才会算出来。</p>'}${b.capMsg?`<p class="notice ok" style="margin:6px 12px 0">${esc(b.capMsg)}</p>`:''}${b.capInfo&&b.capInfo.over&&hasU?`<p class="notice" style="margin:6px 12px 0">今天的金额太大，${b.capInfo.K} 个钱包排不进每个 ${fmt(b.capInfo.cap)} USDT 的上限，至少需要 ${b.capInfo.need} 个钱包</p>`:''}
   <div class="tsub"><span class="tsubtag">UC 打款文件</span><span class="tsubdesc">每个钱包一份 USDT（00），TRX 一天一份（01）</span></div>`}
-function feeDetail(b,bi){const list=b.emps.filter(isNewEmp),tw=trxWsOf()[0];if(!list.length)return '';
-  const p=st.trx,fo=Number(p.feeOld)||0,fn=Number(p.feeNew)||0,sm=serialMap();
-  const n={old:0,new:0,unk:0};list.forEach(e=>{const s=addrStatus(e.addr);s==='old'?n.old++:s==='new'?n.new++:n.unk++});
+/* 第一次发薪员工的地址：状态、查询按钮和明细放在同一块 */
+function renderFirstAddr(){const box=$('faddrBody');if(!box)return;const bs=st.batches||[],bi=bs.length-1,b=bs[bi];
+  if(!b){box.innerHTML='<p class="fhint" style="margin:0">导入当天核准名单后，这里会列出第一次发薪的员工。</p>';return}
+  const list=b.emps.filter(isNewEmp);if(!list.length){box.innerHTML='<p class="fhint" style="margin:0">这批名单没有第一次发薪的员工，不用查。</p>';return}
+  const p=st.trx,fo=Number(p.feeOld)||0,fn=Number(p.feeNew)||0,sm=serialMap(),n={old:0,new:0,unk:0};list.forEach(e=>{const s=addrStatus(e.addr);s==='old'?n.old++:s==='new'?n.new++:n.unk++});
   const ast=a=>`<select class="wsin" data-astat="${esc(a)}"><option value="" ${!addrStatus(a)?'selected':''}>还没查（当新地址 ${fn}）</option><option value="new" ${addrStatus(a)==='new'?'selected':''}>新地址（${fn}）</option><option value="old" ${addrStatus(a)==='old'?'selected':''}>用过的地址（${fo}）</option></select>`;
-  return `<details class="fold-list ucw feew"${(st.ucOpen||{})[bi+'-fee']?' open':''} data-uckey="${bi}-fee" style="margin:8px 12px 12px"><summary>TRX 矿工费明细（由 ${esc(trxWsOf().map(wLabel).join('、'))} 打 TRX）：第一次发薪 ${list.length} 人，用过的地址 ${n.old}、新地址 ${n.new}、还没查 ${n.unk}</summary>
-    <div class="tablewrap" style="margin-top:8px"><table class="ctable" style="min-width:640px"><thead><tr><th>序号</th><th>工号</th><th>姓名</th><th>收款地址</th><th>地址状态（决定矿工费）</th></tr></thead><tbody>${list.slice().sort((x,y)=>String(sm.get(x)||'').localeCompare(String(sm.get(y)||''))).map(e=>`<tr><td>${esc(sm.get(e)||'')}</td><td>${esc(e.code)}</td><td>${esc(e.name)}</td><td class="addrcell">${esc(e.addr||'（没有地址）')}</td><td>${e.addr?ast(e.addr):''}</td></tr>`).join('')}</tbody></table></div></details>`}
+  const payer=trxRuleWs()?`由 ${esc(trxWsOf().map(wLabel).join('、'))} 打 TRX`:'还没选打 TRX 的钱包';
+  box.innerHTML=`<div class="faddrstat"><span>第一次发薪 <b>${list.length}</b> 人</span><span>用过的地址 <b>${n.old}</b></span><span>新地址 <b>${n.new}</b></span><span>还没查 <b${n.unk?' class="neg"':''}>${n.unk}</b></span><span class="muted">${payer}</span></div>
+   <details class="fold-list"${(st.ucOpen||{})[bi+'-fee']?' open':''} data-uckey="${bi}-fee"><summary>查看名单和地址状态</summary><div class="tablewrap" style="margin-top:8px"><table class="ctable" style="min-width:640px"><thead><tr><th>序号</th><th>工号</th><th>姓名</th><th>收款地址</th><th>地址状态（决定矿工费）</th></tr></thead><tbody>${list.slice().sort((x,y)=>String(sm.get(x)||'').localeCompare(String(sm.get(y)||''))).map(e=>`<tr><td>${esc(sm.get(e)||'')}</td><td>${esc(e.code)}</td><td>${esc(e.name)}</td><td class="addrcell">${esc(e.addr||'（没有地址）')}</td><td>${e.addr?ast(e.addr):''}</td></tr>`).join('')}</tbody></table></div></details>`}
 function ucBlock(b,bi){const K=b.K||W,rated=payRateOf(b)>0&&Number(st.phpRate)>0,per=Number(st.trx.perNew)||0;
   const ast=a=>`<select class="wsin" data-astat="${esc(a)}"><option value="" ${!addrStatus(a)?'selected':''}>还没查（当新地址）</option><option value="new" ${addrStatus(a)==='new'?'selected':''}>新地址</option><option value="old" ${addrStatus(a)==='old'?'selected':''}>已启用</option></select>`;
   const tbl=(rows,cur)=>`<table class="uctbl"><thead><tr>${UC_HEAD.map(c=>`<th>${esc(c)}</th>`).join('')}${cur==='01'?'<th>收款地址状态<br><small>（只用来算矿工费，不会导出）</small></th>':''}</tr></thead><tbody>${rows.map(r=>`<tr${r.bad?' class="badrow"':''}><td>${esc(String(r.seq))}</td><td class="addrcell">${r.addr?esc(r.addr):'（没有收款地址）'}${r.bad?`<small class="warnline">${esc(r.bad)}</small>`:''}</td><td>${cur}</td><td class="num">${r.amt===null?'待填汇率':cur==='00'?fmt2(r.amt):fmt3(r.amt)}</td><td></td>${cur==='01'?`<td>${r.addr?ast(r.addr):''}</td>`:''}</tr>`).join('')}</tbody></table>`;
