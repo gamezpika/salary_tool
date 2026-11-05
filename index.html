@@ -374,7 +374,7 @@ small.wh.neg{color:var(--danger);font-weight:600}
 .rc{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 4px;border:1px solid var(--line);border-radius:14px;background:var(--panel);font-size:13px}
 .rc b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--w2);color:#fff;font-size:11px}
 .rc #ruleCap{color:var(--muted)}
-.sechead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;min-height:38px}.sechead h3{margin:0}
+.sechead{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:8px 16px;min-height:38px}.sechead h3{margin:0}
 .secacts{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
 .sechint{margin:4px 0 8px}
 .wstep .subsec{padding:12px 14px;margin:0 0 12px}
@@ -1441,7 +1441,7 @@ function renderWallet(){
   (st.batches||[]).forEach((b,i)=>{const rated=Number(b.rate)>0;
     /* 第 ③ 步显示请款当时的预估分配；打款时如果因为上限重排，第 ⑤ 步才用新的分配 */
     const curW=b.reqSnap?b.emps.map(e=>e.w):null;if(curW)b.emps.forEach((e,k)=>e.w=b.reqSnap[k]);
-    if(b.cleared){const ph=(t,sub)=>`<div class="wday"><div class="wdhead"><b>${t}</b><span class="hint" style="margin:0">${sub}${esc(b.file)}，${b.emps.length} 人</span></div><p class="empty" style="margin:12px">还没分配钱包，请按上方「<b>自动排</b>」。</p></div>`;h+=`<p class="fhint" style="margin:0">这批 ${b.emps.length} 人还没分配，请按右上方「自动排」。</p>`;uh+=ph(`打款日 ${esc(b.date)}`,`（${reqDate(b)?`${esc(reqDate(b))} 已请款`:"请款日未填"}）`);return}
+    if(b.cleared){const ph=(t,sub)=>`<div class="wday"><div class="wdhead"><b>${t}</b><span class="hint" style="margin:0">${sub}${esc(b.file)}，${b.emps.length} 人</span></div><p class="empty" style="margin:12px">还没分配钱包，请按上方「<b>自动排</b>」。</p></div>`;h+=`<p class="fhint" style="margin:0">这批 ${b.emps.length} 人还没分配，请按上方「自动排」。</p>`;uh+=ph(`打款日 ${esc(b.date)}`,`（${reqDate(b)?`${esc(reqDate(b))} 已请款`:"请款日未填"}）`);return}
     const wv=wruleViol(b);
 
     /* 余额检查：整理成一张小表（钱包 × TRX／USDT），只列不够或还没输入余额的 */
