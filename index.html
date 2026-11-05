@@ -528,7 +528,7 @@ tfoot tr.quota td{font-weight:400;color:var(--muted);font-size:13px}
       <div class="frow cfgrow"><label>USDT 分配规则<br><small>（可复选）</small></label><span class="rulechips" id="wOrderChips"></span><span id="ruleCap" hidden></span></div>
       <p class="fhint" id="splitHint" hidden>预设平均分。</p>
     </div>
-    <div class="subsec"><div class="sechead"><h3>钱包分配</h3><div class="secacts"><span class="automsg" id="wAutoMsg" hidden></span><button class="btn" id="wClear">全部清空</button><button class="btn primary" id="wAuto">自动排</button></div></div>
+    <div class="subsec"><div class="sechead"><h3>钱包分配</h3><div class="secacts"><span class="automsg" id="wAutoMsg" hidden></span><button class="btn" id="wAllocExport" disabled title="先按「自动排」">导出 Excel</button><button class="btn" id="wClear">全部清空</button><button class="btn primary" id="wAuto">自动排</button></div></div>
       <p class="fhint sechint"><span id="wAutoHint"></span>全部清空：清掉排的结果（名单保留，可以再按自动排）。</p>
       <div id="walletDays"></div>
     </div>
@@ -1713,7 +1713,15 @@ function payTable2(b,bi){const cells=batchCells([b]),rateA=Number(st.phpRate)||0
   <div class="tablewrap" style="margin:0 12px"><table class="wtbl reqtbl"><thead><tr><th>打款人员</th><th>人数</th><th>总比索PHP</th><th>兑人民币RMB</th><th>USDT数量</th></tr></thead><tbody>${rows}<tr class="wsub"><td>小计</td><td>${th}</td><td class="num">${fmt(tp)}</td><td class="num">${rateA>0?fmt2(r2(tr)):''}</td><td class="num">${hasU?fmt2(r2(tu)):'—'}</td></tr></tbody></table></div>${hasU?'':'<p class="fhint" style="margin:4px 12px 0">先在上面第 ① 步填打款汇率，USDT数量才会算出来。</p>'}${b.capMsg?`<p class="notice ok" style="margin:6px 12px 0">${esc(b.capMsg)}</p>`:''}${b.capInfo&&b.capInfo.over&&hasU?`<p class="notice" style="margin:6px 12px 0">今天的金额太大，${b.capInfo.K} 个钱包排不进每个 ${fmt(b.capInfo.cap)} USDT 的上限，至少需要 ${b.capInfo.need} 个钱包</p>`:''}
   <div class="tsub"><span class="tsubtag">UC 打款文件</span><span class="tsubdesc">每个钱包一份 USDT（00），TRX 一天一份（01）</span></div>`}
 /* 第一次发薪员工的地址：状态、查询按钮和明细放在同一块 */
-function renderFirstAddr(){const box=$('faddrBody');if(!box)return;const bs=st.batches||[],bi=bs.length-1,b=bs[bi];
+/* 钱包分配明细：每个员工的 TRX 费用和矿工费，算法和钱包分配表相同 */
+async function allocExport(btn){const bs=st.batches||[],b=bs[bs.length-1];if(!b||b.cleared)return;const lab=btn.textContent,done=t=>{btn.textContent=t;setTimeout(()=>btn.textContent=lab,3000)};if(!DL||typeof XLSX==='undefined')return done('不能下载');
+  const sm=serialMap(),p=st.trx,fu=Number(p.feeU)||0,fo=Number(p.feeOld)||0,fn=Number(p.feeNew)||0,per=Number(p.perNew)||0;
+  const head=['序号','工号','姓名','事业群','事业处','部门','打 USDT 的钱包','实发工资PHP','兑人民币RMB','第一次打款','打 TRX 的钱包','地址状态','TRX 费用（第一次补助）','转 TRX 的矿工费','转 USDT 的矿工费','收款地址'];
+  const list=b.emps.slice().sort((x,y)=>String(sm.get(x)||'').localeCompare(String(sm.get(y)||''),undefined,{numeric:true}));let tPhp=0,tRmb=0,tSub=0,tFeeT=0,tFeeU=0,tFirst=0;
+  const rows=list.map(e=>{const f=isNewEmp(e),s=f?addrStatus(e.addr):'',feeT=f?(s==='old'?fo:fn):0,sub=f?per:0,m=bRmb(e),rmb=m==null?'':m;tPhp+=e.a;if(m!=null)tRmb+=m;tSub+=sub;tFeeT+=feeT;tFeeU+=fu;if(f)tFirst++;return [String(sm.get(e)||''),e.code,e.name,e.g||'',e.b||'',e.d||'',wLabel(e.w||0),Math.round(e.a),rmb,f?'是':'',f?wLabel(trxWOf(e,b)):'',f?(s==='old'?'用过的地址':s==='new'?'新地址':'还没查（当新地址）'):'',r3(sub),r3(feeT),r3(fu),e.addr||'']});
+  const tot=['小计','','','','','','',Math.round(tPhp),r2(tRmb),tFirst?`${tFirst} 人`:'','','',r3(tSub),r3(tFeeT),r3(tFeeU),''];
+  try{const ws=XLSX.utils.aoa_to_sheet([head,...rows,tot]);rows.forEach((r,i)=>{const c=ws[XLSX.utils.encode_cell({r:i+1,c:0})];if(c){c.t='s';c.v=String(r[0])}});ws['!cols']=[{wch:13},{wch:16},{wch:14},{wch:12},{wch:14},{wch:14},{wch:14},{wch:13},{wch:13},{wch:10},{wch:14},{wch:18},{wch:20},{wch:15},{wch:15},{wch:38}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'钱包分配明细');await DL.save({filename:`钱包分配明细_打款日${b.date}.xlsx`,data:new Uint8Array(XLSX.write(wb,{type:'array',bookType:'xlsx'}))});done('已导出')}catch(err){done(err&&err.code==='declined'?'已取消':'导出失败')}}
+function renderFirstAddr(){{const bs=st.batches||[],lb=bs[bs.length-1],ok=!!lb&&!lb.cleared,x=$('wAllocExport');if(x){x.disabled=!ok;x.title=ok?'':'先按「自动排」'}}const box=$('faddrBody');if(!box)return;const bs=st.batches||[],bi=bs.length-1,b=bs[bi];
   if(!b){box.innerHTML='<p class="fhint" style="margin:0">导入当天核准名单后，这里会列出第一次发薪的员工。</p>';return}
   const list=b.emps.filter(isNewEmp);if(!list.length){box.innerHTML='<p class="fhint" style="margin:0">这批名单没有第一次发薪的员工，不用查。</p>';return}
   const p=st.trx,fo=Number(p.feeOld)||0,fn=Number(p.feeNew)||0,sm=serialMap(),n={old:0,new:0,unk:0};list.forEach(e=>{const s=addrStatus(e.addr);s==='old'?n.old++:s==='new'?n.new++:n.unk++});
@@ -2092,6 +2100,7 @@ document.addEventListener('click',e=>{
   if(e.target.id==='adjExportToday'){adjExportToday(e.target);return}
   if(e.target.id==='adjHold'){adjHold();return}
   if(e.target.dataset&&e.target.dataset.adjundo){adjUndo(e.target.dataset.adjundo);return}
+  if(e.target.id==='wAllocExport'){allocExport(e.target);return}
   if(e.target.id==='wClear'){(st.batches||[]).forEach(b=>{b.cleared=true;b.reqSnap=null;b.capMsg=''});st.ucOpen={};st.autoMsg='已清空排的结果（名单还在），按「自动排」重新排。';render();return}
   if(e.target.id==='wsAdd'){st.wallets.push({name:`钱包 ${st.wallets.length+1}`,addr:'',payer:''});saveWallets();busy(allocAllBatches);return}
   const wsd=e.target.closest('[data-wsdel]');if(wsd){wsd.blur();st.wallets.splice(Number(wsd.dataset.wsdel),1);saveWallets();busy(allocAllBatches);return}
