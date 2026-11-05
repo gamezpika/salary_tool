@@ -22,7 +22,7 @@ rep('DL.save(', '__DS(DL,');
 rep("if(!st.chain.key)throw new Error('还没有填 TronScan API Key');", '');
 rep("fetch(`https://apilist.tronscanapi.com/api/accountv2?address=${encodeURIComponent(addr)}`,{headers:{accept:'application/json','TRON-PRO-API-KEY':st.chain.key}})", "fetch(`/api/chain/account?address=${encodeURIComponent(addr)}`,{headers:{accept:'application/json'}})");
 rep("if(r.status===401||r.status===403)throw new Error('TronScan API Key 无效或没有权限');", "if(r.status===503)throw new Error('服务器还没设定 TronScan API Key，请找 IT');if(r.status===401||r.status===403)throw new Error('登录已过期或没有权限');");
-rep('API Key 只存在这台电脑的浏览器；<br>', '');
+rep('API Key 只存在这台电脑的浏览器；余额', '余额');
 rep('</head>', '<link rel="stylesheet" href="/client.css">\n</head>');
 rep('</body>', '<script src="/client.js"></script>\n</body>');
 fs.rmSync(out, { recursive: true, force: true });
