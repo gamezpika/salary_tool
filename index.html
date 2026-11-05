@@ -374,7 +374,14 @@ small.wh.neg{color:var(--danger);font-weight:600}
 .rc{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 4px;border:1px solid var(--line);border-radius:14px;background:var(--panel);font-size:13px}
 .rc b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--w2);color:#fff;font-size:11px}
 .rc #ruleCap{color:var(--muted)}
-.faddrhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}.faddrhead h3{margin:0}
+.sechead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;min-height:38px}.sechead h3{margin:0}
+.secacts{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+.sechint{margin:4px 0 8px}
+.wstep .subsec{padding:12px 14px;margin:0 0 12px}
+#walletDays .wday{margin-bottom:0;background:var(--panel)}
+#wsetStat .neg{color:var(--danger);font-weight:600}
+.reqhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-bottom:10px}
+.reqhead label{display:flex;align-items:center;gap:8px;font-weight:600}
 .faddrstat{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14px;margin-bottom:6px}.faddrstat b{font-variant-numeric:tabular-nums}
 .adjrow{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:6px}
 .adjf{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--muted);min-width:0}
@@ -392,10 +399,11 @@ small.wh.neg{color:var(--danger);font-weight:600}
 .adjtype{display:inline-block;padding:0 8px;border-radius:10px;font-size:12px;font-weight:600;white-space:nowrap;background:var(--dangerbg);color:var(--danger)}
 .adjtype.add{background:var(--soft);color:var(--ok);border:1px solid var(--ok)}
 .wsin.reqmiss{border:2px solid var(--danger);background:var(--dangerbg)}
-.wdhead .neg,#reqNeedDate,#wOrderChips .neg,.faddrstat .neg{color:var(--danger)}
+.wdhead .neg,.reqhead .neg,#reqNeedDate,#wOrderChips .neg,.faddrstat .neg{color:var(--danger)}
 .btn.chkdone{position:relative}
 .btn.chkdone::after{content:'✓';position:absolute;top:-9px;right:-9px;width:20px;height:20px;display:grid;place-items:center;border-radius:50%;background:var(--ok);color:var(--panel);font-size:13px;font-weight:700;line-height:1}
 .rulechips .muted{color:var(--muted)}
+#reqSec .wtbl{min-width:0!important}
 #cfgTrxWarn.muted{color:var(--muted);font-weight:400}
 #cfgTrxWarn.neg{font-weight:600}
 .tsfoot .neg{color:var(--danger);font-weight:600}
@@ -478,7 +486,7 @@ tfoot tr.quota td{font-weight:400;color:var(--muted);font-size:13px}
   </section>
 
   <div id="walletSec" hidden>
-  <div class="phase ph-req"><b>请款作业</b><span>请款日（打款的前一个工作日）：导入名单 → 汇率与矿工费 → 出款钱包与请款单</span></div>
+  <div class="phase ph-req"><b>请款作业</b><span>请款日（打款的前一个工作日）：导入名单 → 汇率与矿工费 → 出款钱包与分配 → 请款单</span></div>
   <p class="notice" id="busyNote" hidden style="position:sticky;top:8px;z-index:20"></p>
   <section class="step wstep ph-req">
     <h2><span class="n">1</span>导入当天核准名单</h2>
@@ -502,33 +510,33 @@ tfoot tr.quota td{font-weight:400;color:var(--muted);font-size:13px}
     <p class="fhint">请款用人民币估算，RMB → USDT 汇率在作业三（打款）填。</p>
   </section>
   <section class="step wstep ph-req">
-    <h2><span class="n">3</span>出款钱包与请款单</h2>
-    <p class="msg" style="margin-top:0">填好出款钱包 → 设分钱包的条件 → 按「自动排」→ 下方看钱包分配和请款单，按「导出请款单」给老板。</p>
-    <div class="subsec"><h3>出款钱包</h3>
-      <div class="chainbar">
-        <label class="trxp"><b>TronScan API Key</b><input type="password" id="chainKey" autocomplete="off" placeholder="在 tronscan.org 申请" style="width:260px;text-align:left"></label>
-        <button class="btn" id="chainBal">查询链上余额</button>
-        <span class="hint chainhint" style="margin:0;text-align:left;flex-basis:100%">API Key 只存在这台电脑的浏览器；余额会自动填进下方表格。</span>
-      </div>
-      <details class="fold-list wset" open><summary>出款钱包设定</summary>
-      <div class="tablewrap" style="margin:8px 0 8px"><table class="ctable wsettbl" style="min-width:820px"><colgroup><col style="width:5%"><col style="width:12%"><col style="width:31%"><col style="width:12%"><col style="width:20%"><col style="width:20%"></colgroup><thead><tr><th>钱包</th><th>打款人员</th><th>出款地址</th><th>检查</th><th>目前 TRX<br><small id="chkHead1"></small></th><th>目前 USDT<br><small id="chkHead2"></small></th></tr></thead><tbody id="wsetBody"></tbody></table></div>
-      <div class="row" style="margin-bottom:10px;gap:16px"><button class="btn" id="wsAdd">＋新增钱包</button></div>
-    </details>
+    <h2><span class="n">3</span>出款钱包与分配</h2>
+    <div class="subsec"><div class="sechead"><h3>出款钱包</h3><div class="secacts"><label class="trxp"><b>TronScan API Key</b><input type="password" id="chainKey" autocomplete="off" placeholder="在 tronscan.org 申请" style="width:220px;text-align:left"></label><button class="btn" id="chainBal">查询链上余额</button></div></div>
+      <p class="fhint sechint">API Key 只存在这台电脑的浏览器；余额会自动填进下方表格。</p>
+      <p class="fhint" id="wsetStat" style="margin:0 0 4px"></p>
+      <div class="tablewrap" style="margin:8px 0"><table class="ctable wsettbl" style="min-width:820px"><colgroup><col style="width:5%"><col style="width:12%"><col style="width:31%"><col style="width:12%"><col style="width:20%"><col style="width:20%"></colgroup><thead><tr><th>钱包</th><th>打款人员</th><th>出款地址</th><th>检查</th><th>目前 TRX<br><small id="chkHead1"></small></th><th>目前 USDT<br><small id="chkHead2"></small></th></tr></thead><tbody id="wsetBody"></tbody></table></div>
+      <button class="btn" id="wsAdd">＋新增钱包</button>
     </div>
-    <div class="subsec" id="faddrBox"><div class="faddrhead"><h3>第一次发薪员工的地址</h3><button class="btn" id="chainFirst">上链查询第一次发薪员工的地址</button></div>
-      <p class="fhint" style="margin:2px 0 6px">用来决定打 TRX 的矿工费：用过的地址较便宜，新地址较贵；还没查的先当新地址。</p>
+    <div class="subsec" id="faddrBox"><div class="sechead"><h3>第一次发薪员工的地址</h3><div class="secacts"><button class="btn" id="chainFirst">上链查询第一次发薪员工的地址</button></div></div>
+      <p class="fhint sechint">用来决定打 TRX 的矿工费：用过的地址较便宜，新地址较贵；还没查的先当新地址。</p>
       <div id="faddrBody"></div>
     </div>
-    <div class="subsec"><h3>分钱包的条件</h3>
+    <div class="subsec"><div class="sechead"><h3>分钱包的条件</h3></div>
       <div class="frow cfgrow"><label>固定由哪个钱包打 TRX<br><small>（第一次打款的 30 TRX）</small></label><span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span id="cfgTrx" class="chips"></span><span class="neg" id="cfgTrxWarn" style="font-size:13px">请至少勾一个，才能按「自动排」</span></span></div>
       <div class="frow cfgrow" id="cfgSplitRow" hidden><label>第一次打款的 TRX<br><small>各钱包打几人</small></label><div id="cfgSplit" class="trxsplit" style="margin:0;flex-direction:column;align-items:flex-start;max-width:460px"></div></div>
       <div class="frow cfgrow"><label>本次由哪个钱包打 USDT</label><span id="cfgUsdt" class="chips"></span></div>
       <div class="frow cfgrow"><label>USDT 分配规则<br><small>（可复选）</small></label><span class="rulechips" id="wOrderChips"></span><span id="ruleCap" hidden></span></div>
       <p class="fhint" id="splitHint" hidden>预设平均分。</p>
     </div>
-    <div class="toolbar" style="margin:0 0 14px"><button class="btn primary" id="wAuto">自动排</button><button class="btn" id="wClear">全部清空</button><span class="automsg" id="wAutoMsg" hidden></span><span class="hint" style="margin:0;text-align:left;flex-basis:100%"><span id="wAutoHint"></span>全部清空：清掉排的结果（名单保留，可以再按自动排）。</span></div>
-    <div id="walletDays"></div>
-    <div class="row" id="reqExportBar" style="margin-top:12px" hidden><button class="btn primary" id="reqExportBtn">导出请款单（照请款信格式）</button><span class="neg" id="reqNeedDate" style="font-size:13.5px;font-weight:600" hidden>请先填上方的请款日，才能导出</span></div>
+    <div class="subsec"><div class="sechead"><h3>钱包分配</h3><div class="secacts"><span class="automsg" id="wAutoMsg" hidden></span><button class="btn" id="wClear">全部清空</button><button class="btn primary" id="wAuto">自动排</button></div></div>
+      <p class="fhint sechint"><span id="wAutoHint"></span>全部清空：清掉排的结果（名单保留，可以再按自动排）。</p>
+      <div id="walletDays"></div>
+    </div>
+  </section>
+  <section class="step wstep ph-req" id="reqSec">
+    <h2><span class="n">4</span>请款单</h2>
+    <div id="reqBody"></div>
+    <div class="row" id="reqExportBar" style="margin-top:12px" hidden><button class="btn primary" id="reqExportBtn">导出请款单（照请款信格式）</button><span class="neg" id="reqNeedDate" style="font-size:13.5px;font-weight:600" hidden>请先填请款日，才能导出</span></div>
   </section>
   <div class="phase pay ph-pay"><b>打款作业</b><span>打款日当天：填打款汇率 → 下载 UC 打款文件打给员工（矿工费由链上自动扣）</span></div>
   <section class="step wstep ph-pay">
@@ -908,7 +916,7 @@ function render(){
   $('walletSec').hidden=st.tab!=='wallet';$('job1Phase').hidden=st.tab==='wallet';
   if(st.tab==='wallet')renderWallet();
   $('tabs').hidden=!loadedData||st.tab==='wallet';
-  $('leadText').innerHTML=st.tab==='wallet'?((st.wjob||'2')==='3'?'作业三（打款日）：① 导入作业二导出的请款单、填打款汇率 → ② 暂缓（有人今天不发才做）→ ③ 导出打款单、下载 UC 打款文件。':'作业二（请款日）：① 导入当天核准名单 → ② 汇率与矿工费 → ③ 出款钱包与请款单，导出请款单给老板。'):'作业一（月初、送审前）：① 导入资料 → ② 每天预计拨款 → ③ 设定排的条件 → ④ 选择分配单位 → ⑤ 排发放日期 → ⑥ 总结，导出送审名单。';
+  $('leadText').innerHTML=st.tab==='wallet'?((st.wjob||'2')==='3'?'作业三（打款日）：① 导入作业二导出的请款单、填打款汇率 → ② 暂缓（有人今天不发才做）→ ③ 导出打款单、下载 UC 打款文件。':'作业二（请款日）：① 导入当天核准名单 → ② 汇率与矿工费 → ③ 出款钱包与分配 → ④ 请款单，导出给老板。'):'作业一（月初、送审前）：① 导入资料 → ② 每天预计拨款 → ③ 设定排的条件 → ④ 选择分配单位 → ⑤ 排发放日期 → ⑥ 总结，导出送审名单。';
   document.querySelectorAll('nav.jobs [data-job]').forEach(b=>{const j=b.dataset.job,on=j==='1'?st.tab!=='wallet':(st.tab==='wallet'&&(st.wjob||'2')===j);b.classList.toggle('on',on);b.setAttribute('aria-selected',on)});
   $('walletSec').dataset.w=st.wjob||'2';
   $('tabHold').hidden=!hasHold;
@@ -1390,7 +1398,7 @@ function renderWallet(){
   const done=st.wallets.filter(x=>!addrCheck(x.addr)&&(x.payer||x.name||'').trim()).length,nW=st.wallets.length;
   updateBalChk();updFieldStatus();
   {const miss=st.wallets.map((x,w)=>{const a=addrCheck(x.addr),p=(x.payer||x.name||'').trim();if(!a&&p)return '';return `${wLabel(w)}：${[!p?'没填打款人员':'',a==='还没填'?'没填出款地址':a?'出款地址'+a:''].filter(Boolean).join('、')}`}).filter(Boolean);st.walletMiss=miss}
-  document.querySelector('.wset>summary').innerHTML=`${done===nW?`出款钱包：${nW} 个都填好地址和打款人员`:`出款钱包：${done}／${nW} 个已填好地址和打款人员（<b class="neg">${esc(st.walletMiss.join('；'))}</b>）`}${st.balShort?`；<b class="neg">${st.balShort} 项余额不够</b>`:''}（按 ＋／－ 展开或收起）`;
+  $('wsetStat').innerHTML=`${done===nW?`出款钱包：${nW} 个都填好地址和打款人员`:`出款钱包：${done}／${nW} 个已填好地址和打款人员（<b class="neg">${esc(st.walletMiss.join('；'))}</b>）`}${st.balShort?`；<b class="neg">${st.balShort} 项余额不够</b>`:''}`;
   if(document.activeElement!==$('phpRate'))$('phpRate').value=st.phpRate||'';
   /* 第 ④ 步：打款汇率 */
   if(!$('payRates').contains(document.activeElement))$('payRates').innerHTML=(st.batches||[]).map((b,i)=>`<div class="frow"><label>打款 RMB → USDT</label><input type="number" step="0.0001" min="0" data-brate="${i}" value="${b.rate||''}" placeholder="打款日汇率" class="fin"><span class="fst"></span><span class="funit">打款日 ${esc(b.date)}</span></div>`).join('')||'<div class="frow"><label>打款 RMB → USDT</label><span class="funit" style="grid-column:2 / 5">导入当天核准名单后，这里会出现打款汇率格</span></div>';
@@ -1422,17 +1430,17 @@ function renderWallet(){
         <td class="num">${fmt3(t.sub)}${t.nFirst?`<button class="who inl first" data-bnew="${key}~${w}">${t.nFirst}人</button>`:''}</td>
         <td class="num" title="${t.nFirst?`${t.nFirst} 笔：用过的地址 ${t.nOld}、新地址 ${t.nNew}、还没查 ${t.nUnk}（还没查先当新地址）`:''}">${fmt3(t.feeT)}${t.nUnk?`<small class="wh" style="color:var(--w3)">${t.nUnk} 笔未查</small>`:''}</td>
         <td class="num">${fmt3(t.feeU)}</td></tr>`}).join('');
-    const allocT=`<div class="tsub"><span class="tsubtag">钱包分配</span><span class="tsubdesc">预估每个钱包打几人、要准备多少 TRX${sel.length===1&&sel[0].reqSnap?'（请款时的预估；打款时已依上限重排，实际见作业三）':''}</span></div><table class="wtbl reqtbl"><thead><tr><th>打款人员</th><th>人数</th><th>总比索PHP</th><th>兑人民币RMB</th><th>TRX 费用<br><small>（第一次补助）</small></th><th>转 TRX 的矿工费</th><th>转 USDT 的矿工费</th></tr></thead><tbody>${alloc}<tr class="wsub"><td>小计</td><td><button class="who inl" data-bwho="${key}~-1">${tot.heads}</button></td><td class="num">${fmt(tot.php)}</td><td class="num">${rateA>0?fmt2(r2(tot.rmb)):''}</td><td class="num">${fmt3(r3(tot.sub))}</td><td class="num">${fmt3(r3(tot.feeT))}</td><td class="num">${fmt3(r3(tot.feeU))}</td></tr></tbody></table>`;
+    const allocT=`<table class="wtbl reqtbl"><thead><tr><th>打款人员</th><th>人数</th><th>总比索PHP</th><th>兑人民币RMB</th><th>TRX 费用<br><small>（第一次补助）</small></th><th>转 TRX 的矿工费</th><th>转 USDT 的矿工费</th></tr></thead><tbody>${alloc}<tr class="wsub"><td>小计</td><td><button class="who inl" data-bwho="${key}~-1">${tot.heads}</button></td><td class="num">${fmt(tot.php)}</td><td class="num">${rateA>0?fmt2(r2(tot.rmb)):''}</td><td class="num">${fmt3(r3(tot.sub))}</td><td class="num">${fmt3(r3(tot.feeT))}</td><td class="num">${fmt3(r3(tot.feeU))}</td></tr></tbody></table>`;
     const mail=cells.map((o,w)=>`<tr><td><span class="wtag" style="--wc:${wc(w)}"></span>${esc(wLabel(w))}</td><td>${o.heads}</td><td class="num">${fmt(o.php)}</td><td class="num">${rateA>0?fmt2(o.rmb):'—'}</td><td class="num">${hasU?fmt2(o.usdt):'—'}</td></tr>`).join('');
-    const mailT=`<div class="tsub"><span class="tsubtag mail">请款单</span><span class="tsubdesc">给老板的请款表，在最下方导出 Excel</span></div><table class="wtbl reqtbl"><thead><tr><th>打款人员</th><th>人数</th><th>总比索PHP</th><th>兑人民币RMB</th><th>USDT数量</th></tr></thead><tbody>${mail}<tr class="wsub"><td>小计</td><td>${tot.heads}</td><td class="num">${fmt(tot.php)}</td><td class="num">${rateA>0?fmt2(r2(tot.rmb)):'—'}</td><td class="num">${hasU?fmt2(r2(tot.usdt)):'—'}</td></tr></tbody></table>${hasU?'':'<p class="fhint" style="margin:0 12px 10px">USDT数量要等打款日在作业三填了汇率才有。</p>'}`;
-    return allocT+mailT};
+    const mailT=`<table class="wtbl reqtbl"><thead><tr><th>打款人员</th><th>人数</th><th>总比索PHP</th><th>兑人民币RMB</th><th>USDT数量</th></tr></thead><tbody>${mail}<tr class="wsub"><td>小计</td><td>${tot.heads}</td><td class="num">${fmt(tot.php)}</td><td class="num">${rateA>0?fmt2(r2(tot.rmb)):'—'}</td><td class="num">${hasU?fmt2(r2(tot.usdt)):'—'}</td></tr></tbody></table>${hasU?'':'<p class="fhint" style="margin:6px 12px 10px">USDT数量要等打款日在作业三填了汇率才有。</p>'}`;
+    return {allocT,mailT}};
 
-  let h='';
+  let h='',rq='';
   let uh='';
   (st.batches||[]).forEach((b,i)=>{const rated=Number(b.rate)>0;
     /* 第 ③ 步显示请款当时的预估分配；打款时如果因为上限重排，第 ⑤ 步才用新的分配 */
     const curW=b.reqSnap?b.emps.map(e=>e.w):null;if(curW)b.emps.forEach((e,k)=>e.w=b.reqSnap[k]);
-    if(b.cleared){const ph=(t,sub)=>`<div class="wday"><div class="wdhead"><b>${t}</b><span class="hint" style="margin:0">${sub}${esc(b.file)}，${b.emps.length} 人</span></div><p class="empty" style="margin:12px">还没分配钱包，请按上方「<b>自动排</b>」。</p></div>`;h+=ph(`请款日 ${esc(reqDate(b))}`,`（<b>${esc(b.date)}</b> 打款用）`);uh+=ph(`打款日 ${esc(b.date)}`,`（${reqDate(b)?`${esc(reqDate(b))} 已请款`:"请款日未填"}）`);return}
+    if(b.cleared){const ph=(t,sub)=>`<div class="wday"><div class="wdhead"><b>${t}</b><span class="hint" style="margin:0">${sub}${esc(b.file)}，${b.emps.length} 人</span></div><p class="empty" style="margin:12px">还没分配钱包，请按上方「<b>自动排</b>」。</p></div>`;h+=`<p class="fhint" style="margin:0">这批 ${b.emps.length} 人还没分配，请按右上方「自动排」。</p>`;uh+=ph(`打款日 ${esc(b.date)}`,`（${reqDate(b)?`${esc(reqDate(b))} 已请款`:"请款日未填"}）`);return}
     const wv=wruleViol(b);
 
     /* 余额检查：整理成一张小表（钱包 × TRX／USDT），只列不够或还没输入余额的 */
@@ -1442,13 +1450,15 @@ function renderWallet(){
       if(tB===null||uB===null||tS>1e-9||uS>0.005)chk.push({w,tN,tB,tS,uN,uB,uS})}
     const cell=(need,bal,short,f,ok)=>bal===null?`<td class="num"><span class="hint" style="margin:0">没有余额</span></td>`:short===null?`<td class="num"><span class="hint" style="margin:0">待填汇率</span></td>`:short>0?`<td class="num"><b class="neg">还差 ${f(short)}</b><small class="wh">需要 ${f(need)}／目前 ${f(bal)}</small></td>`:`<td class="num"><span class="okc">✓ 够</span></td>`;
     const chkHTML=chk.length?`<div class="balchk"><div class="balhead">${esc(b.date)} 余额检查（只列不够或还没输入余额的钱包）</div><table class="ctable balt"><thead><tr><th>钱包</th><th>TRX</th><th>USDT</th></tr></thead><tbody>${chk.map(c=>`<tr><td><span class="wtag" style="--wc:${wc(c.w)}"></span>${esc(wLabel(c.w))}</td>${cell(c.tN,c.tB,c.tS,fmt3)}${cell(c.uN,c.uB,c.uS,fmt2)}</tr>`).join('')}</tbody></table>${chk.some(c=>c.tB===null||c.uB===null)?'<p class="hint" style="text-align:left;margin:4px 0 0">没有余额的钱包，请在上方「出款钱包」输入目前余额，或按「查询链上余额」。</p>':''}</div>`:'';
-    h+=`${wv.length?`<div class="notice">${esc(b.date)}：${wv.map(esc).join('；')}</div>`:''}<div class="wday"><div class="wdhead"><b>请款日</b><input type="date" class="wsin${reqDate(b)?'':' reqmiss'}" style="width:auto" data-breq="${i}" value="${esc(reqDate(b))}" required aria-required="true" aria-label="请款日（必填）">${reqDate(b)?'':'<b class="neg" style="font-size:13px">必填</b>'}<span class="hint" style="margin:0">（<b>${esc(b.date)}</b> 打款用）${esc(b.file)}，${b.emps.length} 人</span><span class="hint" style="margin:0">TRX 由 <b>${esc(trxWsOf().map(wLabel).join('、'))}</b> 打${trxWsOf().length>1?`（${trxCounts(b).map(x=>`${esc(wLabel(x.w))}：${x.n} 人`).join('、')}）`:''}</span>
-      </div><div class="tablewrap">${rowsFor(batchCells([b]),i,true,[b])}</div></div>`;
+    const rf=rowsFor(batchCells([b]),i,true,[b]);
+    h+=`${wv.length?`<div class="notice">${esc(b.date)}：${wv.map(esc).join('；')}</div>`:''}<div class="wday"><div class="wdhead"><span class="hint" style="margin:0"><b>${esc(b.date)}</b> 打款，${esc(b.file)}，${b.emps.length} 人</span><span class="hint" style="margin:0">TRX 由 <b>${esc(trxWsOf().map(wLabel).join('、'))}</b> 打${trxWsOf().length>1?`（${trxCounts(b).map(x=>`${esc(wLabel(x.w))}：${x.n} 人`).join('、')}）`:''}</span></div><div class="tablewrap">${rf.allocT}</div></div>`;
+    rq+=`<div class="reqhead"><label>请款日<input type="date" class="wsin${reqDate(b)?'':' reqmiss'}" style="width:auto" data-breq="${i}" value="${esc(reqDate(b))}" required aria-required="true" aria-label="请款日（必填）"></label>${reqDate(b)?'':'<b class="neg" style="font-size:13px">必填</b>'}<span class="hint" style="margin:0">打款日 <b>${esc(b.date)}</b></span></div><div class="wday" style="margin-bottom:0"><div class="tablewrap">${rf.mailT}</div></div>`;
     if(curW)b.emps.forEach((e,k)=>e.w=curW[k]);
     uh+=`<div class="wday"><div class="wdhead"><b>打款日 ${esc(b.date)}</b><span class="hint" style="margin:0">（${reqDate(b)?`${esc(reqDate(b))} 已请款`:"请款日未填"}）${esc(b.file)}，${b.emps.length} 人</span><span class="hint" style="margin:0">打款汇率 ${Number(b.rate)?`<b>${esc(String(b.rate))}</b>`:'<b class="neg">未填（上面第 ① 步）</b>'}</span></div>${payTable2(b,i)}${ucBlock(b,i)}</div>`});
-  if(!(st.batches||[]).length)h='<p class="empty">还没有导入任何一天的核准名单。每天核准后，从 OA 导出当天的名单，按上方「导入当天核准名单」。</p>';
-  else if(st.batches.length>1)h+=`<div class="wday month"><div class="wdhead"><b>整个月</b>${st.batches.every(b=>Number(b.rate)>0)?'':'<span class="hint" style="margin:0">有日子还没填汇率，USDT 只加总已填的</span>'}<span class="wdbtns"><button class="btn sm" data-bcopy="-1">复制整个月请款单</button></span></div><div class="tablewrap">${rowsFor(batchCells(st.batches),-1,true,st.batches)}</div></div>`;
+  if(!(st.batches||[]).length)h='<p class="fhint" style="margin:0">先在第 ① 步导入当天核准名单。</p>';
+  else if(st.batches.length>1)h+=`<div class="wday month"><div class="wdhead"><b>整个月</b>${st.batches.every(b=>Number(b.rate)>0)?'':'<span class="hint" style="margin:0">有日子还没填汇率，USDT 只加总已填的</span>'}<span class="wdbtns"><button class="btn sm" data-bcopy="-1">复制整个月请款单</button></span></div><div class="tablewrap">${rowsFor(batchCells(st.batches),-1,true,st.batches).allocT}</div></div>`;
   $('walletDays').innerHTML=h;
+  $('reqBody').innerHTML=rq||'<p class="fhint" style="margin:0">在第 ③ 步按「自动排」后，这里会出现请款单。</p>';
   {const bs=st.batches||[],i=bs.length-1,ok=i>=0&&!bs[i].cleared&&payRateOf(bs[i])>0;$('payExportBtn').disabled=!ok;$('payExportBtn').title=ok?'':'先在第 ① 步填打款汇率';if(i>=0)$('payExportBtn').dataset.bpay=String(i)}
   {const bs=st.batches||[],i=bs.length-1,ok=i>=0&&!bs[i].cleared;$('reqExportBar').hidden=!ok;if(ok){const has=!!reqDate(bs[i]);$('reqExportBtn').dataset.bxls=String(i);$('reqExportBtn').disabled=!has;$('reqExportBtn').title=has?'':'请先填请款日';$('reqNeedDate').hidden=has}}
 
