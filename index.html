@@ -528,8 +528,9 @@ tfoot tr.quota td{font-weight:400;color:var(--muted);font-size:13px}
       <div class="frow cfgrow"><label>USDT 分配规则<br><small>（可复选）</small></label><span class="rulechips" id="wOrderChips"></span><span id="ruleCap" hidden></span></div>
       <p class="fhint" id="splitHint" hidden>预设平均分。</p>
     </div>
-    <div class="subsec"><div class="sechead"><h3>钱包分配</h3><div class="secacts"><span class="automsg" id="wAutoMsg" hidden></span><button class="btn" id="wAllocExport" disabled title="先按「自动排」">导出 Excel</button><button class="btn" id="wClear">全部清空</button><button class="btn primary" id="wAuto">自动排</button></div></div>
+    <div class="subsec"><div class="sechead"><h3>钱包分配</h3><div class="secacts"><button class="btn primary" id="wAuto">自动排</button><button class="btn" id="wClear">全部清空</button><button class="btn" id="wAllocExport" disabled title="先按「自动排」">导出 Excel</button></div></div>
       <p class="fhint sechint"><span id="wAutoHint"></span>全部清空：清掉排的结果（名单保留，可以再按自动排）。</p>
+      <p class="automsg" id="wAutoMsg" style="margin:0 0 8px" hidden></p>
       <div id="walletDays"></div>
     </div>
   </section>
@@ -2093,7 +2094,7 @@ document.addEventListener('click',e=>{
   const ud=e.target.closest('[data-ucdl]');if(ud){const [bi,w,cur]=ud.dataset.ucdl.split('~');ucExport(Number(bi),Number(w),cur,ud);return}
   if(e.target.id==='chainBal'){chainCheckWallets(e.target);return}
   if(e.target.id==='chainFirst'){chainCheckFirsts(e.target);return}
-  if(e.target.id==='wAuto'){if(!(st.batches||[]).length){$('batchMsg').textContent='请先导入当天核准名单。';return}{const lb=st.batches[st.batches.length-1];if(step2Missing().length||!trxWOk(lb)||!trxSplitOk(lb))return}st.orderDirty=false;st.batches.forEach(b=>{b.cleared=false;b.capMsg='';b.reqSnap=null});busy(()=>{allocAllBatches();const b=st.batches[st.batches.length-1],c=batchCells([b]),d=new Date();saveReqResult(b);st.autoMsg=`已自动排 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}：${c.map((o,w)=>`${wLabel(w)}：${o.heads} 人`).join('、')}`},'正在自动排…');return}
+  if(e.target.id==='wAuto'){if(!(st.batches||[]).length){$('batchMsg').textContent='请先导入当天核准名单。';return}{const lb=st.batches[st.batches.length-1];if(step2Missing().length||!trxWOk(lb)||!trxSplitOk(lb))return}st.orderDirty=false;st.batches.forEach(b=>{b.cleared=false;b.capMsg='';b.reqSnap=null});busy(()=>{allocAllBatches();const b=st.batches[st.batches.length-1],c=batchCells([b]),d=new Date();saveReqResult(b);st.autoMsg=`已自动排 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`},'正在自动排…');return}
   if(e.target.id==='adjToggle'){st.adjOpen=true;render();return}
   if(e.target.id==='adjClose'){st.adjOpen=false;render();return}
   if(e.target.dataset&&e.target.dataset.adjpick){const b=adjBatch(),hit=b&&b.emps.find(x=>x.code===e.target.dataset.adjpick);if(hit){$('adjPerson').value=`${hit.code} ${hit.name}`;adjPickSet(hit);$('adjReason').focus()}return}
