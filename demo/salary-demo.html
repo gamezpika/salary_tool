@@ -1424,7 +1424,7 @@ function wruleViol(b){const out=[];(st.wrules||[]).forEach(r=>{const es=b.emps.f
 function allocAllBatches(){(st.batches||[]).forEach(allocBatch)}
 /* 两个汇率：请款日的 RMB→USDT（算请款）、打款日的 RMB→USDT（算实际打给员工）。打款汇率还没填，先用请款汇率 */
 const reqRateOf=b=>Number(b.rate)||0, payRateOf=b=>Number(b.rate)||0;
-const bRmb=e=>isFinite(e.rmbF)&&e.rmbF>0?e.rmbF:(e.rateF>0?round2(e.a/e.rateF):rmbOf(e.a)), bUsdt=(e,b,mode)=>{const r=mode==='req'?reqRateOf(b):payRateOf(b),m=rmbOf(e.a);return m!==null&&r>0?floor2(m/r):null};
+const bRmb=e=>isFinite(e.rmbF)&&e.rmbF>0?e.rmbF:(e.rateF>0?round2(e.a/e.rateF):rmbOf(e.a)), bUsdt=(e,b,mode)=>{const r=mode==='req'?reqRateOf(b):payRateOf(b),m=(e.parts||(e.rateF>0&&e.rateF!==Number(st.phpRate)))?bRmb(e):rmbOf(e.a);return m!==null&&r>0?floor2(m/r):null};
 function batchCells(list,mode){const out=[...Array(bK(list))].map(()=>({php:0,heads:0,usdt:0,rmb:0,nw:0,chg:0,list:[],rated:true}));
   list.forEach(b=>{const rated=(mode==='req'?reqRateOf(b):payRateOf(b))>0;b.emps.forEach(e=>{const o=out[e.w||0];o.php+=e.a;o.heads++;o.list.push({e,b});
     const m=bRmb(e);if(m!==null)o.rmb+=m;const u=bUsdt(e,b,mode);if(u!==null)o.usdt+=u;if(!rated)o.rated=false;if(isNewEmp(e))o.nw++;if(addrChanged(e))o.chg++})});
@@ -1870,8 +1870,10 @@ const ADJBYKEY='payroll-demo-allocator-adjby-v1';
 function adjWho(){return window.__payUser||$('adjBy').value.trim()}
 /* 作业二防呆：名单有多种汇率、钱包地址空白或格式不对，导入后提醒（不挡） */
 function batchWarnings(b){const out=[],list=(b&&b.emps)||[];if(!list.length)return out;
-  const m=new Map();list.forEach(e=>{const r=Number(e.rateF)||0;if(r>0){if(!m.has(r))m.set(r,[]);m.get(r).push(e)}});
-  if(m.size>1){const rs=[...m.entries()].sort((x,y)=>y[1].length-x[1].length),main=rs[0][0],others=rs.slice(1);out.push(`名单有 ${m.size} 种汇率：${rs.map(([r,l])=>`${r}（${l.length} 人）`).join('、')}。公司汇率应该一致，请回 OA 确认。和多数人不同的：${others.flatMap(x=>x[1]).slice(0,5).map(e=>e.code||e.name).join('、')}${others.flatMap(x=>x[1]).length>5?' 等':''}。`)}
+  /* 同一个薪资年月，公司汇率应该一致；不同月份（补发）汇率不同是正常的 */
+  const byM=new Map();list.forEach(e=>(e.parts||[{month:e.month,rate:e.rateF}]).forEach(p=>{const k=p.month||'';if(!byM.has(k))byM.set(k,[]);byM.get(k).push({e,r:p.rate})}));
+  byM.forEach((rows,mon)=>{const m=new Map();rows.forEach(({e,r})=>{r=Number(r)||0;if(r>0){if(!m.has(r))m.set(r,[]);m.get(r).push(e)}});
+  if(m.size>1){const rs=[...m.entries()].sort((x,y)=>y[1].length-x[1].length),main=rs[0][0],others=rs.slice(1);out.push(`${byM.size>1&&mon?`薪资年月 ${mon} `:'名单'}有 ${m.size} 种汇率：${rs.map(([r,l])=>`${r}（${l.length} 人）`).join('、')}。公司汇率应该一致，请回 OA 确认。和多数人不同的：${others.flatMap(x=>x[1]).slice(0,5).map(e=>e.code||e.name).join('、')}${others.flatMap(x=>x[1]).length>5?' 等':''}。`)}});
   const bad=list.filter(e=>addrCheck(e.addr||'')),blank=bad.filter(e=>!(e.addr||'').trim()),wrong=bad.filter(e=>(e.addr||'').trim());const names=l=>l.slice(0,5).map(e=>e.code||e.name).join('、')+(l.length>5?' 等':'');
   if(blank.length)out.push(`有 ${blank.length} 人钱包地址是空白：${names(blank)}。`);if(wrong.length)out.push(`有 ${wrong.length} 人钱包地址格式不对：${names(wrong)}。`);return out}
 function renderBatWarn(){const bs=st.batches||[],w=batchWarnings(bs[bs.length-1]),x=$('batWarn');if(!x)return;x.hidden=!w.length;x.innerHTML=w.length?`<b>请确认：</b><br>${w.map(esc).join('<br>')}`:''}
@@ -1894,7 +1896,7 @@ function renderAdj(){const b=adjBatch();if(!$('adjBody'))return;
   <div class="tablewrap"><table class="ctable adjtbl"><thead><tr>${OA_HEAD.map(h=>`<th>${esc(h)}</th>`).join('')}<th></th></tr></thead><tbody>${hold.map(a=>`<tr>${adjOaRow(a).map((v,i)=>`<td${OA_NUM.includes(i)?' class="num"':''}${i===11?' style="white-space:normal;min-width:140px"':''}>${OA_NUM.includes(i)?(i===8?fmt(v):fmt2(v)):esc(v)}</td>`).join('')}<td><button class="x" data-adjundo="${esc(a.id)}" ${dis}>撤销</button></td></tr>`).join('')}</tbody></table></div>
   <div class="row" style="margin-top:10px"><button class="btn" id="adjExportToday">导出暂缓名单（回写 OA 用）</button></div>`}
 function adjStore(){try{return JSON.parse(localStorage.getItem(ADJKEY)||'{}')||{}}catch(_){return{}}}
-async function adjExportToday(btn){const b=adjBatch();if(!b||!(b.adj||[]).length)return;const lab=btn.textContent,done=t=>{btn.textContent=t;setTimeout(()=>btn.textContent=lab,3000)};if(!DL||typeof XLSX==='undefined')return done('不能下载');try{const wb=XLSX.utils.book_new();const hold=(b.adj||[]).filter(a=>a.type==='hold'),ws=XLSX.utils.aoa_to_sheet([['发薪','薪资年月','工号','备注_暂缓原因','审批人员'],...hold.map(a=>[0,String(a.e.month||''),String(a.e.code||''),a.reason||'',a.by||''])]);ws['!cols']=[{wch:6},{wch:10},{wch:20},{wch:24},{wch:12}];XLSX.utils.book_append_sheet(wb,ws,'暂缓名单');await __DS(DL,{filename:`暂缓名单_打款日${b.date}.xlsx`,data:new Uint8Array(XLSX.write(wb,{type:'array',bookType:'xlsx'}))});done('已导出')}catch(err){done(err&&err.code==='declined'?'已取消':'导出失败')}}
+async function adjExportToday(btn){const b=adjBatch();if(!b||!(b.adj||[]).length)return;const lab=btn.textContent,done=t=>{btn.textContent=t;setTimeout(()=>btn.textContent=lab,3000)};if(!DL||typeof XLSX==='undefined')return done('不能下载');try{const wb=XLSX.utils.book_new();const hold=(b.adj||[]).filter(a=>a.type==='hold'),ws=XLSX.utils.aoa_to_sheet([['发薪','薪资年月','工号','备注_暂缓原因','审批人员'],...hold.flatMap(a=>empMonths(a.e).map(mon=>[0,String(mon||''),String(a.e.code||''),a.reason||'',a.by||'']))]);ws['!cols']=[{wch:6},{wch:10},{wch:20},{wch:24},{wch:12}];XLSX.utils.book_append_sheet(wb,ws,'暂缓名单');await __DS(DL,{filename:`暂缓名单_打款日${b.date}.xlsx`,data:new Uint8Array(XLSX.write(wb,{type:'array',bookType:'xlsx'}))});done('已导出')}catch(err){done(err&&err.code==='declined'?'已取消':'导出失败')}}
 function adjMsg(t,err){$('adjMsg').textContent=t;$('adjMsg').classList.toggle('err',!!err)}
 function adjNew(type,e,extra){return {id:`${Date.now()}-${Math.random().toString(36).slice(2,8)}`,at:Date.now(),by:adjWho(),type,e,...extra}}
 let adjPick=null;
@@ -1932,7 +1934,17 @@ function parseBatchRows(rows){
   const emps=[];let date='';
   rows.forEach((r,ri)=>{const a=toNum(r[kPhp]);if(!isFinite(a)||a<=0)return;if(!date&&kDt)date=normDate(r[kDt]);
     emps.push({ord:ri,seqRaw:kSeq?String(r[kSeq]??'').trim().replace(/\.0+$/,''):'',seq:kSeq?(toNum(r[kSeq])||ri+1):ri+1,a,code:t(r,kE),name:t(r,kN),g:t(r,kG),b:t(r,kB),d:t(r,kD),pos:t(r,kPos),addr:t(r,kAd),month:normMonth(t(r,kM)),w:0,rmbF:toNum(r[kRmb]),rateF:toNum(r[kR]),first:kF?isYes(t(r,kF)):undefined})});
-  return {rows,emps,date,kR,kF,kSeq}}
+  return {rows,emps:mergeByCode(emps),date,kR,kF,kSeq}}
+/* 补发：同一个工号有好几个薪资年月，合成一笔打款（省 TRX 手续费）。
+   金额加总、RMB 各月分别算再加总；钱包地址用最新月份那一列的；parts 留着各月明细，暂缓导出时要拆回每个月一列 */
+function mergeByCode(list){const by=new Map(),out=[];const rmb1=e=>isFinite(e.rmbF)&&e.rmbF>0?e.rmbF:(e.rateF>0?round2(e.a/e.rateF):NaN);
+  list.forEach(e=>{const k=e.code;if(!k){out.push(e);return}const x=by.get(k);if(!x){by.set(k,e);out.push(e);return}
+    if(!x.parts)x.parts=[{month:x.month,a:x.a,rmb:rmb1(x),rate:x.rateF,seq:x.seqRaw,addr:x.addr}];x.parts.push({month:e.month,a:e.a,rmb:rmb1(e),rate:e.rateF,seq:e.seqRaw,addr:e.addr});if(e.first)x.first=true});
+  out.forEach(x=>{if(!x.parts)return;const ps=x.parts.sort((p,q)=>String(p.month).localeCompare(String(q.month))),last=ps[ps.length-1];
+    x.a=ps.reduce((s,p)=>s+p.a,0);x.rmbF=ps.every(p=>isFinite(p.rmb))?round2(ps.reduce((s,p)=>s+p.rmb,0)):NaN;x.rateF=last.rate;
+    x.addr=[...ps].reverse().map(p=>p.addr).find(Boolean)||x.addr;x.month=ps.map(p=>p.month).join('、')});
+  return out}
+const empMonths=e=>e.parts?e.parts.map(p=>p.month):[e.month||''];
 function importBatch(f,rows0){const parsed=parseBatchRows(rows0),{rows,emps,kR,kF,kSeq}=parsed;let date=parsed.date;
   st.batchHasFirst=!!kF;st.batchHasSeq=!!kSeq;
   if(!emps.length)throw new Error('名单里没有金额大于 0 的员工。');
@@ -2518,7 +2530,7 @@ $('batchFile').addEventListener('change',e=>{
       /* 同一个打款日重新导入，会清掉那天的暂缓记录：先提醒一次 */
       {const d=parseBatchRows(rows).date,r0=d&&adjStore()[d],n=r0?(r0.adj||[]).filter(a=>a.type==='hold').length:0;if(n&&st.adjOver!==f.name){st.adjOver=f.name;$('batchMsg').textContent=`打款日 ${d} 已有 ${n} 人暂缓，重新导入会把这些暂缓记录清掉。确定要导入，请再选一次文件。`;e.target.value='';return}st.adjOver=''}
       const {b,replaced}=importBatch(f.name,rows);const before=st.prev;autoPrevW();if(st.prev!==before)allocAllBatches();savePaidBatches();
-      $('batchMsg').innerHTML=`已导入 <b>${esc(b.date)}</b>：${b.emps.length} 人，${fmt(b.emps.reduce((a,e)=>a+e.a,0))} PHP${replaced?'（之前的资料已清空，全部重算）':''}。`;render()}
+      $('batchMsg').innerHTML=`已导入 <b>${esc(b.date)}</b>：${b.emps.length} 人，${fmt(b.emps.reduce((a,e)=>a+e.a,0))} PHP${(()=>{const n=b.emps.filter(e=>e.parts).length;return n?`，其中 ${n} 人有多个薪资年月，已合成一笔`:''})()}${replaced?'（之前的资料已清空，全部重算）':''}。`;render()}
     catch(err){st.batchErr=err.message;render()}e.target.value=''};
   r.readAsArrayBuffer(f);
 });
