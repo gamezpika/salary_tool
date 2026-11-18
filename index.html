@@ -1344,7 +1344,7 @@ function wruleViol(b){const out=[];(st.wrules||[]).forEach(r=>{const es=b.emps.f
 function allocAllBatches(){(st.batches||[]).forEach(allocBatch)}
 /* 两个汇率：请款日的 RMB→USDT（算请款）、打款日的 RMB→USDT（算实际打给员工）。打款汇率还没填，先用请款汇率 */
 const reqRateOf=b=>Number(b.rate)||0, payRateOf=b=>Number(b.rate)||0;
-const bRmb=e=>isFinite(e.rmbF)&&e.rmbF>0?e.rmbF:(e.rateF>0?round2(e.a/e.rateF):rmbOf(e.a)), bUsdt=(e,b,mode)=>{const r=mode==='req'?reqRateOf(b):payRateOf(b),m=(e.parts||(e.rateF>0&&e.rateF!==Number(st.phpRate)))?bRmb(e):rmbOf(e.a);return m!==null&&r>0?floor2(m/r):null};
+const bRmb=e=>isFinite(e.rmbF)&&e.rmbF>0?e.rmbF:(e.rateF>0?round2(e.a/e.rateF):rmbOf(e.a)), bUsdt=(e,b,mode)=>{const r=mode==='req'?reqRateOf(b):payRateOf(b),m=rmbOf(e.a);return m!==null&&r>0?floor2(m/r):null};
 function batchCells(list,mode){const out=[...Array(bK(list))].map(()=>({php:0,heads:0,usdt:0,rmb:0,nw:0,chg:0,list:[],rated:true}));
   list.forEach(b=>{const rated=(mode==='req'?reqRateOf(b):payRateOf(b))>0;b.emps.forEach(e=>{const o=out[e.w||0];o.php+=e.a;o.heads++;o.list.push({e,b});
     const m=bRmb(e);if(m!==null)o.rmb+=m;const u=bUsdt(e,b,mode);if(u!==null)o.usdt+=u;if(!rated)o.rated=false;if(isNewEmp(e))o.nw++;if(addrChanged(e))o.chg++})});
@@ -1790,10 +1790,9 @@ const ADJBYKEY='payroll-allocator-adjby-v1';
 function adjWho(){return window.__payUser||$('adjBy').value.trim()}
 /* 作业二防呆：名单有多种汇率、钱包地址空白或格式不对，导入后提醒（不挡） */
 function batchWarnings(b){const out=[],list=(b&&b.emps)||[];if(!list.length)return out;
-  /* 同一个薪资年月，公司汇率应该一致；不同月份（补发）汇率不同是正常的 */
-  const byM=new Map();list.forEach(e=>(e.parts||[{month:e.month,rate:e.rateF}]).forEach(p=>{const k=p.month||'';if(!byM.has(k))byM.set(k,[]);byM.get(k).push({e,r:p.rate})}));
-  byM.forEach((rows,mon)=>{const m=new Map();rows.forEach(({e,r})=>{r=Number(r)||0;if(r>0){if(!m.has(r))m.set(r,[]);m.get(r).push(e)}});
-  if(m.size>1){const rs=[...m.entries()].sort((x,y)=>y[1].length-x[1].length),main=rs[0][0],others=rs.slice(1);out.push(`${byM.size>1&&mon?`薪资年月 ${mon} `:'名单'}有 ${m.size} 种汇率：${rs.map(([r,l])=>`${r}（${l.length} 人）`).join('、')}。公司汇率应该一致，请回 OA 确认。和多数人不同的：${others.flatMap(x=>x[1]).slice(0,5).map(e=>e.code||e.name).join('、')}${others.flatMap(x=>x[1]).length>5?' 等':''}。`)}});
+  /* 每天只有一个汇率（补发名单也是另外一天单独发）：合并过的人每个月份的汇率也要算进来 */
+  const m=new Map();list.forEach(e=>(e.parts?e.parts.map(p=>p.rate):[e.rateF]).forEach(r=>{r=Number(r)||0;if(r>0){if(!m.has(r))m.set(r,[]);if(!m.get(r).includes(e))m.get(r).push(e)}}));
+  if(m.size>1){const rs=[...m.entries()].sort((x,y)=>y[1].length-x[1].length),main=rs[0][0],others=rs.slice(1);out.push(`名单有 ${m.size} 种汇率：${rs.map(([r,l])=>`${r}（${l.length} 人）`).join('、')}。公司汇率应该一致，请回 OA 确认。和多数人不同的：${others.flatMap(x=>x[1]).slice(0,5).map(e=>e.code||e.name).join('、')}${others.flatMap(x=>x[1]).length>5?' 等':''}。`)}
   const bad=list.filter(e=>addrCheck(e.addr||'')),blank=bad.filter(e=>!(e.addr||'').trim()),wrong=bad.filter(e=>(e.addr||'').trim());const names=l=>l.slice(0,5).map(e=>e.code||e.name).join('、')+(l.length>5?' 等':'');
   if(blank.length)out.push(`有 ${blank.length} 人钱包地址是空白：${names(blank)}。`);if(wrong.length)out.push(`有 ${wrong.length} 人钱包地址格式不对：${names(wrong)}。`);return out}
 function renderBatWarn(){const bs=st.batches||[],w=batchWarnings(bs[bs.length-1]),x=$('batWarn');if(!x)return;x.hidden=!w.length;x.innerHTML=w.length?`<b>请确认：</b><br>${w.map(esc).join('<br>')}`:''}
@@ -1856,7 +1855,7 @@ function parseBatchRows(rows){
     emps.push({ord:ri,seqRaw:kSeq?String(r[kSeq]??'').trim().replace(/\.0+$/,''):'',seq:kSeq?(toNum(r[kSeq])||ri+1):ri+1,a,code:t(r,kE),name:t(r,kN),g:t(r,kG),b:t(r,kB),d:t(r,kD),pos:t(r,kPos),addr:t(r,kAd),month:normMonth(t(r,kM)),w:0,rmbF:toNum(r[kRmb]),rateF:toNum(r[kR]),first:kF?isYes(t(r,kF)):undefined})});
   return {rows,emps:mergeByCode(emps),date,kR,kF,kSeq}}
 /* 补发：同一个工号有好几个薪资年月，合成一笔打款（省 TRX 手续费）。
-   金额加总、RMB 各月分别算再加总；钱包地址用最新月份那一列的；parts 留着各月明细，暂缓导出时要拆回每个月一列 */
+   金额、RMB 加总（同一天只有一个汇率）；钱包地址用最新月份那一列的；parts 留着各月明细，暂缓导出时要拆回每个月一列 */
 function mergeByCode(list){const by=new Map(),out=[];const rmb1=e=>isFinite(e.rmbF)&&e.rmbF>0?e.rmbF:(e.rateF>0?round2(e.a/e.rateF):NaN);
   list.forEach(e=>{const k=e.code;if(!k){out.push(e);return}const x=by.get(k);if(!x){by.set(k,e);out.push(e);return}
     if(!x.parts)x.parts=[{month:x.month,a:x.a,rmb:rmb1(x),rate:x.rateF,seq:x.seqRaw,addr:x.addr}];x.parts.push({month:e.month,a:e.a,rmb:rmb1(e),rate:e.rateF,seq:e.seqRaw,addr:e.addr});if(e.first)x.first=true});
